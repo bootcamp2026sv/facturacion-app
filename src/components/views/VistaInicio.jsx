@@ -36,19 +36,53 @@ export default function VistaInicio() {
         ))}
       </div>
 
-      {/* Sección Informativa del Prototipo */}
-      <div className="mt-5 premium-fade-in" style={{ animationDelay: '0.4s' }}>
-        <div className="premium-card-static p-4">
-          <h3 className="text-xl font-bold m-0 mb-3" style={{ color: 'var(--text-primary)' }}>Especificaciones del Prototipo</h3>
-          <p className="line-height-3 mb-3" style={{ color: 'var(--text-muted)' }}>
-            Maquetación e interfaz construida sobre React 19 y PrimeReact. La navegación lateral colapsable gestiona vistas en memoria para la simulación de registros sin almacenamiento persistente.
-          </p>
-          <div className="p-3 border-round-xl flex align-items-start gap-2 text-sm" style={{ background: 'var(--stats-card-1-bg)', color: 'var(--text-primary)', borderLeft: '3px solid #6366f1' }}>
-            <div>
-              <h4 className="font-bold m-0 mb-1">Instrucciones de Integración (Desarrollo)</h4>
-              <p className="m-0">
-                Para añadir secciones: incorpore el componente correspondiente en el arreglo <code>ELEMENTOS_MENU</code> dentro de <code>PanelPrincipal.jsx</code>. El menú lateral y el enrutador principal se actualizarán de forma automática.
-              </p>
+      {/* Accesos Rápidos y Estado del Sistema */}
+      <div className="grid mt-4">
+        <div className="col-12 md:col-6 premium-fade-in" style={{ animationDelay: '0.4s' }}>
+          <div className="premium-card-static p-4 h-full" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '16px' }}>
+            <h3 className="text-xl font-bold m-0 mb-3" style={{ color: 'var(--text-primary)' }}>Accesos Rápidos</h3>
+            <div className="flex flex-column gap-3">
+              <div className="flex align-items-center justify-content-between p-2 border-round hover:surface-hover cursor-pointer transition-colors transition-duration-150">
+                <div className="flex align-items-center gap-2">
+                  <i className="pi pi-shopping-cart" style={{ color: '#6366F1' }}></i>
+                  <span style={{ color: 'var(--text-primary)' }}>Nueva Venta (POS)</span>
+                </div>
+                <i className="pi pi-angle-right" style={{ color: 'var(--text-muted)' }}></i>
+              </div>
+              <div className="flex align-items-center justify-content-between p-2 border-round hover:surface-hover cursor-pointer transition-colors transition-duration-150">
+                <div className="flex align-items-center gap-2">
+                  <i className="pi pi-users" style={{ color: '#10B981' }}></i>
+                  <span style={{ color: 'var(--text-primary)' }}>Registrar Cliente</span>
+                </div>
+                <i className="pi pi-angle-right" style={{ color: 'var(--text-muted)' }}></i>
+              </div>
+              <div className="flex align-items-center justify-content-between p-2 border-round hover:surface-hover cursor-pointer transition-colors transition-duration-150">
+                <div className="flex align-items-center gap-2">
+                  <i className="pi pi-box" style={{ color: '#F59E0B' }}></i>
+                  <span style={{ color: 'var(--text-primary)' }}>Gestión de Inventario</span>
+                </div>
+                <i className="pi pi-angle-right" style={{ color: 'var(--text-muted)' }}></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 md:col-6 premium-fade-in" style={{ animationDelay: '0.4s' }}>
+          <div className="premium-card-static p-4 h-full" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '16px' }}>
+            <h3 className="text-xl font-bold m-0 mb-3" style={{ color: 'var(--text-primary)' }}>Estado de Conexiones</h3>
+            <div className="flex flex-column gap-3">
+              <div className="flex align-items-center justify-content-between">
+                <span style={{ color: 'var(--text-secondary)' }}>Servicio de Facturación</span>
+                <span className="p-badge p-badge-success" style={{ background: '#10B981', color: '#fff', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>ACTIVO</span>
+              </div>
+              <div className="flex align-items-center justify-content-between">
+                <span style={{ color: 'var(--text-secondary)' }}>Firma Electrónica (DTE)</span>
+                <span className="p-badge p-badge-success" style={{ background: '#10B981', color: '#fff', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>CONECTADO</span>
+              </div>
+              <div className="flex align-items-center justify-content-between">
+                <span style={{ color: 'var(--text-secondary)' }}>Ministerio de Hacienda</span>
+                <span className="p-badge p-badge-info" style={{ background: '#6366F1', color: '#fff', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>PRUEBAS (00)</span>
+              </div>
             </div>
           </div>
         </div>
