@@ -1,0 +1,184 @@
+/* ============================================
+   CSS Custom Properties — Tema Claro (default)
+   ============================================ */
+:root {
+  --sidebar-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-text: #cbd5e1;
+  --sidebar-icon: #94a3b8;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-hover-text: #f1f5f9;
+  --sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --sidebar-active-text: #e2e8f0;
+  --sidebar-active-icon: #818cf8;
+
+  --login-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-bg-solid: rgba(255, 255, 255, 0.95);
+  --card-border: rgba(255, 255, 255, 0.3);
+  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  --card-hover-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.15);
+  --card-hover-border: rgba(99, 102, 241, 0.3);
+
+  --header-bg: rgba(255, 255, 255, 0.8);
+  --header-border: rgba(0, 0, 0, 0.06);
+  --header-title: #1e293b;
+
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-icon: #94a3b8;
+
+  --table-header-bg: #f1f5f9;
+  --table-header-text: #475569;
+  --table-header-border: #e2e8f0;
+  --table-row-hover: rgba(99, 102, 241, 0.04);
+  --table-row-border: #f1f5f9;
+
+  --divider-gradient: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+
+  --stats-card-1-bg: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  --stats-card-2-bg: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  --stats-card-3-bg: linear-gradient(135deg, #fef3c7, #fde68a);
+  --stats-card-4-bg: linear-gradient(135deg, #fef2f2, #fecaca);
+
+  --surface-muted: #f8fafc;
+  --surface-border-light: #e2e8f0;
+  --surface-hover: #f1f5f9;
+}
+
+/* ============================================
+   CSS Custom Properties — Tema Oscuro
+   ============================================ */
+[data-theme='dark'] {
+  --sidebar-bg: linear-gradient(180deg, #0b1121 0%, #111827 100%);
+  --sidebar-border: rgba(255, 255, 255, 0.04);
+  --sidebar-text: #94a3b8;
+  --sidebar-icon: #64748b;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-hover-text: #e2e8f0;
+  --sidebar-active-bg: rgba(99, 102, 241, 0.2);
+  --sidebar-active-text: #f1f5f9;
+  --sidebar-active-icon: #a5b4fc;
+
+  --login-bg: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
+
+  --card-bg: rgba(30, 41, 59, 0.85);
+  --card-bg-solid: rgba(30, 41, 59, 0.95);
+  --card-border: rgba(255, 255, 255, 0.06);
+  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+  --card-hover-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.25);
+  --card-hover-border: rgba(99, 102, 241, 0.4);
+
+  --header-bg: rgba(15, 23, 42, 0.85);
+  --header-border: rgba(255, 255, 255, 0.06);
+  --header-title: #f1f5f9;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-icon: #475569;
+
+  --table-header-bg: rgba(30, 41, 59, 0.5);
+  --table-header-text: #94a3b8;
+  --table-header-border: rgba(255, 255, 255, 0.06);
+  --table-row-hover: rgba(99, 102, 241, 0.08);
+  --table-row-border: rgba(255, 255, 255, 0.04);
+
+  --divider-gradient: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+
+  --stats-card-1-bg: rgba(99, 102, 241, 0.15);
+  --stats-card-2-bg: rgba(16, 185, 129, 0.15);
+  --stats-card-3-bg: rgba(245, 158, 11, 0.15);
+  --stats-card-4-bg: rgba(239, 68, 68, 0.15);
+
+  --surface-muted: rgba(30, 41, 59, 0.5);
+  --surface-border-light: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.04);
+}
+
+/* ============================================
+   Override PrimeReact CSS vars for Dark Mode
+   ============================================ */
+[data-theme='dark'] {
+  --text-color: #e2e8f0;
+  --text-color-secondary: #94a3b8;
+  --surface-ground: #0f172a;
+  --surface-section: #0f172a;
+  --surface-card: #1e293b;
+  --surface-overlay: #1e293b;
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --primary-color: #818cf8;
+  --primary-color-text: #ffffff;
+  --highlight-bg: rgba(99, 102, 241, 0.25);
+  --highlight-text-color: #e2e8f0;
+  --maskbg: rgba(0, 0, 0, 0.6);
+  --input-bg: rgba(30, 41, 59, 0.8);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-hover-border: rgba(129, 140, 248, 0.4);
+  --input-focus-border-color: #818cf8;
+  --input-focus-box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
+
+/* Override PrimeFlex text color utilities for dark mode */
+[data-theme='dark'] .text-900,
+[data-theme='dark'] .text-800,
+[data-theme='dark'] .text-700 {
+  color: #f1f5f9 !important;
+}
+[data-theme='dark'] .text-600,
+[data-theme='dark'] .text-500 {
+  color: #94a3b8 !important;
+}
+[data-theme='dark'] .text-400,
+[data-theme='dark'] .text-300 {
+  color: #64748b !important;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--surface-ground);
+  color: var(--text-color);
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* --- Premium Animations --- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.premium-fade-in {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.premium-fade-in-delay-1 {
+  animation: fadeInUp 0.5s ease-out 0.1s both;
+}
+.premium-fade-in-delay-2 {
+  animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+.premium-fade-in-delay-3 {
+  animation: fadeInUp 0.5s ease-out 0.3s both;
+}
+
+.premium-fade-in-fast {
+  animation: fadeIn 0.3s ease-out;
+}

@@ -1,0 +1,373 @@
+/* ============================================
+   Premium UI Overrides for PrimeReact
+   Themed via CSS Custom Properties
+   ============================================ */
+
+/* --- Smooth transitions on theme switch --- */
+.premium-card,
+.premium-card-static,
+.premium-stats-card,
+.premium-surface-card,
+.premium-panel-header,
+.premium-sidebar,
+.premium-sidebar *,
+.premium-btn,
+.premium-btn-secondary,
+.premium-table .p-datatable-thead > tr > th,
+.premium-table .p-datatable-tbody > tr,
+.premium-login-bg,
+.premium-page-header h2 {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* --- Login Background --- */
+.premium-login-bg {
+  background: var(--login-bg);
+  position: relative;
+  overflow: hidden;
+}
+.premium-login-bg::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 40%, rgba(99,102,241,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(168,85,247,0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* --- Glassmorphism Card --- */
+.premium-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+}
+.premium-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-hover-shadow);
+  border-color: var(--card-hover-border);
+}
+
+.premium-card-static {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+}
+
+/* --- Stats Card (dashboard) --- */
+.premium-stats-card {
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+  position: relative;
+}
+.premium-stats-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.premium-stats-card:hover::after {
+  opacity: 1;
+}
+.premium-stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-hover-shadow);
+}
+
+/* --- Premium Sidebar --- */
+.premium-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+}
+.premium-sidebar .nav-item {
+  color: var(--sidebar-text);
+}
+.premium-sidebar .nav-item i {
+  color: var(--sidebar-icon);
+}
+.premium-sidebar .nav-item:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-hover-text);
+}
+.premium-sidebar .nav-item:hover i {
+  color: var(--sidebar-hover-text);
+}
+.premium-sidebar .nav-item-active {
+  background: var(--sidebar-active-bg) !important;
+  border-left: 3px solid #6366f1;
+}
+.premium-sidebar .nav-item-active i {
+  color: var(--sidebar-active-icon) !important;
+}
+.premium-sidebar .nav-item-active span {
+  color: var(--sidebar-active-text) !important;
+  font-weight: 600;
+}
+
+/* --- Premium Buttons --- */
+.premium-btn {
+  border-radius: 10px !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
+}
+.premium-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px -8px rgba(99, 102, 241, 0.4) !important;
+}
+.premium-btn:active {
+  transform: scale(0.97);
+}
+
+.premium-btn-secondary {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+}
+.premium-btn-secondary:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+/* --- Input with Icon --- */
+.premium-input-group {
+  position: relative;
+}
+.premium-input-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 1;
+  font-size: 0.9rem;
+}
+.premium-input-group .p-inputtext,
+.premium-input-group .p-password input,
+.premium-input-group .p-dropdown,
+.premium-input-group .p-inputnumber {
+  padding-left: 38px !important;
+}
+.premium-input-group .p-inputtext:focus,
+.premium-input-group .p-password:focus-within,
+.premium-input-group .p-dropdown:not(.p-disabled).p-focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+.premium-input-group:focus-within .premium-input-icon {
+  color: #6366f1;
+}
+
+.premium-input-group .p-dropdown {
+  border-radius: 8px;
+}
+.premium-input-group .p-dropdown .p-dropdown-label {
+  padding-left: 38px !important;
+}
+
+/* --- Premium DataTable --- */
+.premium-table .p-datatable-wrapper {
+  border-radius: 12px;
+}
+.premium-table .p-datatable-thead > tr > th {
+  background: var(--table-header-bg);
+  padding: 0.875rem 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--table-header-text);
+  border-bottom: 2px solid var(--table-header-border);
+}
+.premium-table .p-datatable-tbody > tr {
+  transition: all 0.15s ease;
+}
+.premium-table .p-datatable-tbody > tr:hover {
+  background: var(--table-row-hover);
+}
+.premium-table .p-datatable-tbody > tr > td {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--table-row-border);
+}
+.premium-table .p-paginator {
+  background: transparent;
+  border: none;
+  padding: 0.75rem 0;
+}
+.premium-table .p-paginator .p-paginator-page.p-highlight {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+  border-radius: 8px;
+}
+
+/* --- Premium TabView --- */
+.premium-tabs .p-tabview-nav {
+  background: transparent;
+  border-bottom: 2px solid var(--surface-border-light);
+  padding: 0 0.5rem;
+}
+.premium-tabs .p-tabview-nav li .p-tabview-nav-link {
+  padding: 1rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  border: none;
+}
+.premium-tabs .p-tabview-nav li .p-tabview-nav-link:hover {
+  color: #6366f1;
+  background: transparent;
+}
+.premium-tabs .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  color: #6366f1;
+  border-bottom: 2px solid #6366f1;
+  margin-bottom: -2px;
+  background: transparent;
+}
+.premium-tabs .p-tabview-panels {
+  background: transparent;
+  border: none;
+  padding: 1.5rem 0.5rem;
+}
+
+/* --- Tag subtle --- */
+.premium-tag {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+}
+
+/* --- Page Header --- */
+.premium-page-header h2 {
+  background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* --- Icon in a gradient circle --- */
+.premium-icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+.premium-stats-card:hover .premium-icon-circle {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+/* --- PrimeReact Card overrides for premium look --- */
+.premium-card .p-card,
+.premium-stats-card .p-card,
+.premium-card-static .p-card {
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 16px;
+}
+.premium-card .p-card .p-card-content,
+.premium-stats-card .p-card .p-card-content,
+.premium-card-static .p-card .p-card-content {
+  padding: 1.25rem;
+}
+.premium-card .p-card .p-card-title,
+.premium-stats-card .p-card .p-card-title,
+.premium-card-static .p-card .p-card-title {
+  padding: 1.25rem 1.25rem 0;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* --- Override Surface Card (Panels) --- */
+.premium-surface-card {
+  background: var(--card-bg-solid);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+/* --- Divider subtle --- */
+.premium-divider {
+  height: 1px;
+  background: var(--divider-gradient);
+  border: none;
+  margin: 1rem 0;
+}
+
+/* --- Label premium --- */
+.premium-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* --- Toggle sidebar button --- */
+.premium-toggle-btn.p-button.p-button-text {
+  color: var(--text-muted) !important;
+  border-radius: 10px !important;
+}
+.premium-toggle-btn.p-button.p-button-text:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: #6366f1 !important;
+}
+
+/* --- Panel header --- */
+.premium-panel-header {
+  background: var(--header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--header-border);
+}
+
+/* ============================================
+   Dark Mode — Dialog & Button refinements
+   ============================================ */
+[data-theme='dark'] .p-dialog-header {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+[data-theme='dark'] .p-dialog-content {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+[data-theme='dark'] .p-dialog-footer {
+  background: #1e293b;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+[data-theme='dark'] .p-button.p-button-secondary.p-button-outlined {
+  color: #a5b4fc !important;
+  border-color: #a5b4fc !important;
+}
+[data-theme='dark'] .p-button.p-button-secondary.p-button-outlined:hover {
+  background: rgba(165, 180, 252, 0.08) !important;
+  color: #c7d2fe !important;
+  border-color: #c7d2fe !important;
+}
+[data-theme='dark'] .premium-divider {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+[data-theme='dark'] .surface-border {
+  border-color: rgba(255,255,255,0.06) !important;
+}
