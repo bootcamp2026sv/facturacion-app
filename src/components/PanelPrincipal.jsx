@@ -72,7 +72,7 @@ export default function PanelPrincipal() {
     },
     {
       id: "geografia",
-      etiqueta: "Geografía (SV)",
+      etiqueta: "Cat Departamentos",
       icono: "pi pi-map",
       componente: <VistaGeografia />,
     },

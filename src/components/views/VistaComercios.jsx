@@ -1,226 +1,351 @@
-import React, { useState } from 'react';
-import { TabView, TabPanel } from 'primereact/tabview';
+import React, { useState, useEffect, useRef } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Tag } from 'primereact/tag';
-import { Message } from 'primereact/message';
+import { Toast } from 'primereact/toast';
+import { InputSwitch } from 'primereact/inputswitch';
+
+import api from '../../services/api';
+
+// Catálogos de respaldo local (Fallback)
+const MUNICIPIOS_MOCK = [
+  { id: 1, Nombre: 'San Salvador Centro', Codigo: '0614' },
+  { id: 2, Nombre: 'La Libertad Este', Codigo: '0501' },
+  { id: 3, Nombre: 'Santa Ana Centro', Codigo: '0201' },
+  { id: 4, Nombre: 'San Miguel Centro', Codigo: '1201' },
+  { id: 5, Nombre: 'La Libertad Sur', Codigo: '0502' }
+];
+
+const ACTIVIDADES_MOCK = [
+  { id: 1, CodActividad: '62010', DescActividad: 'Actividades de programación informática (Desarrollo de software)' },
+  { id: 2, CodActividad: '62020', DescActividad: 'Consultoría de informática y de gestión de instalaciones informáticas' },
+  { id: 3, CodActividad: '47730', DescActividad: 'Venta al por menor de productos farmacéuticos y médicos en establecimientos especializados' },
+  { id: 4, CodActividad: '56101', DescActividad: 'Restaurantes y servicios móviles de comidas' }
+];
 
 export default function VistaComercios() {
-  const [sucursales, setSucursales] = useState([
-    { id: 1, codEstable: 'M001', codPuntoVenta: 'P001', nombre: 'Casa Matriz - San Salvador', tipo: 'Matriz', telefono: '2200-0000', direccion: 'Paseo Gral Escalón #3500' },
-    { id: 2, codEstable: 'S001', codPuntoVenta: 'P001', nombre: 'Sucursal 1 - Santa Tecla', tipo: 'Sucursal', telefono: '2233-1111', direccion: 'Avenida Manuel Enrique Araujo' }
-  ]);
+  const toast = useRef(null);
+  const [cargando, setCargando] = useState(false);
 
-  const [datosComercio, setDatosComercio] = useState({
-    nombre: 'BOOTCAMP FACTURACION S.A. DE C.V.',
-    nombreComercial: 'FacturaPro',
-    nit: '0614-121285-101-5',
-    nrc: '123456-7',
-    correo: 'administracion@facturapro.com',
+  // Estados para catálogos dinámicos
+  const [municipiosLista, setMunicipiosLista] = useState(MUNICIPIOS_MOCK);
+  const [actividadesLista, setActividadesLista] = useState(ACTIVIDADES_MOCK);
+
+  // Formulario de Casa Matriz (tipoEstablecimiento: 2)
+  const [datosMatriz, setDatosMatriz] = useState({
+    id: 1,
+    nombre: 'TECHSERVICES EL SALVADOR',
+    nombreComercial: 'TECHSERVICES EL SALVADOR',
+    nit: '0614-150822-101-9',
+    nrc: '261453-8',
+    telefono: '2525-4000',
+    correo: 'facturacion@techservices.com.sv',
+    granContribuyente: false,
+    complementoDireccion: 'Avenida Las Magnolias, Edificio Insigne, Nivel 8, Colonia San Benito',
+    tipoEstablecimiento: 2,
     codEstableMH: 'M001',
     codPuntoVentaMH: 'P001',
-    actividadEconomicaId: 1
+    municipio_id: 1,
+    actividadEconomica_id: 1
   });
 
-  const [nuevaSucursal, setNuevaSucursal] = useState({
-    codEstable: '',
-    codPuntoVenta: '',
-    nombre: '',
-    tipo: 'Sucursal',
-    telefono: '',
-    direccion: ''
-  });
+  // --- INTEGRACIÓN API ---
+  /*
+  useEffect(() => {
+    const cargarDatosAPI = async () => {
+      setCargando(true);
+      try {
+        // 1. Cargar municipios reales de la API
+        const resMuni = await api.get('/municipios');
+        const listaMuni = resMuni.data || [];
+        setMunicipiosLista(listaMuni);
 
-  const [indiceTabActivo, setIndiceTabActivo] = useState(0);
-  const [successComercio, setSuccessComercio] = useState(false);
-  const [successSucursal, setSuccessSucursal] = useState(false);
+        // 2. Cargar actividades económicas reales de la API
+        const resAct = await api.get('/ActividadEconomicas');
+        const listaAct = resAct.data || [];
+        setActividadesLista(listaAct);
 
-  const tiposOpciones = [
-    { label: 'Casa Matriz', value: 'Matriz' },
-    { label: 'Sucursal', value: 'Sucursal' }
-  ];
+        // 3. Cargar comercios reales
+        const respuesta = await api.get('/Comercios');
+        const listaComercios = respuesta.data || [];
 
-  const guardarComercio = (e) => {
-    e.preventDefault();
-    setSuccessComercio(true);
-    setTimeout(() => setSuccessComercio(false), 3000);
-  };
+        // Encontrar la casa matriz para rellenar el formulario principal
+        const matriz = listaComercios.find(c => {
+          const tipo = c.tipoEstablecimiento || c.TipoEstablecimiento;
+          return tipo === 2;
+        });
 
-  const guardarSucursal = (e) => {
-    e.preventDefault();
-    if (!nuevaSucursal.codEstable || !nuevaSucursal.nombre) return;
-    const nueva = {
-      id: Date.now(),
-      ...nuevaSucursal
+        if (matriz) {
+          setDatosMatriz({
+            id: matriz.id,
+            nombre: matriz.nombre || matriz.Nombre || '',
+            nombreComercial: matriz.nombreComercial || matriz.NombreComercial || '',
+            nit: matriz.nit || matriz.Nit || '',
+            nrc: matriz.nrc || matriz.Nrc || '',
+            telefono: matriz.telefono || matriz.Telefono || '',
+            correo: matriz.correo || matriz.Correo || '',
+            granContribuyente: matriz.granContribuyente !== undefined ? (matriz.granContribuyente || matriz.GranContribuyente) : false,
+            complementoDireccion: matriz.complementoDireccion || matriz.ComplementoDireccion || '',
+            tipoEstablecimiento: 2,
+            codEstableMH: matriz.codEstableMH || matriz.CodEstableMH || '',
+            codPuntoVentaMH: matriz.codPuntoVentaMH || matriz.CodPuntoVentaMH || '',
+            municipio_id: matriz.municipio_id || matriz.Municipio_id || matriz.municipio?.id || matriz.Municipio?.id || 1,
+            actividadEconomica_id: matriz.actividadEconomica_id || matriz.ActividadEconomica_id || matriz.actividadEconomica?.id || matriz.ActividadEconomica?.id || 1
+          });
+        }
+      } catch (error) {
+        console.error("Error al cargar datos de la API:", error);
+        toast.current.show({ 
+          severity: 'error', 
+          summary: 'Error de Sincronización', 
+          detail: 'No se pudieron descargar los catálogos o los establecimientos del servidor.', 
+          life: 4000 
+        });
+      } finally {
+        setCargando(false);
+      }
     };
-    setSucursales([...sucursales, nueva]);
-    setNuevaSucursal({ codEstable: '', codPuntoVenta: '', nombre: '', tipo: 'Sucursal', telefono: '', direccion: '' });
-    setSuccessSucursal(true);
-    setTimeout(() => setSuccessSucursal(false), 2000);
+    cargarDatosAPI();
+  }, []);
+  */
+
+  // --- MÉTODOS DE GUARDADO ---
+
+  // Guardar/Actualizar Casa Matriz
+  const guardarMatriz = async (e) => {
+    e.preventDefault();
+    setCargando(true);
+
+    try {
+      // --- PERSISTENCIA API ---
+      /*
+      const payload = {
+        Nombre: datosMatriz.nombre,
+        NombreComercial: datosMatriz.nombreComercial,
+        Nit: datosMatriz.nit,
+        Nrc: datosMatriz.nrc,
+        Telefono: datosMatriz.telefono,
+        Correo: datosMatriz.correo,
+        GranContribuyente: datosMatriz.granContribuyente,
+        ComplementoDireccion: datosMatriz.complementoDireccion,
+        TipoEstablecimiento: 2,
+        CodEstableMH: datosMatriz.codEstableMH,
+        CodPuntoVentaMH: datosMatriz.codPuntoVentaMH,
+        Municipio_id: datosMatriz.municipio_id,
+        municipio_id: datosMatriz.municipio_id,
+        ActividadEconomica_id: datosMatriz.actividadEconomica_id,
+        actividadEconomica_id: datosMatriz.actividadEconomica_id
+      };
+
+      const respuesta = datosMatriz.id
+        ? await api.put(`/Comercios/${datosMatriz.id}`, payload)
+        : await api.post('/Comercios', payload);
+
+      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de Casa Matriz actualizados en el servidor.', life: 3000 });
+      */
+
+      // Fallback local
+      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de Casa Matriz actualizados localmente.', life: 3000 });
+
+    } catch (error) {
+      console.error(error);
+      toast.current.show({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la configuración de Casa Matriz.', life: 3000 });
+    } finally {
+      setCargando(false);
+    }
   };
 
   return (
     <div className="p-4 premium-fade-in">
-      <div className="flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
-        <div>
-          <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Configuración de Comercio Emisor</h2>
-          <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Mantenimiento de credenciales tributarias y sucursales ante el Ministerio de Hacienda.</p>
-        </div>
-        
-        <div className="flex align-items-center gap-2">
-          <Tag severity="danger" value="PUT" className="premium-tag" />
-          <code className="text-sm" style={{ color: '#64748b' }}>/api/v1/Comercios/{'{id}'}</code>
-        </div>
+      <Toast ref={toast} />
+
+      <div className="mb-4">
+        <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Configuración de Comercio Emisor
+        </h2>
       </div>
 
       <div className="premium-surface-card">
-        <TabView className="premium-tabs" activeIndex={indiceTabActivo} onTabChange={(e) => setIndiceTabActivo(e.index)}>
+        <div className="p-fluid pt-3" style={{ maxWidth: '850px', margin: '0 auto' }}>
           
-          <TabPanel header="Comercio Emisor" leftIcon="pi pi-briefcase" headerClassName="mr-2">
-            <div className="p-fluid pt-2 w-full md:w-9">
-              {successComercio && (
-                <Message severity="success" text="Datos del comercio emisor actualizados correctamente." className="mb-3 w-full" />
-              )}
-              
-              <form onSubmit={guardarComercio} className="flex flex-column gap-4">
-                <div className="flex flex-column md:flex-row gap-3">
-                  <div className="flex-1 flex flex-column gap-2">
-                    <label className="font-bold text-sm text-900">Razón Social</label>
-                    <div className="premium-input-group">
-                      <i className="pi pi-building premium-input-icon"></i>
-                      <InputText value={datosComercio.nombre} onChange={(e) => setDatosComercio({...datosComercio, nombre: e.target.value})} required />
-                    </div>
-                  </div>
-                  <div className="flex-1 flex flex-column gap-2">
-                    <label className="font-bold text-sm text-900">Nombre Comercial</label>
-                    <div className="premium-input-group">
-                      <i className="pi pi-tag premium-input-icon"></i>
-                      <InputText value={datosComercio.nombreComercial} onChange={(e) => setDatosComercio({...datosComercio, nombreComercial: e.target.value})} />
-                    </div>
+          <form onSubmit={guardarMatriz} className="flex flex-column gap-4">
+            
+            {/* Bloque 1.1: Identificación Legal */}
+            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
+              <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <i className="pi pi-building text-primary"></i> 1. Información Legal y Fiscal
+              </h3>
+              <div className="grid">
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="nombre" className="font-bold text-xs text-800">Razón Social <span className="text-red-500">*</span></label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-building premium-input-icon"></i>
+                    <InputText 
+                      id="nombre" 
+                      value={datosMatriz.nombre} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, nombre: e.target.value})} 
+                      required 
+                    />
                   </div>
                 </div>
-
-                <div className="flex flex-column md:flex-row gap-3">
-                  <div className="flex-1 flex flex-column gap-2">
-                    <label className="font-bold text-sm text-900">NIT</label>
-                    <div className="premium-input-group">
-                      <i className="pi pi-id-card premium-input-icon"></i>
-                      <InputText value={datosComercio.nit} onChange={(e) => setDatosComercio({...datosComercio, nit: e.target.value})} required />
-                    </div>
-                  </div>
-                  <div className="flex-1 flex flex-column gap-2">
-                    <label className="font-bold text-sm text-900">NRC</label>
-                    <div className="premium-input-group">
-                      <i className="pi pi-file premium-input-icon"></i>
-                      <InputText value={datosComercio.nrc} onChange={(e) => setDatosComercio({...datosComercio, nrc: e.target.value})} required />
-                    </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="nombreComercial" className="font-bold text-xs text-800">Nombre Comercial</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-tag premium-input-icon"></i>
+                    <InputText 
+                      id="nombreComercial" 
+                      value={datosMatriz.nombreComercial} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, nombreComercial: e.target.value})} 
+                    />
                   </div>
                 </div>
-
-                <div className="flex flex-column md:flex-row gap-3">
-                  <div className="flex-1 flex flex-column gap-2">
-                    <label className="font-bold text-sm text-900">Código Establecimiento MH</label>
-                    <div className="premium-input-group">
-                      <i className="pi pi-map-marker premium-input-icon"></i>
-                      <InputText value={datosComercio.codEstableMH} onChange={(e) => setDatosComercio({...datosComercio, codEstableMH: e.target.value})} required />
-                    </div>
-                  </div>
-                  <div className="flex-1 flex flex-column gap-2">
-                    <label className="font-bold text-sm text-900">Código Punto Venta MH</label>
-                    <div className="premium-input-group">
-                      <i className="pi pi-qrcode premium-input-icon"></i>
-                      <InputText value={datosComercio.codPuntoVentaMH} onChange={(e) => setDatosComercio({...datosComercio, codPuntoVentaMH: e.target.value})} required />
-                    </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="nit" className="font-bold text-xs text-800">NIT <span className="text-red-500">*</span></label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-id-card premium-input-icon"></i>
+                    <InputText 
+                      id="nit" 
+                      value={datosMatriz.nit} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, nit: e.target.value})} 
+                      placeholder="0614-150822-101-9" 
+                      required 
+                    />
                   </div>
                 </div>
-
-                <Button type="submit" label="Guardar Configuración" icon="pi pi-save" className="premium-btn w-13rem" />
-              </form>
-            </div>
-          </TabPanel>
-
-          <TabPanel header="Sucursales / Establecimientos" leftIcon="pi pi-map-marker">
-            <div className="grid pt-3">
-              
-              <div className="col-12 md:col-5">
-                <div className="premium-card-static">
-                  <div className="p-card p-component">
-                    <div className="p-card-title" style={{ padding: '1.25rem 1.25rem 0' }}>Añadir Establecimiento</div>
-                    <div className="p-card-content" style={{ padding: '1.25rem' }}>
-                      <div className="p-fluid">
-                        {successSucursal && (
-                          <Message severity="success" text="Sucursal agregada exitosamente." className="mb-3 w-full" />
-                        )}
-                        <form onSubmit={guardarSucursal} className="flex flex-column gap-3">
-                          <div className="flex flex-column md:flex-row gap-2">
-                            <div className="flex-1 flex flex-column gap-1">
-                              <label className="premium-label">Cod. Establecimiento</label>
-                              <div className="premium-input-group">
-                                <i className="pi pi-building premium-input-icon" style={{ fontSize: '0.8rem' }}></i>
-                                <InputText value={nuevaSucursal.codEstable} onChange={(e) => setNuevaSucursal({...nuevaSucursal, codEstable: e.target.value})} placeholder="S002" required />
-                              </div>
-                            </div>
-                            <div className="flex-1 flex flex-column gap-1">
-                              <label className="premium-label">Cod. Punto Venta</label>
-                              <div className="premium-input-group">
-                                <i className="pi pi-qrcode premium-input-icon" style={{ fontSize: '0.8rem' }}></i>
-                                <InputText value={nuevaSucursal.codPuntoVenta} onChange={(e) => setNuevaSucursal({...nuevaSucursal, codPuntoVenta: e.target.value})} placeholder="P002" required />
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-column gap-1">
-                            <label className="premium-label">Nombre Sucursal</label>
-                            <div className="premium-input-group">
-                              <i className="pi pi-map-marker premium-input-icon"></i>
-                              <InputText value={nuevaSucursal.nombre} onChange={(e) => setNuevaSucursal({...nuevaSucursal, nombre: e.target.value})} placeholder="Sucursal 2 - San Miguel" required />
-                            </div>
-                          </div>
-
-                          <div className="flex flex-column gap-1">
-                            <label className="premium-label">Tipo</label>
-                            <div className="premium-input-group">
-                              <i className="pi pi-sitemap premium-input-icon"></i>
-                              <Dropdown value={nuevaSucursal.tipo} options={tiposOpciones} onChange={(e) => setNuevaSucursal({...nuevaSucursal, tipo: e.value})} />
-                            </div>
-                          </div>
-
-                          <div className="flex flex-column gap-1">
-                            <label className="premium-label">Dirección Sucursal</label>
-                            <div className="premium-input-group">
-                              <i className="pi pi-chevron-circle-right premium-input-icon"></i>
-                              <InputText value={nuevaSucursal.direccion} onChange={(e) => setNuevaSucursal({...nuevaSucursal, direccion: e.target.value})} placeholder="Av. Roosevelt Sur #45" />
-                            </div>
-                          </div>
-
-                          <Button type="submit" label="Registrar Sucursal" icon="pi pi-plus" className="premium-btn mt-1" />
-                        </form>
-                      </div>
-                    </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="nrc" className="font-bold text-xs text-800">NRC <span className="text-red-500">*</span></label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-file premium-input-icon"></i>
+                    <InputText 
+                      id="nrc" 
+                      value={datosMatriz.nrc} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, nrc: e.target.value})} 
+                      placeholder="261453-8" 
+                      required 
+                    />
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="col-12 md:col-7">
-                <div className="premium-table">
-                  <DataTable value={sucursales} size="small" emptyMessage="No hay sucursales registradas" responsiveLayout="scroll">
-                    <Column field="codEstable" header="Cod. Estable" className="font-bold"></Column>
-                    <Column field="codPuntoVenta" header="Cod. PV"></Column>
-                    <Column field="nombre" header="Nombre"></Column>
-                    <Column field="tipo" header="Tipo"></Column>
-                    <Column field="telefono" header="Teléfono"></Column>
-                    <Column field="direccion" header="Dirección"></Column>
-                  </DataTable>
+            {/* Bloque 1.2: Establecimiento MH */}
+            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
+              <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <i className="pi pi-key text-primary"></i> 2. Parámetros de Hacienda (MH)
+              </h3>
+              <div className="grid">
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="codEstableMH" className="font-bold text-xs text-800">Cod. Establecimiento Casa Matriz <span className="text-red-500">*</span></label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-map-marker premium-input-icon"></i>
+                    <InputText 
+                      id="codEstableMH" 
+                      value={datosMatriz.codEstableMH} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, codEstableMH: e.target.value})} 
+                      placeholder="M001" 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="codPuntoVentaMH" className="font-bold text-xs text-800">Cod. Punto de Venta Casa Matriz <span className="text-red-500">*</span></label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-qrcode premium-input-icon"></i>
+                    <InputText 
+                      id="codPuntoVentaMH" 
+                      value={datosMatriz.codPuntoVentaMH} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, codPuntoVentaMH: e.target.value})} 
+                      placeholder="P001" 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="col-12 flex flex-column gap-2 mt-2">
+                  <label htmlFor="actividadEconomica_id" className="font-bold text-xs text-800">Actividad Económica Emisor</label>
+                  <Dropdown 
+                    id="actividadEconomica_id" 
+                    value={datosMatriz.actividadEconomica_id} 
+                    options={actividadesLista.map(a => ({ label: `${a.CodActividad || a.codActividad} - ${a.DescActividad || a.descActividad}`, value: a.id }))} 
+                    onChange={(e) => setDatosMatriz({...datosMatriz, actividadEconomica_id: e.value})} 
+                  />
                 </div>
               </div>
-
             </div>
-          </TabPanel>
 
-        </TabView>
+            {/* Bloque 1.3: Contacto y Dirección */}
+            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
+              <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <i className="pi pi-map text-primary"></i> 3. Dirección y Contacto Comercial
+              </h3>
+              <div className="grid">
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="telefono" className="font-bold text-xs text-800">Teléfono Emisor</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-phone premium-input-icon"></i>
+                    <InputText 
+                      id="telefono" 
+                      value={datosMatriz.telefono} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, telefono: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="correo" className="font-bold text-xs text-800">Correo Comercial</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-envelope premium-input-icon"></i>
+                    <InputText 
+                      id="correo" 
+                      value={datosMatriz.correo} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, correo: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="municipio_id" className="font-bold text-xs text-800">Municipio de Matriz</label>
+                  <Dropdown 
+                    id="municipio_id" 
+                    value={datosMatriz.municipio_id} 
+                    options={municipiosLista.map(m => ({ label: m.Nombre || m.nombre || 'Municipio', value: m.id }))} 
+                    onChange={(e) => setDatosMatriz({...datosMatriz, municipio_id: e.value})} 
+                  />
+                </div>
+                <div className="col-12 md:col-6 flex align-items-center justify-content-between mt-4 p-2 bg-transparent">
+                  <div className="flex flex-column">
+                    <span className="font-bold text-xs text-800">¿Gran Contribuyente?</span>
+                    <span className="text-xs text-500" style={{ color: 'var(--text-muted)' }}>Clasificación del comercio emisor</span>
+                  </div>
+                  <InputSwitch 
+                    checked={datosMatriz.granContribuyente} 
+                    onChange={(e) => setDatosMatriz({...datosMatriz, granContribuyente: e.value})} 
+                  />
+                </div>
+                <div className="col-12 flex flex-column gap-2 mt-2">
+                  <label htmlFor="complementoDireccion" className="font-bold text-xs text-800">Dirección Física Completa</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-compass premium-input-icon"></i>
+                    <InputText 
+                      id="complementoDireccion" 
+                      value={datosMatriz.complementoDireccion} 
+                      onChange={(e) => setDatosMatriz({...datosMatriz, complementoDireccion: e.target.value})} 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-content-end mt-2">
+              <Button 
+                type="submit" 
+                label={cargando ? "Guardando..." : "Guardar Configuración"} 
+                icon={cargando ? "pi pi-spin pi-spinner" : "pi pi-save"} 
+                className="premium-btn" 
+                style={{ width: '240px' }}
+                disabled={cargando}
+              />
+            </div>
+
+          </form>
+        </div>
       </div>
     </div>
   );
