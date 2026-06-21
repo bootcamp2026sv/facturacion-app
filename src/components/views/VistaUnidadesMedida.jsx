@@ -245,7 +245,7 @@ export default function VistaUnidadesMedida() {
       <div className="flex flex-column gap-3">
         <div>
           <h2 className="text-3xl font-bold m-0">Catálogo de Unidades de Medida</h2>
-          <p className="text-color-secondary mt-1">Definición de magnitudes físicas o comerciales para facturación DTE.</p>
+          
         </div>
 
         <Toolbar left={headerToolbar} />
