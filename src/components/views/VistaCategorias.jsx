@@ -4,45 +4,47 @@ import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
-import { InputNumber } from 'primereact/inputnumber';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { InputSwitch } from 'primereact/inputswitch';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { IconField } from 'primereact/iconfield';
 import { InputIcon } from 'primereact/inputicon';
 import api from '../../services/api';
 
-export default function VistaUnidadesMedida() {
-  const [unidades, setUnidades] = useState([]);
+export default function VistaCategorias() {
+  const [categorias, setCategorias] = useState([]);
   const [dialogoVisible, setDialogoVisible] = useState(false);
   const [dialogoEliminarVisible, setDialogoEliminarVisible] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  const unidadVacia = {
+  const categoriaVacia = {
     id: null,
-    codUnidad: null,
-    descUnidad: ''
+    nombre: '',
+    descripcion: '',
+    activo: true
   };
 
-  const [unidad, setUnidad] = useState(unidadVacia);
+  const [categoria, setCategoria] = useState(categoriaVacia);
   const [filtroGlobal, setFiltroGlobal] = useState('');
   const toast = useRef(null);
 
   useEffect(() => {
-    cargarUnidades();
+    cargarCategorias();
   }, []);
 
-  const cargarUnidades = async () => {
+  const cargarCategorias = async () => {
     setCargando(true);
     try {
-      const response = await api.get('/UnidadDeMedidas');
-      setUnidades(response.data);
+      const response = await api.get('/Categorias');
+      setCategorias(response.data);
     } catch (error) {
-      console.error('Error al cargar unidades de medida:', error);
+      console.error('Error al cargar categorías:', error);
       toast.current.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar las unidades de medida.',
+        detail: 'No se pudieron cargar las categorías.',
         life: 3000
       });
     } finally {
@@ -51,7 +53,7 @@ export default function VistaUnidadesMedida() {
   };
 
   const abrirNuevo = () => {
-    setUnidad(unidadVacia);
+    setCategoria(categoriaVacia);
     setDialogoVisible(true);
   };
 
@@ -63,12 +65,12 @@ export default function VistaUnidadesMedida() {
     setDialogoEliminarVisible(false);
   };
 
-  const guardarUnidad = async () => {
-    if (unidad.codUnidad === null || !unidad.descUnidad.trim()) {
+  const guardarCategoria = async () => {
+    if (!categoria.nombre.trim()) {
       toast.current.show({
         severity: 'warn',
         summary: 'Advertencia',
-        detail: 'Complete todos los campos obligatorios.',
+        detail: 'El nombre de la categoría es obligatorio.',
         life: 3000
       });
       return;
@@ -77,40 +79,41 @@ export default function VistaUnidadesMedida() {
     setGuardando(true);
     try {
       const payload = {
-        id: unidad.id,
-        codUnidad: unidad.codUnidad,
-        descUnidad: unidad.descUnidad.trim()
+        id: categoria.id,
+        nombre: categoria.nombre.trim(),
+        descripcion: categoria.descripcion ? categoria.descripcion.trim() : '',
+        activo: categoria.activo
       };
 
-      if (unidad.id) {
+      if (categoria.id) {
         // Actualizar
-        await api.put(`/UnidadDeMedidas/${unidad.id}`, payload);
+        await api.put(`/Categorias/${categoria.id}`, payload);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Unidad de medida actualizada correctamente.',
+          detail: 'Categoría actualizada correctamente.',
           life: 3000
         });
       } else {
         // Crear
-        await api.post('/UnidadDeMedidas', payload);
+        await api.post('/Categorias', payload);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Unidad de medida creada correctamente.',
+          detail: 'Categoría creada correctamente.',
           life: 3000
         });
       }
 
-      cargarUnidades();
+      cargarCategorias();
       setDialogoVisible(false);
     } catch (error) {
-      console.error('Error al guardar unidad de medida:', error);
+      console.error('Error al guardar categoría:', error);
       const apiMsg = error.response?.data?.message || error.response?.data?.error || '';
       toast.current.show({
         severity: 'error',
         summary: 'Error',
-        detail: apiMsg || 'No se pudo guardar la unidad de medida.',
+        detail: apiMsg || 'No se pudo guardar la categoría.',
         life: 3000
       });
     } finally {
@@ -118,39 +121,43 @@ export default function VistaUnidadesMedida() {
     }
   };
 
-  const editarUnidad = (unidadSelected) => {
-    setUnidad({ ...unidadSelected });
+  const editarCategoria = (categoriaSelected) => {
+    setCategoria({ ...categoriaSelected });
     setDialogoVisible(true);
   };
 
-  const confirmarEliminarUnidad = (unidadSelected) => {
-    setUnidad(unidadSelected);
+  const confirmarEliminarCategoria = (categoriaSelected) => {
+    setCategoria(categoriaSelected);
     setDialogoEliminarVisible(true);
   };
 
-  const eliminarUnidad = async () => {
+  const eliminarCategoria = async () => {
     setCargando(true);
     try {
-      await api.delete(`/UnidadDeMedidas/${unidad.id}`);
+      await api.delete(`/Categorias/${categoria.id}`);
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
-        detail: 'Unidad de medida eliminada correctamente.',
+        detail: 'Categoría eliminada correctamente.',
         life: 3000
       });
-      cargarUnidades();
+      cargarCategorias();
       setDialogoEliminarVisible(false);
     } catch (error) {
-      console.error('Error al eliminar unidad de medida:', error);
+      console.error('Error al eliminar categoría:', error);
       toast.current.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudo eliminar la unidad de medida.',
+        detail: 'No se pudo eliminar la categoría.',
         life: 3000
       });
     } finally {
       setCargando(false);
     }
+  };
+
+  const plantillaActivo = (rowData) => {
+    return rowData.activo ? 'Sí' : 'No';
   };
 
   const plantillaAcciones = (rowData) => {
@@ -159,12 +166,12 @@ export default function VistaUnidadesMedida() {
         <Button
           icon="pi pi-pencil"
           className="p-button-rounded p-button-success p-button-sm"
-          onClick={() => editarUnidad(rowData)}
+          onClick={() => editarCategoria(rowData)}
         />
         <Button
           icon="pi pi-trash"
           className="p-button-rounded p-button-danger p-button-sm"
-          onClick={() => confirmarEliminarUnidad(rowData)}
+          onClick={() => confirmarEliminarCategoria(rowData)}
         />
       </div>
     );
@@ -175,7 +182,7 @@ export default function VistaUnidadesMedida() {
       <React.Fragment>
         <div className="flex flex-wrap gap-2">
           <Button
-            label="Nueva Unidad"
+            label="Nueva Categoría"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={abrirNuevo}
@@ -198,7 +205,7 @@ export default function VistaUnidadesMedida() {
         label="Guardar"
         icon="pi pi-check"
         className="p-button-primary"
-        onClick={guardarUnidad}
+        onClick={guardarCategoria}
         loading={guardando}
       />
     </div>
@@ -217,7 +224,7 @@ export default function VistaUnidadesMedida() {
         label="Sí, Eliminar"
         icon="pi pi-check"
         className="p-button-danger"
-        onClick={eliminarUnidad}
+        onClick={eliminarCategoria}
         loading={cargando}
       />
     </div>
@@ -225,7 +232,7 @@ export default function VistaUnidadesMedida() {
 
   const headerTabla = (
     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-2">
-      <h3 className="m-0">Unidades de Medida Registradas</h3>
+      <h3 className="m-0">Categorías de Producto</h3>
       <IconField iconPosition="left">
         <InputIcon className="pi pi-search" />
         <InputText
@@ -244,33 +251,34 @@ export default function VistaUnidadesMedida() {
 
       <div className="flex flex-column gap-3">
         <div>
-          <h2 className="text-3xl font-bold m-0">Catálogo de Unidades de Medida</h2>
-          <p className="text-color-secondary mt-1">Definición de magnitudes físicas o comerciales para facturación DTE.</p>
+          <h2 className="text-3xl font-bold m-0">Catálogo de Categorías</h2>
+          <p className="text-color-secondary mt-1">Clasificación y segmentación de productos.</p>
         </div>
 
         <Toolbar left={headerToolbar} />
 
         <DataTable
-          value={unidades}
+          value={categorias}
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25]}
           loading={cargando}
           globalFilter={filtroGlobal}
           header={headerTabla}
-          emptyMessage="No se encontraron unidades de medida."
+          emptyMessage="No se encontraron categorías."
           responsiveLayout="scroll"
         >
-          <Column field="codUnidad" header="Código de Unidad (MH)" sortable bodyClassName="font-bold" style={{ width: '30%' }}></Column>
-          <Column field="descUnidad" header="Descripción de la Unidad" sortable style={{ width: '50%' }}></Column>
-          <Column body={plantillaAcciones} exportable={false} style={{ minWidth: '8rem', width: '20%' }}></Column>
+          <Column field="nombre" header="Nombre de Categoría" sortable bodyClassName="font-bold" style={{ width: '30%' }}></Column>
+          <Column field="descripcion" header="Descripción" sortable style={{ width: '45%' }}></Column>
+          <Column header="Activa" body={plantillaActivo} style={{ width: '10%' }}></Column>
+          <Column body={plantillaAcciones} exportable={false} style={{ minWidth: '8rem', width: '15%' }}></Column>
         </DataTable>
       </div>
 
       <Dialog
         visible={dialogoVisible}
         style={{ width: '400px' }}
-        header={unidad.id ? 'Modificar Unidad' : 'Crear Unidad'}
+        header={categoria.id ? 'Modificar Categoría' : 'Crear Categoría'}
         modal
         className="p-fluid"
         footer={footerDialogo}
@@ -278,13 +286,12 @@ export default function VistaUnidadesMedida() {
       >
         <div className="grid">
           <div className="col-12 field mb-3">
-            <label htmlFor="codUnidad" className="font-bold block mb-1">Código de Unidad (MH) *</label>
-            <InputNumber
-              id="codUnidad"
-              value={unidad.codUnidad}
-              onValueChange={(e) => setUnidad({ ...unidad, codUnidad: e.value })}
-              useGrouping={false}
-              placeholder="Ej. 1"
+            <label htmlFor="nombre" className="font-bold block mb-1">Nombre de la Categoría *</label>
+            <InputText
+              id="nombre"
+              value={categoria.nombre}
+              onChange={(e) => setCategoria({ ...categoria, nombre: e.target.value })}
+              placeholder="Ej. Electrónica, Lácteos"
               required
               autoFocus
               disabled={guardando}
@@ -292,13 +299,24 @@ export default function VistaUnidadesMedida() {
           </div>
 
           <div className="col-12 field mb-3">
-            <label htmlFor="descUnidad" className="font-bold block mb-1">Descripción de la Unidad *</label>
-            <InputText
-              id="descUnidad"
-              value={unidad.descUnidad}
-              onChange={(e) => setUnidad({ ...unidad, descUnidad: e.target.value })}
-              placeholder="Ej. Unidad, Kilogramo, Servicio"
-              required
+            <label htmlFor="descripcion" className="font-bold block mb-1">Descripción</label>
+            <InputTextarea
+              id="descripcion"
+              value={categoria.descripcion}
+              onChange={(e) => setCategoria({ ...categoria, descripcion: e.target.value })}
+              placeholder="Descripción de la categoría..."
+              rows={3}
+              autoResize
+              disabled={guardando}
+            />
+          </div>
+
+          <div className="col-12 field mb-3 flex align-items-center gap-3">
+            <label htmlFor="activo" className="font-bold">Categoría Activa</label>
+            <InputSwitch
+              inputId="activo"
+              checked={categoria.activo}
+              onChange={(e) => setCategoria({ ...categoria, activo: e.value })}
               disabled={guardando}
             />
           </div>
@@ -315,7 +333,7 @@ export default function VistaUnidadesMedida() {
       >
         <div className="flex align-items-center gap-3">
           <i className="pi pi-exclamation-triangle text-red-500 text-3xl" />
-          <span>¿Está seguro de que desea eliminar la unidad de medida <b>{unidad.descUnidad}</b>?</span>
+          <span>¿Está seguro de que desea eliminar la categoría <b>{categoria.nombre}</b>?</span>
         </div>
       </Dialog>
     </div>

@@ -4,13 +4,14 @@ import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
-import { authService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-export default function Acceso({ alIngresar }) {
+export default function Acceso() {
   const [usuario, setUsuario] = useState('admin');
   const [clave, setClave] = useState('admin123');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const { login, motivoCierreSesion, limpiarMotivoCierre } = useAuth();
 
   const manejarEnvio = async (evento) => {
     evento.preventDefault();
@@ -21,10 +22,10 @@ export default function Acceso({ alIngresar }) {
 
     setCargando(true);
     setError('');
+    if (motivoCierreSesion) limpiarMotivoCierre();
 
     try {
-      const datosAutenticacion = await authService.login(usuario, clave);
-      alIngresar(datosAutenticacion);
+      await login(usuario, clave);
     } catch (err) {
       console.error('Error de login:', err);
       if (err.response) {
@@ -70,6 +71,14 @@ export default function Acceso({ alIngresar }) {
               <Message severity="error" text={error} className="mb-2" />
             )}
 
+            {motivoCierreSesion === 'inactividad' && (
+              <Message 
+                severity="warn" 
+                text="Su sesión ha expirado por inactividad. Inicie sesión nuevamente." 
+                className="mb-2" 
+              />
+            )}
+
             <div className="flex flex-column gap-2">
               <label htmlFor="usuario" className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Usuario o Correo</label>
               <div className="premium-input-group">
@@ -77,7 +86,10 @@ export default function Acceso({ alIngresar }) {
                 <InputText 
                   id="usuario" 
                   value={usuario} 
-                  onChange={(e) => setUsuario(e.target.value)} 
+                  onChange={(e) => {
+                    setUsuario(e.target.value);
+                    if (motivoCierreSesion) limpiarMotivoCierre();
+                  }} 
                   placeholder="Ingrese su usuario o correo" 
                   className="w-full"
                   disabled={cargando}
@@ -93,7 +105,10 @@ export default function Acceso({ alIngresar }) {
                 <Password 
                   id="clave" 
                   value={clave} 
-                  onChange={(e) => setClave(e.target.value)} 
+                  onChange={(e) => {
+                    setClave(e.target.value);
+                    if (motivoCierreSesion) limpiarMotivoCierre();
+                  }} 
                   placeholder="Ingrese su contraseña" 
                   feedback={false}
                   toggleMask

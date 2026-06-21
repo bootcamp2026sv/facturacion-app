@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Button } from "primereact/button";
 import { useTema } from "../context/ThemeContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import VistaInicio from "./views/VistaInicio";
 import VistaProductos from "./views/VistaProductos";
+import VistaCategorias from "./views/VistaCategorias";
 import VistaClientes from "./views/VistaClientes";
 import VistaCodigosActividad from "./views/VistaCodigosActividad";
 import VistaUnidadesMedida from "./views/VistaUnidadesMedida";
@@ -13,10 +15,11 @@ import VistaComercios from "./views/VistaComercios";
 import VistaGeografia from "./views/VistaGeografia";
 import VistaControlSistema from "./views/VistaControlSistema";
 
-export default function PanelPrincipal({ usuario, alCerrarSesion }) {
+export default function PanelPrincipal() {
   const [estaColapsado, setEstaColapsado] = useState(false);
   const [vistaActiva, setVistaActiva] = useState("inicio");
   const { tema, alternarTema } = useTema();
+  const { usuario, logout } = useAuth();
 
   const ELEMENTOS_MENU = [
     {
@@ -48,6 +51,12 @@ export default function PanelPrincipal({ usuario, alCerrarSesion }) {
       etiqueta: "Productos",
       icono: "pi pi-box",
       componente: <VistaProductos />,
+    },
+    {
+      id: "categorias",
+      etiqueta: "Categorías",
+      icono: "pi pi-tags",
+      componente: <VistaCategorias />,
     },
     {
       id: "clientes",
@@ -157,12 +166,12 @@ export default function PanelPrincipal({ usuario, alCerrarSesion }) {
                 Sesión de:
               </p>
               <p className="margin-0 text-sm font-bold text-0 text-ellipsis overflow-hidden white-space-nowrap">
-                {usuario?.usuario || "Administrador"}
+                {usuario?.username || "Administrador"}
               </p>
             </div>
           )}
           <button
-            onClick={alCerrarSesion}
+            onClick={logout}
             title={estaColapsado ? "Cerrar Sesión" : undefined}
             className={`flex align-items-center border-none border-round cursor-pointer p-3 text-sm transition-colors transition-duration-200 w-full text-red-300 bg-transparent hover:bg-red-500 hover:text-white nav-item ${
               estaColapsado
@@ -211,7 +220,7 @@ export default function PanelPrincipal({ usuario, alCerrarSesion }) {
             <div className="flex align-items-center gap-2 surface-ground p-2 border-round-xl">
               <i className="pi pi-user text-primary"></i>
               <span className="text-sm font-medium text-secondary">
-                {usuario?.usuario || "admin"}
+                {usuario?.username || "admin"}
               </span>
             </div>
           </div>

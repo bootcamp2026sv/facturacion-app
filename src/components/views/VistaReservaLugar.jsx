@@ -4,6 +4,8 @@ import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
+import { IconField } from 'primereact/iconfield';
+import { InputIcon } from 'primereact/inputicon';
 
 export default function VistaReservaLugar({ modelo, accion, descripcion, endpoints = [], tipoMock = 'formulario' }) {
   const [success, setSuccess] = useState(false);
@@ -160,10 +162,10 @@ export default function VistaReservaLugar({ modelo, accion, descripcion, endpoin
           /* Real PrimeReact DataTable with Interactive mock rows */
           <div>
             <div className="flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
-              <span className="p-input-icon-left w-full md:w-20rem">
-                <i className="pi pi-search" />
+              <IconField iconPosition="left" className="w-full md:w-20rem">
+                <InputIcon className="pi pi-search" />
                 <InputText placeholder="Buscar registros..." className="w-full" />
-              </span>
+              </IconField>
               <Button label="Agregar Nuevo" icon="pi pi-plus" className="p-button-primary" />
             </div>
             
