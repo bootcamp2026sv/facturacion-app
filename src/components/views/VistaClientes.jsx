@@ -244,7 +244,7 @@ export default function VistaClientes() {
     return (
       <div className="flex flex-column">
         <span className="font-semibold text-sm">{numDoc}</span>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tipo} ({tipoDoc})</span>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tipo}</span>
       </div>
     );
   };

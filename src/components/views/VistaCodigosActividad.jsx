@@ -7,11 +7,7 @@ import api from '../../services/api';
 
 export default function VistaCodigosActividad() {
   // Datos de prueba
-  const [codigosActividad, setCodigosActividad] = useState([
-    { id: 1, codActividad: '47002', descActividad: 'Venta de otros productos ncp', activo: true },
-    { id: 2, codActividad: '620100', descActividad: 'Desarrollo de Software y Aplicaciones', activo: true },
-    { id: 3, codActividad: '620200', descActividad: 'Consultoría e Intermediación Informática', activo: true }
-  ]);
+  const [codigosActividad, setCodigosActividad] = useState([]);
 
   // Estado del formulario
   const [datosFormulario, setDatosFormulario] = useState({
@@ -20,8 +16,9 @@ export default function VistaCodigosActividad() {
     activo: true
   });
 
+
   // Descomentar para conectar con la API
-  /*
+ 
   useEffect(() => {
     const cargarActividades = async () => {
       try {
@@ -33,14 +30,14 @@ export default function VistaCodigosActividad() {
     };
     cargarActividades();
   }, []);
-  */
+  
 
   const manejarEnvio = async (evento) => {
     evento.preventDefault();
     if (!datosFormulario.codActividad.trim() || !datosFormulario.descActividad.trim()) return;
 
     // Descomentar para guardar en la API
-    /*
+    
     try {
       const respuesta = await api.post('/ActividadEconomicas', datosFormulario);
       setCodigosActividad([...codigosActividad, respuesta.data]);
@@ -49,16 +46,7 @@ export default function VistaCodigosActividad() {
     } catch (error) {
       console.error("Error al registrar actividad:", error);
     }
-    */
 
-    // Simulación local (comentar al conectar API)
-    const nuevaActividadSimulada = {
-      id: Date.now(),
-      ...datosFormulario
-    };
-
-    setCodigosActividad([...codigosActividad, nuevaActividadSimulada]);
-    setDatosFormulario({ codActividad: '', descActividad: '', activo: true });
   };
 
   return (
@@ -117,7 +105,13 @@ export default function VistaCodigosActividad() {
               <div className="p-card-title" style={{ padding: '1.25rem 1.25rem 0' }}>Códigos Registrados</div>
               <div className="p-card-content" style={{ padding: '1.25rem' }}>
                 <div className="premium-table">
-                  <DataTable value={codigosActividad} paginator rows={5} size="small" emptyMessage="No hay códigos registrados" responsiveLayout="scroll">
+                  <DataTable 
+                  value={codigosActividad} 
+                  paginator rows={5} 
+                  size="small" 
+                  emptyMessage="No hay códigos registrados" 
+                  responsiveLayout="scroll"
+                  >
                     <Column field="codActividad" header="Código" sortable bodyClassName="font-bold"></Column>
                     <Column field="descActividad" header="Nombre" sortable></Column>
                   </DataTable>
