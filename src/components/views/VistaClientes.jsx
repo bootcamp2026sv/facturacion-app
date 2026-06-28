@@ -30,67 +30,17 @@ const MAPA_DOCUMENTOS = {
 };
 
 // Datos de prueba
-const DISTRITOS_SIMULADOS = [
-  { id: 1, nombre: 'San Salvador (San Salvador Centro)' },
-  { id: 2, nombre: 'Antiguo Cuscatlán (La Libertad Este)' },
-  { id: 3, nombre: 'Santa Ana (Santa Ana Centro)' },
-  { id: 4, nombre: 'San Miguel (San Miguel Centro)' },
-  { id: 5, nombre: 'Santa Tecla (La Libertad Sur)' }
-];
 
-const ACTIVIDADES_SIMULADAS = [
-  { id: 1, codActividad: '620100', descActividad: 'Desarrollo de Software y Aplicaciones' },
-  { id: 2, codActividad: '620200', descActividad: 'Consultoría e Intermediación Informática' },
-  { id: 3, codActividad: '47002', descActividad: 'Venta de otros productos ncp' },
-  { id: 4, codActividad: '731000', descActividad: 'Servicios de Publicidad y Relaciones Públicas' }
-];
 
 export default function VistaClientes() {
   const toast = useRef(null);
   const [indiceTabActivo, setIndiceTabActivo] = useState(0);
   const [cargando, setCargando] = useState(false);
-  const [distritos, setDistritos] = useState(DISTRITOS_SIMULADOS);
-  const [actividades, setActividades] = useState(ACTIVIDADES_SIMULADAS);
+  const [distritos, setDistritos] = useState([]);
+  const [actividades, setActividades] = useState([]);
 
   // Clientes de ejemplo
-  const [clientes, setClientes] = useState([
-    {
-      id: 1,
-      tipoDocumento: 13,
-      numDocumento: '06012435-9',
-      nrc: '254120-3',
-      nombre: 'Distribuidora Alimentos',
-      apellidos: 'S.A. de C.V.',
-      nombreComercial: 'DistAlimentos',
-      telefono: '2234-5678',
-      correo: 'contacto@distalimentos.com.sv',
-      granContribuyente: true,
-      activo: true,
-      complementoDireccion: 'Paseo General Escalón #3500, San Salvador',
-      distrito_id: 1,
-      actividadEconomica_id: 3,
-      distrito: { id: 1, nombre: 'San Salvador' },
-      actividadEconomica: { id: 3, codActividad: '47002', descActividad: 'Venta de otros productos ncp' }
-    },
-    {
-      id: 2,
-      tipoDocumento: 13,
-      numDocumento: '01234567-8',
-      nrc: '',
-      nombre: 'Juan Carlos',
-      apellidos: 'Pérez',
-      nombreComercial: 'Consultores Pérez',
-      telefono: '7123-4567',
-      correo: 'juan.perez@gmail.com',
-      granContribuyente: false,
-      activo: true,
-      complementoDireccion: 'Colonia Flor Blanca, Calle El Progreso #45',
-      distrito_id: 2,
-      actividadEconomica_id: 2,
-      distrito: { id: 2, nombre: 'Antiguo Cuscatlán' },
-      actividadEconomica: { id: 2, codActividad: '620200', descActividad: 'Consultoría e Intermediación Informática' }
-    }
-  ]);
+  const [clientes, setClientes] = useState([]);
 
   // Estado del formulario
   const [datosFormulario, setDatosFormulario] = useState({
@@ -103,14 +53,14 @@ export default function VistaClientes() {
     telefono: '',
     correo: '',
     granContribuyente: false,
-    activo: true,
+    activo: false,
     complementoDireccion: '',
     distrito_id: 1,
     actividadEconomica_id: 1
   });
 
   // Descomentar para conectar con la API
-  /*
+  
   useEffect(() => {
     const cargarDatosAPI = async () => {
       setCargando(true);
@@ -147,7 +97,7 @@ export default function VistaClientes() {
     };
     cargarDatosAPI();
   }, []);
-  */
+  
 
   const resetearFormulario = () => {
     setDatosFormulario({
@@ -179,7 +129,7 @@ export default function VistaClientes() {
 
     try {
       // Descomentar para guardar en la API
-      /*
+      
       const respuesta = await api.post('/Clientes', datosFormulario); 
       
       const clienteGuardado = respuesta.data;
@@ -188,35 +138,6 @@ export default function VistaClientes() {
         severity: 'success', 
         summary: 'Registrado', 
         detail: `Cliente guardado con ID ${clienteGuardado.id || 'N/A'} en la base de datos.`, 
-        life: 3000 
-      });
-      */
-
-      // Simulación local (comentar al conectar API)
-      const nuevoId = Math.floor(Math.random() * 900) + 100;
-      
-      const distritoSeleccionado = distritos.find(d => d.id === datosFormulario.distrito_id);
-      const actividadSeleccionada = actividades.find(a => a.id === datosFormulario.actividadEconomica_id);
-      
-      const nuevoClienteSimulado = {
-        ...datosFormulario,
-        id: nuevoId,
-        distrito: distritoSeleccionado ? {
-          id: distritoSeleccionado.id,
-          nombre: distritoSeleccionado.nombre || distritoSeleccionado.Nombre
-        } : null,
-        actividadEconomica: actividadSeleccionada ? {
-          id: actividadSeleccionada.id,
-          codActividad: actividadSeleccionada.codActividad || actividadSeleccionada.CodActividad,
-          descActividad: actividadSeleccionada.descActividad || actividadSeleccionada.DescActividad
-        } : null
-      };
-
-      setClientes(prev => [...prev, nuevoClienteSimulado]);
-      toast.current.show({ 
-        severity: 'success', 
-        summary: 'Guardado', 
-        detail: `Cliente registrado localmente con ID temporal ${nuevoId}.`, 
         life: 3000 
       });
       // -----------------------------------------------------------
