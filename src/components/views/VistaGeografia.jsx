@@ -7,10 +7,9 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
 
-// Importar cliente Axios para la API real
 import api from '../../services/api';
 
-// Helper para corregir la inversión de columnas de Código y Nombre en la BD del backend
+// Corrige inversión de código y nombre en BD
 const corregirCasingYInversion = (rowData) => {
   if (!rowData) return { codigo: '', nombre: '' };
   const rawCodigo = rowData.codigo || rowData.Codigo || '';
@@ -31,7 +30,7 @@ export default function VistaGeografia() {
   const [indiceTabActivo, setIndiceTabActivo] = useState(0);
   const [cargando, setCargando] = useState(false);
 
-  // 1. Departamentos (Catálogo completo de los 14 departamentos de El Salvador)
+  // Departamentos
   const [departamentos, setDepartamentos] = useState([
     { id: 1, codigo: '01', nombre: 'Ahuachapán', municipios: [] },
     { id: 2, codigo: '02', nombre: 'Santa Ana', municipios: [] },
@@ -54,7 +53,7 @@ export default function VistaGeografia() {
     { id: 14, codigo: '14', nombre: 'La Unión', municipios: [] }
   ]);
 
-  // 2. Municipios (Datos de prueba con relaciones para lookup local)
+  // Municipios (lookup local)
   const [municipios, setMunicipios] = useState([
     { 
       id: 1, 
@@ -89,7 +88,7 @@ export default function VistaGeografia() {
     }
   ]);
 
-  // 3. Distritos (Datos de prueba)
+  // Distritos
   const [distritos, setDistritos] = useState([
     { id: 1, codigo: '01', nombre: 'San Salvador', municipioId: 1, municipio: { id: 1, codigo: '01', nombre: 'San Salvador Centro' } },
     { id: 2, codigo: '02', nombre: 'Mejicanos', municipioId: 1, municipio: { id: 1, codigo: '01', nombre: 'San Salvador Centro' } },
@@ -97,13 +96,12 @@ export default function VistaGeografia() {
     { id: 4, codigo: '04', nombre: 'Santa Tecla', municipioId: 3, municipio: { id: 3, codigo: '03', nombre: 'La Libertad Sur' } }
   ]);
 
-  // Estados de formularios individuales
+  // Estados de formularios
   const [nuevoDepto, setNuevoDepto] = useState({ codigo: '', nombre: '' });
   const [nuevoMuni, setNuevoMuni] = useState({ codigo: '', nombre: '', departamentoId: 6 });
   const [nuevoDist, setNuevoDist] = useState({ codigo: '', nombre: '', municipioId: 1 });
 
-  // --- EFECTO PARA CONECTAR A LA API EN PRODUCCIÓN ---
-  // Para cargar datos reales de la base de datos, descomenta este bloque:
+  // Descomentar para conectar con la API
   /*
   useEffect(() => {
     const cargarGeografiaAPI = async () => {
@@ -147,7 +145,7 @@ export default function VistaGeografia() {
   */
   
 
-  // Mapeos para Dropdowns del formulario (corrige inversión y casing)
+  // Opciones para Dropdowns
   const deptoOpciones = departamentos.map(d => {
     const corregido = corregirCasingYInversion(d);
     return { label: corregido.nombre, value: d.id };
@@ -166,21 +164,18 @@ export default function VistaGeografia() {
     setCargando(true);
 
     try {
-      // --- CONEXIÓN  A LA API ---
-      // 
+      // Descomentar para guardar en la API
       /*
       const respuesta = await api.post('/departamentos', nuevoDepto);
       setDepartamentos(prev => [...prev, respuesta.data]);
       toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Departamento registrado en el sistema.', life: 3000 });
       */
 
-      // --- SIMULACIÓN
-      // Comentar en produccion
+      // Simulación local (comentar al conectar API)
       const nuevoId = Date.now();
-      const nuevoDeptoMock = { id: nuevoId, ...nuevoDepto };
-      setDepartamentos(prev => [...prev, nuevoDeptoMock]);
+      const nuevoDeptoSimulado = { id: nuevoId, ...nuevoDepto };
+      setDepartamentos(prev => [...prev, nuevoDeptoSimulado]);
       toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Departamento registrado localmente.', life: 3000 });
-      // -----------------------------------------------------------
 
       setNuevoDepto({ codigo: '', nombre: '' });
     } catch (error) {
@@ -200,8 +195,7 @@ export default function VistaGeografia() {
     try {
       const deptoSeleccionado = departamentos.find(d => d.id === nuevoMuni.departamentoId);
 
-      // --- CONEXIÓN A LA API ---
-      // 
+      // Descomentar para guardar en la API
       /*
       const payload = {
         codigo: nuevoMuni.codigo,
@@ -213,30 +207,28 @@ export default function VistaGeografia() {
       toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Municipio registrado en el sistema.', life: 3000 });
       */
 
-      // --- SIMULACIÓN  ---
-      // Comentar en produccion
+      // Simulación local (comentar al conectar API)
       const nuevoId = Date.now();
-      const nuevoMuniMock = { 
+      const nuevoMuniSimulado = { 
         id: nuevoId, 
         codigo: nuevoMuni.codigo, 
         nombre: nuevoMuni.nombre, 
         departamentoId: nuevoMuni.departamentoId,
         departamento: deptoSeleccionado,
-        distritos: [] // Inicializar array para búsqueda inversa local
+        distritos: []
       };
-      setMunicipios(prev => [...prev, nuevoMuniMock]);
+      setMunicipios(prev => [...prev, nuevoMuniSimulado]);
 
-      // Actualizar departamento para la búsqueda inversa local
+      // Actualizar departamento para búsqueda local
       setDepartamentos(prev => prev.map(d => {
         if (d.id === nuevoMuni.departamentoId) {
           const listM = d.municipios || d.Municipios || [];
-          return { ...d, municipios: [...listM, nuevoMuniMock] };
+          return { ...d, municipios: [...listM, nuevoMuniSimulado] };
         }
         return d;
       }));
 
       toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Municipio registrado localmente.', life: 3000 });
-      // -----------------------------------------------------------
 
       setNuevoMuni({ codigo: '', nombre: '', departamentoId: deptoOpciones[0]?.value || 1 });
     } catch (error) {
@@ -256,8 +248,7 @@ export default function VistaGeografia() {
     try {
       const muniSeleccionado = municipios.find(m => m.id === nuevoDist.municipioId);
 
-      // --- CONEXIÓN A LA API ---
-      // 
+      // Descomentar para guardar en la API
       /*
       const payload = {
         codigo: nuevoDist.codigo,
@@ -269,29 +260,27 @@ export default function VistaGeografia() {
       toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Distrito registrado en el sistema.', life: 3000 });
       */
 
-      // --- SIMULACIÓN ---
-      // Comentar en produccion
+      // Simulación local (comentar al conectar API)
       const nuevoId = Date.now();
-      const nuevoDistMock = { 
+      const nuevoDistSimulado = { 
         id: nuevoId, 
         codigo: nuevoDist.codigo, 
         nombre: nuevoDist.nombre, 
         municipioId: nuevoDist.municipioId,
         municipio: muniSeleccionado
       };
-      setDistritos(prev => [...prev, nuevoDistMock]);
+      setDistritos(prev => [...prev, nuevoDistSimulado]);
 
-      // Actualizar municipio para la búsqueda inversa local
+      // Actualizar municipio para búsqueda local
       setMunicipios(prev => prev.map(m => {
         if (m.id === nuevoDist.municipioId) {
           const listD = m.distritos || m.Distritos || [];
-          return { ...m, distritos: [...listD, nuevoDistMock] };
+          return { ...m, distritos: [...listD, nuevoDistSimulado] };
         }
         return m;
       }));
 
       toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Distrito registrado localmente.', life: 3000 });
-      // -----------------------------------------------------------
 
       setNuevoDist({ codigo: '', nombre: '', municipioId: muniOpciones[0]?.value || 1 });
     } catch (error) {

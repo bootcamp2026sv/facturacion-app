@@ -7,8 +7,8 @@ import { InputSwitch } from 'primereact/inputswitch';
 
 import api from '../../services/api';
 
-// Catálogos de respaldo local (Fallback)
-const MUNICIPIOS_MOCK = [
+// Catálogos de prueba locales
+const MUNICIPIOS_SIMULADOS = [
   { id: 1, Nombre: 'San Salvador Centro', Codigo: '0614' },
   { id: 2, Nombre: 'La Libertad Este', Codigo: '0501' },
   { id: 3, Nombre: 'Santa Ana Centro', Codigo: '0201' },
@@ -16,7 +16,7 @@ const MUNICIPIOS_MOCK = [
   { id: 5, Nombre: 'La Libertad Sur', Codigo: '0502' }
 ];
 
-const ACTIVIDADES_MOCK = [
+const ACTIVIDADES_SIMULADAS = [
   { id: 1, CodActividad: '62010', DescActividad: 'Actividades de programación informática (Desarrollo de software)' },
   { id: 2, CodActividad: '62020', DescActividad: 'Consultoría de informática y de gestión de instalaciones informáticas' },
   { id: 3, CodActividad: '47730', DescActividad: 'Venta al por menor de productos farmacéuticos y médicos en establecimientos especializados' },
@@ -27,12 +27,12 @@ export default function VistaComercios() {
   const toast = useRef(null);
   const [cargando, setCargando] = useState(false);
 
-  // Estados para catálogos dinámicos
-  const [municipiosLista, setMunicipiosLista] = useState(MUNICIPIOS_MOCK);
-  const [actividadesLista, setActividadesLista] = useState(ACTIVIDADES_MOCK);
+  // Estados para catálogos
+  const [municipiosLista, setMunicipiosLista] = useState(MUNICIPIOS_SIMULADOS);
+  const [actividadesLista, setActividadesLista] = useState(ACTIVIDADES_SIMULADAS);
 
-  // Formulario de Casa Matriz (tipoEstablecimiento: 2)
-  const [datosMatriz, setDatosMatriz] = useState({
+  // Estado del formulario
+  const [datosComercio, setDatosComercio] = useState({
     id: 1,
     nombre: 'TECHSERVICES EL SALVADOR',
     nombreComercial: 'TECHSERVICES EL SALVADOR',
@@ -49,48 +49,38 @@ export default function VistaComercios() {
     actividadEconomica_id: 1
   });
 
-  // --- INTEGRACIÓN API ---
+  // Descomentar para conectar con la API
   /*
   useEffect(() => {
     const cargarDatosAPI = async () => {
       setCargando(true);
       try {
-        // 1. Cargar municipios reales de la API
         const resMuni = await api.get('/municipios');
-        const listaMuni = resMuni.data || [];
-        setMunicipiosLista(listaMuni);
+        setMunicipiosLista(resMuni.data || []);
 
-        // 2. Cargar actividades económicas reales de la API
         const resAct = await api.get('/ActividadEconomicas');
-        const listaAct = resAct.data || [];
-        setActividadesLista(listaAct);
+        setActividadesLista(resAct.data || []);
 
-        // 3. Cargar comercios reales
         const respuesta = await api.get('/Comercios');
         const listaComercios = respuesta.data || [];
+        const comercio = listaComercios[0];
 
-        // Encontrar la casa matriz para rellenar el formulario principal
-        const matriz = listaComercios.find(c => {
-          const tipo = c.tipoEstablecimiento || c.TipoEstablecimiento;
-          return tipo === 2;
-        });
-
-        if (matriz) {
-          setDatosMatriz({
-            id: matriz.id,
-            nombre: matriz.nombre || matriz.Nombre || '',
-            nombreComercial: matriz.nombreComercial || matriz.NombreComercial || '',
-            nit: matriz.nit || matriz.Nit || '',
-            nrc: matriz.nrc || matriz.Nrc || '',
-            telefono: matriz.telefono || matriz.Telefono || '',
-            correo: matriz.correo || matriz.Correo || '',
-            granContribuyente: matriz.granContribuyente !== undefined ? (matriz.granContribuyente || matriz.GranContribuyente) : false,
-            complementoDireccion: matriz.complementoDireccion || matriz.ComplementoDireccion || '',
-            tipoEstablecimiento: 2,
-            codEstableMH: matriz.codEstableMH || matriz.CodEstableMH || '',
-            codPuntoVentaMH: matriz.codPuntoVentaMH || matriz.CodPuntoVentaMH || '',
-            municipio_id: matriz.municipio_id || matriz.Municipio_id || matriz.municipio?.id || matriz.Municipio?.id || 1,
-            actividadEconomica_id: matriz.actividadEconomica_id || matriz.ActividadEconomica_id || matriz.actividadEconomica?.id || matriz.ActividadEconomica?.id || 1
+        if (comercio) {
+          setDatosComercio({
+            id: comercio.id,
+            nombre: comercio.nombre || comercio.Nombre || '',
+            nombreComercial: comercio.nombreComercial || comercio.NombreComercial || '',
+            nit: comercio.nit || comercio.Nit || '',
+            nrc: comercio.nrc || comercio.Nrc || '',
+            telefono: comercio.telefono || comercio.Telefono || '',
+            correo: comercio.correo || comercio.Correo || '',
+            granContribuyente: comercio.granContribuyente !== undefined ? (comercio.granContribuyente || comercio.GranContribuyente) : false,
+            complementoDireccion: comercio.complementoDireccion || comercio.ComplementoDireccion || '',
+            tipoEstablecimiento: comercio.tipoEstablecimiento || comercio.TipoEstablecimiento || 2,
+            codEstableMH: comercio.codEstableMH || comercio.CodEstableMH || '',
+            codPuntoVentaMH: comercio.codPuntoVentaMH || comercio.CodPuntoVentaMH || '',
+            municipio_id: comercio.municipio_id || comercio.Municipio_id || comercio.municipio?.id || comercio.Municipio?.id || 1,
+            actividadEconomica_id: comercio.actividadEconomica_id || comercio.ActividadEconomica_id || comercio.actividadEconomica?.id || comercio.ActividadEconomica?.id || 1
           });
         }
       } catch (error) {
@@ -109,47 +99,27 @@ export default function VistaComercios() {
   }, []);
   */
 
-  // --- MÉTODOS DE GUARDADO ---
-
-  // Guardar/Actualizar Casa Matriz
-  const guardarMatriz = async (e) => {
+  // Guardar cambios
+  const guardarComercio = async (e) => {
     e.preventDefault();
     setCargando(true);
 
     try {
-      // --- PERSISTENCIA API ---
+      // Descomentar para guardar en la API
       /*
-      const payload = {
-        Nombre: datosMatriz.nombre,
-        NombreComercial: datosMatriz.nombreComercial,
-        Nit: datosMatriz.nit,
-        Nrc: datosMatriz.nrc,
-        Telefono: datosMatriz.telefono,
-        Correo: datosMatriz.correo,
-        GranContribuyente: datosMatriz.granContribuyente,
-        ComplementoDireccion: datosMatriz.complementoDireccion,
-        TipoEstablecimiento: 2,
-        CodEstableMH: datosMatriz.codEstableMH,
-        CodPuntoVentaMH: datosMatriz.codPuntoVentaMH,
-        Municipio_id: datosMatriz.municipio_id,
-        municipio_id: datosMatriz.municipio_id,
-        ActividadEconomica_id: datosMatriz.actividadEconomica_id,
-        actividadEconomica_id: datosMatriz.actividadEconomica_id
-      };
+      const respuesta = datosComercio.id
+        ? await api.put(`/Comercios/${datosComercio.id}`, datosComercio)
+        : await api.post('/Comercios', datosComercio);
 
-      const respuesta = datosMatriz.id
-        ? await api.put(`/Comercios/${datosMatriz.id}`, payload)
-        : await api.post('/Comercios', payload);
-
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de Casa Matriz actualizados en el servidor.', life: 3000 });
+      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de comercio actualizados en el servidor.', life: 3000 });
       */
 
-      // Fallback local
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de Casa Matriz actualizados localmente.', life: 3000 });
+      // Guardado local de prueba
+      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de comercio actualizados localmente.', life: 3000 });
 
     } catch (error) {
       console.error(error);
-      toast.current.show({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la configuración de Casa Matriz.', life: 3000 });
+      toast.current.show({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la configuración de comercio.', life: 3000 });
     } finally {
       setCargando(false);
     }
@@ -168,9 +138,9 @@ export default function VistaComercios() {
       <div className="premium-surface-card">
         <div className="p-fluid pt-3" style={{ maxWidth: '850px', margin: '0 auto' }}>
           
-          <form onSubmit={guardarMatriz} className="flex flex-column gap-4">
+          <form onSubmit={guardarComercio} className="flex flex-column gap-4">
             
-            {/* Bloque 1.1: Identificación Legal */}
+            {/* 1. Información Legal */}
             <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
               <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <i className="pi pi-building text-primary"></i> 1. Información Legal y Fiscal
@@ -182,8 +152,8 @@ export default function VistaComercios() {
                     <i className="pi pi-building premium-input-icon"></i>
                     <InputText 
                       id="nombre" 
-                      value={datosMatriz.nombre} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, nombre: e.target.value})} 
+                      value={datosComercio.nombre} 
+                      onChange={(e) => setDatosComercio({...datosComercio, nombre: e.target.value})} 
                       required 
                     />
                   </div>
@@ -194,8 +164,8 @@ export default function VistaComercios() {
                     <i className="pi pi-tag premium-input-icon"></i>
                     <InputText 
                       id="nombreComercial" 
-                      value={datosMatriz.nombreComercial} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, nombreComercial: e.target.value})} 
+                      value={datosComercio.nombreComercial} 
+                      onChange={(e) => setDatosComercio({...datosComercio, nombreComercial: e.target.value})} 
                     />
                   </div>
                 </div>
@@ -205,8 +175,8 @@ export default function VistaComercios() {
                     <i className="pi pi-id-card premium-input-icon"></i>
                     <InputText 
                       id="nit" 
-                      value={datosMatriz.nit} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, nit: e.target.value})} 
+                      value={datosComercio.nit} 
+                      onChange={(e) => setDatosComercio({...datosComercio, nit: e.target.value})} 
                       placeholder="0614-150822-101-9" 
                       required 
                     />
@@ -218,8 +188,8 @@ export default function VistaComercios() {
                     <i className="pi pi-file premium-input-icon"></i>
                     <InputText 
                       id="nrc" 
-                      value={datosMatriz.nrc} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, nrc: e.target.value})} 
+                      value={datosComercio.nrc} 
+                      onChange={(e) => setDatosComercio({...datosComercio, nrc: e.target.value})} 
                       placeholder="261453-8" 
                       required 
                     />
@@ -228,33 +198,33 @@ export default function VistaComercios() {
               </div>
             </div>
 
-            {/* Bloque 1.2: Establecimiento MH */}
+            {/* 2. Hacienda */}
             <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
               <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <i className="pi pi-key text-primary"></i> 2. Parámetros de Hacienda (MH)
               </h3>
               <div className="grid">
                 <div className="col-12 md:col-6 flex flex-column gap-2">
-                  <label htmlFor="codEstableMH" className="font-bold text-xs text-800">Cod. Establecimiento Casa Matriz <span className="text-red-500">*</span></label>
+                  <label htmlFor="codEstableMH" className="font-bold text-xs text-800">Cod. Establecimiento <span className="text-red-500">*</span></label>
                   <div className="premium-input-group">
                     <i className="pi pi-map-marker premium-input-icon"></i>
                     <InputText 
                       id="codEstableMH" 
-                      value={datosMatriz.codEstableMH} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, codEstableMH: e.target.value})} 
+                      value={datosComercio.codEstableMH} 
+                      onChange={(e) => setDatosComercio({...datosComercio, codEstableMH: e.target.value})} 
                       placeholder="M001" 
                       required 
                     />
                   </div>
                 </div>
                 <div className="col-12 md:col-6 flex flex-column gap-2">
-                  <label htmlFor="codPuntoVentaMH" className="font-bold text-xs text-800">Cod. Punto de Venta Casa Matriz <span className="text-red-500">*</span></label>
+                  <label htmlFor="codPuntoVentaMH" className="font-bold text-xs text-800">Cod. Punto de Venta <span className="text-red-500">*</span></label>
                   <div className="premium-input-group">
                     <i className="pi pi-qrcode premium-input-icon"></i>
                     <InputText 
                       id="codPuntoVentaMH" 
-                      value={datosMatriz.codPuntoVentaMH} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, codPuntoVentaMH: e.target.value})} 
+                      value={datosComercio.codPuntoVentaMH} 
+                      onChange={(e) => setDatosComercio({...datosComercio, codPuntoVentaMH: e.target.value})} 
                       placeholder="P001" 
                       required 
                     />
@@ -264,15 +234,15 @@ export default function VistaComercios() {
                   <label htmlFor="actividadEconomica_id" className="font-bold text-xs text-800">Actividad Económica Emisor</label>
                   <Dropdown 
                     id="actividadEconomica_id" 
-                    value={datosMatriz.actividadEconomica_id} 
+                    value={datosComercio.actividadEconomica_id} 
                     options={actividadesLista.map(a => ({ label: `${a.CodActividad || a.codActividad} - ${a.DescActividad || a.descActividad}`, value: a.id }))} 
-                    onChange={(e) => setDatosMatriz({...datosMatriz, actividadEconomica_id: e.value})} 
+                    onChange={(e) => setDatosComercio({...datosComercio, actividadEconomica_id: e.value})} 
                   />
                 </div>
               </div>
             </div>
 
-            {/* Bloque 1.3: Contacto y Dirección */}
+            {/* 3. Dirección y contacto */}
             <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
               <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <i className="pi pi-map text-primary"></i> 3. Dirección y Contacto Comercial
@@ -284,8 +254,8 @@ export default function VistaComercios() {
                     <i className="pi pi-phone premium-input-icon"></i>
                     <InputText 
                       id="telefono" 
-                      value={datosMatriz.telefono} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, telefono: e.target.value})} 
+                      value={datosComercio.telefono} 
+                      onChange={(e) => setDatosComercio({...datosComercio, telefono: e.target.value})} 
                     />
                   </div>
                 </div>
@@ -295,18 +265,18 @@ export default function VistaComercios() {
                     <i className="pi pi-envelope premium-input-icon"></i>
                     <InputText 
                       id="correo" 
-                      value={datosMatriz.correo} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, correo: e.target.value})} 
+                      value={datosComercio.correo} 
+                      onChange={(e) => setDatosComercio({...datosComercio, correo: e.target.value})} 
                     />
                   </div>
                 </div>
                 <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
-                  <label htmlFor="municipio_id" className="font-bold text-xs text-800">Municipio de Matriz</label>
+                  <label htmlFor="municipio_id" className="font-bold text-xs text-800">Municipio</label>
                   <Dropdown 
                     id="municipio_id" 
-                    value={datosMatriz.municipio_id} 
+                    value={datosComercio.municipio_id} 
                     options={municipiosLista.map(m => ({ label: m.Nombre || m.nombre || 'Municipio', value: m.id }))} 
-                    onChange={(e) => setDatosMatriz({...datosMatriz, municipio_id: e.value})} 
+                    onChange={(e) => setDatosComercio({...datosComercio, municipio_id: e.value})} 
                   />
                 </div>
                 <div className="col-12 md:col-6 flex align-items-center justify-content-between mt-4 p-2 bg-transparent">
@@ -315,8 +285,8 @@ export default function VistaComercios() {
                     <span className="text-xs text-500" style={{ color: 'var(--text-muted)' }}>Clasificación del comercio emisor</span>
                   </div>
                   <InputSwitch 
-                    checked={datosMatriz.granContribuyente} 
-                    onChange={(e) => setDatosMatriz({...datosMatriz, granContribuyente: e.value})} 
+                    checked={datosComercio.granContribuyente} 
+                    onChange={(e) => setDatosComercio({...datosComercio, granContribuyente: e.value})} 
                   />
                 </div>
                 <div className="col-12 flex flex-column gap-2 mt-2">
@@ -325,8 +295,8 @@ export default function VistaComercios() {
                     <i className="pi pi-compass premium-input-icon"></i>
                     <InputText 
                       id="complementoDireccion" 
-                      value={datosMatriz.complementoDireccion} 
-                      onChange={(e) => setDatosMatriz({...datosMatriz, complementoDireccion: e.target.value})} 
+                      value={datosComercio.complementoDireccion} 
+                      onChange={(e) => setDatosComercio({...datosComercio, complementoDireccion: e.target.value})} 
                     />
                   </div>
                 </div>

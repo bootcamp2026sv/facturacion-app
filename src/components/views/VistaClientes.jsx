@@ -12,30 +12,13 @@ import { Tag } from 'primereact/tag';
 // Importar cliente Axios para la API real
 import api from '../../services/api';
 
-// Opciones de tipo de documento homologadas con Ministerio de Hacienda
+// Tipos de documento
 const TIPO_DOC_OPCIONES = [
   { label: 'DUI (Documento Único de Identidad)', value: 13 },
   { label: 'NIT (Número de Identificación Tributaria)', value: 36 },
   { label: 'Pasaporte', value: 3 },
   { label: 'Carnet de Residente', value: 2 },
   { label: 'Otro / Extranjero', value: 37 }
-];
-
-// Opciones ficticias para simular distritos (geografía)
-const DISTRITO_OPCIONES = [
-  { label: 'San Salvador (San Salvador Centro)', value: 1 },
-  { label: 'Antiguo Cuscatlán (La Libertad Este)', value: 2 },
-  { label: 'Santa Ana (Santa Ana Centro)', value: 3 },
-  { label: 'San Miguel (San Miguel Centro)', value: 4 },
-  { label: 'Santa Tecla (La Libertad Sur)', value: 5 }
-];
-
-// Opciones ficticias para simular actividades económicas
-const ACTIVIDAD_OPCIONES = [
-  { label: '620100 - Desarrollo de Software y Aplicaciones', value: 620100 },
-  { label: '620200 - Consultoría e Intermediación Informática', value: 620200 },
-  { label: '47002 - Venta de otros productos ncp', value: 47002 },
-  { label: '731000 - Servicios de Publicidad y Relaciones Públicas', value: 731000 }
 ];
 
 const MAPA_DOCUMENTOS = {
@@ -46,27 +29,30 @@ const MAPA_DOCUMENTOS = {
   37: 'Otro/Extranjero'
 };
 
-const MAPA_DISTRITOS = {
-  1: 'San Salvador',
-  2: 'Antiguo Cuscatlán',
-  3: 'Santa Ana',
-  4: 'San Miguel',
-  5: 'Santa Tecla'
-};
+// Datos de prueba
+const DISTRITOS_SIMULADOS = [
+  { id: 1, nombre: 'San Salvador (San Salvador Centro)' },
+  { id: 2, nombre: 'Antiguo Cuscatlán (La Libertad Este)' },
+  { id: 3, nombre: 'Santa Ana (Santa Ana Centro)' },
+  { id: 4, nombre: 'San Miguel (San Miguel Centro)' },
+  { id: 5, nombre: 'Santa Tecla (La Libertad Sur)' }
+];
 
-const MAPA_ACTIVIDADES = {
-  620100: 'Desarrollo de Software',
-  620200: 'Consultoría TI',
-  47002: 'Venta Prod. NCP',
-  731000: 'Publicidad'
-};
+const ACTIVIDADES_SIMULADAS = [
+  { id: 1, codActividad: '620100', descActividad: 'Desarrollo de Software y Aplicaciones' },
+  { id: 2, codActividad: '620200', descActividad: 'Consultoría e Intermediación Informática' },
+  { id: 3, codActividad: '47002', descActividad: 'Venta de otros productos ncp' },
+  { id: 4, codActividad: '731000', descActividad: 'Servicios de Publicidad y Relaciones Públicas' }
+];
 
 export default function VistaClientes() {
   const toast = useRef(null);
   const [indiceTabActivo, setIndiceTabActivo] = useState(0);
   const [cargando, setCargando] = useState(false);
+  const [distritos, setDistritos] = useState(DISTRITOS_SIMULADOS);
+  const [actividades, setActividades] = useState(ACTIVIDADES_SIMULADAS);
 
-  // Listado de clientes (datos ficticios de ejemplo)
+  // Clientes de ejemplo
   const [clientes, setClientes] = useState([
     {
       id: 1,
@@ -82,9 +68,9 @@ export default function VistaClientes() {
       activo: true,
       complementoDireccion: 'Paseo General Escalón #3500, San Salvador',
       distrito_id: 1,
-      actividadEconomica_id: 47002,
+      actividadEconomica_id: 3,
       distrito: { id: 1, nombre: 'San Salvador' },
-      actividadEconomica: { codActividad: '47002', descActividad: 'Venta de otros productos ncp' }
+      actividadEconomica: { id: 3, codActividad: '47002', descActividad: 'Venta de otros productos ncp' }
     },
     {
       id: 2,
@@ -100,13 +86,13 @@ export default function VistaClientes() {
       activo: true,
       complementoDireccion: 'Colonia Flor Blanca, Calle El Progreso #45',
       distrito_id: 2,
-      actividadEconomica_id: 620200,
+      actividadEconomica_id: 2,
       distrito: { id: 2, nombre: 'Antiguo Cuscatlán' },
-      actividadEconomica: { codActividad: '620200', descActividad: 'Consultoría e Intermediación Informática' }
+      actividadEconomica: { id: 2, codActividad: '620200', descActividad: 'Consultoría e Intermediación Informática' }
     }
   ]);
 
-  // Formulario enlazado exactamente al ClienteDTO del Backend
+  // Estado del formulario
   const [datosFormulario, setDatosFormulario] = useState({
     nombre: '',
     apellidos: '',
@@ -120,31 +106,46 @@ export default function VistaClientes() {
     activo: true,
     complementoDireccion: '',
     distrito_id: 1,
-    actividadEconomica_id: 620100
+    actividadEconomica_id: 1
   });
 
-  // --- PARA CONECTAR A LA API EN PRODUCCIÓN ---
-  // Para cargar datos reales de la base de datos:
+  // Descomentar para conectar con la API
   /*
   useEffect(() => {
-    const obtenerClientesAPI = async () => {
+    const cargarDatosAPI = async () => {
       setCargando(true);
       try {
-        const respuesta = await api.get('/Clientes');
-        setClientes(respuesta.data);
+        // 1. Obtener listado de distritos desde el API
+        const respuestaDistritos = await api.get('/distritos');
+        setDistritos(respuestaDistritos.data || []);
+
+        // 2. Obtener listado de actividades económicas desde el API
+        const respuestaActividades = await api.get('/ActividadEconomicas');
+        setActividades(respuestaActividades.data || []);
+
+        // 3. Obtener listado de clientes registrados
+        const respuestaClientes = await api.get('/Clientes');
+        setClientes(respuestaClientes.data || []);
+
+        toast.current.show({ 
+          severity: 'success', 
+          summary: 'Sincronizado', 
+          detail: 'Datos sincronizados con el servidor exitosamente.', 
+          life: 3000 
+        });
       } catch (error) {
-        console.error("Error al cargar clientes de la API:", error);
+        console.error("Error al sincronizar con la API:", error);
         toast.current.show({ 
           severity: 'error', 
-          summary: 'Error de Red', 
-          detail: 'No se pudo sincronizar con la API.', 
+          summary: 'Error de Sincronización', 
+          detail: 'No se pudieron descargar los catálogos o los clientes del servidor.', 
           life: 4000 
         });
       } finally {
         setCargando(false);
       }
     };
-    obtenerClientesAPI();
+    cargarDatosAPI();
   }, []);
   */
 
@@ -162,7 +163,7 @@ export default function VistaClientes() {
       activo: true,
       complementoDireccion: '',
       distrito_id: 1,
-      actividadEconomica_id: 620100
+      actividadEconomica_id: 1
     });
   };
 
@@ -177,53 +178,41 @@ export default function VistaClientes() {
     setCargando(true);
 
     try {
-      // --- CONEXIÓN DE UN SOLO A LA API ---
-      // Descomenta este bloque para enviar los datos reales al servidor local.
-      // Si tu backend espera mayúsculas (PascalCase), utiliza el mapeo payload.
+      // Descomentar para guardar en la API
       /*
-      const payload = {
-        Nombre: datosFormulario.nombre,
-        Apellidos: datosFormulario.apellidos,
-        NombreComercial: datosFormulario.nombreComercial,
-        TipoDocumento: datosFormulario.tipoDocumento,
-        NumDocumento: datosFormulario.numDocumento,
-        Nrc: datosFormulario.nrc,
-        Telefono: datosFormulario.telefono,
-        Correo: datosFormulario.correo,
-        GranContribuyente: datosFormulario.granContribuyente,
-        Activo: datosFormulario.activo,
-        ComplementoDireccion: datosFormulario.complementoDireccion,
-        Distrito_id: datosFormulario.distrito_id, // o DistritoId según tu backend
-        ActividadEconomica_id: datosFormulario.actividadEconomica_id // o ActividadEconomicaId
-      };
-
-      const respuesta = await api.post('/Clientes', payload); // o datosFormulario si usa minúsculas
-      setClientes(prev => [...prev, respuesta.data]);
+      const respuesta = await api.post('/Clientes', datosFormulario); 
+      
+      const clienteGuardado = respuesta.data;
+      setClientes(prev => [...prev, clienteGuardado]);
       toast.current.show({ 
         severity: 'success', 
         summary: 'Registrado', 
-        detail: `Cliente guardado con ID ${respuesta.data.id || 'N/A'} en la base de datos.`, 
+        detail: `Cliente guardado con ID ${clienteGuardado.id || 'N/A'} en la base de datos.`, 
         life: 3000 
       });
       */
 
-      // --- SIMULACIÓN LOCAL CON DATOS FICTICIOS ---
-      // Comentar en produccion
+      // Simulación local (comentar al conectar API)
       const nuevoId = Math.floor(Math.random() * 900) + 100;
-      const nuevoClienteMock = {
+      
+      const distritoSeleccionado = distritos.find(d => d.id === datosFormulario.distrito_id);
+      const actividadSeleccionada = actividades.find(a => a.id === datosFormulario.actividadEconomica_id);
+      
+      const nuevoClienteSimulado = {
         ...datosFormulario,
         id: nuevoId,
-        distrito: {
-          id: datosFormulario.distrito_id,
-          nombre: MAPA_DISTRITOS[datosFormulario.distrito_id]
-        },
-        actividadEconomica: {
-          codActividad: String(datosFormulario.actividadEconomica_id),
-          descActividad: MAPA_ACTIVIDADES[datosFormulario.actividadEconomica_id]
-        }
+        distrito: distritoSeleccionado ? {
+          id: distritoSeleccionado.id,
+          nombre: distritoSeleccionado.nombre || distritoSeleccionado.Nombre
+        } : null,
+        actividadEconomica: actividadSeleccionada ? {
+          id: actividadSeleccionada.id,
+          codActividad: actividadSeleccionada.codActividad || actividadSeleccionada.CodActividad,
+          descActividad: actividadSeleccionada.descActividad || actividadSeleccionada.DescActividad
+        } : null
       };
 
-      setClientes(prev => [...prev, nuevoClienteMock]);
+      setClientes(prev => [...prev, nuevoClienteSimulado]);
       toast.current.show({ 
         severity: 'success', 
         summary: 'Guardado', 
@@ -247,7 +236,7 @@ export default function VistaClientes() {
     }
   };
 
-  // Renderizadores de columnas para la tabla (compatibles con minúsculas y mayúsculas de la API)
+  // Templates para la tabla
   const documentoTemplate = (rowData) => {
     const tipoDoc = rowData.tipoDocumento || rowData.TipoDocumento || 13;
     const numDoc = rowData.numDocumento || rowData.NumDocumento || 'S/N';
@@ -281,7 +270,7 @@ export default function VistaClientes() {
     const distrito = rowData.distrito || rowData.Distrito;
     const distritoId = rowData.distrito_id || rowData.Distrito_id || rowData.distritoId || rowData.DistritoId;
     const complemento = rowData.complementoDireccion || rowData.ComplementoDireccion || 'Sin dirección';
-    const distritoNombre = distrito?.nombre || distrito?.Nombre || MAPA_DISTRITOS[distritoId] || 'Desconocido';
+    const distritoNombre = distrito?.nombre || distrito?.Nombre || distritos.find(d => d.id === distritoId)?.nombre || 'Desconocido';
     return (
       <div className="flex flex-column" style={{ maxWidth: '220px' }}>
         <span className="text-xs font-semibold">{distritoNombre}</span>
@@ -295,8 +284,11 @@ export default function VistaClientes() {
   const actividadTemplate = (rowData) => {
     const actividad = rowData.actividadEconomica || rowData.ActividadEconomica;
     const actividadId = rowData.actividadEconomica_id || rowData.ActividadEconomica_id || rowData.actividadEconomicaId || rowData.ActividadEconomicaId;
-    const actividadDesc = actividad?.descActividad || actividad?.DescActividad || MAPA_ACTIVIDADES[actividadId] || 'Desconocido';
-    const codigo = actividad?.codActividad || actividad?.CodActividad || actividadId || '';
+    
+    const actividadObj = actividad || actividades.find(a => a.id === actividadId);
+    const actividadDesc = actividadObj?.descActividad || actividadObj?.DescActividad || 'Desconocido';
+    const codigo = actividadObj?.codActividad || actividadObj?.CodActividad || '';
+    
     return (
       <div className="flex flex-column">
         <span className="text-xs font-semibold">{actividadDesc}</span>
@@ -488,7 +480,7 @@ export default function VistaClientes() {
                       <Dropdown 
                         id="distrito_id" 
                         value={datosFormulario.distrito_id} 
-                        options={DISTRITO_OPCIONES} 
+                        options={distritos.map(d => ({ label: d.nombre || d.Nombre || '', value: d.id }))} 
                         onChange={(e) => setDatosFormulario({ ...datosFormulario, distrito_id: e.value })} 
                       />
                     </div>
@@ -497,7 +489,7 @@ export default function VistaClientes() {
                       <Dropdown 
                         id="actividadEconomica_id" 
                         value={datosFormulario.actividadEconomica_id} 
-                        options={ACTIVIDAD_OPCIONES} 
+                        options={actividades.map(a => ({ label: `${a.codActividad || a.CodActividad || ''} - ${a.descActividad || a.DescActividad || ''}`, value: a.id }))} 
                         onChange={(e) => setDatosFormulario({ ...datosFormulario, actividadEconomica_id: e.value })} 
                       />
                     </div>

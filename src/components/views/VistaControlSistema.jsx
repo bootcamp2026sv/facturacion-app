@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
@@ -7,11 +7,13 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
 import { Message } from 'primereact/message';
+import api from '../../services/api';
 
 export default function VistaControlSistema() {
+  // Datos de prueba
   const [usuarios, setUsuarios] = useState([
-    { id: 1, username: 'admin', correo: 'admin@facturacion.com', habilitado: true, rol: 'Administrador' },
-    { id: 2, username: 'facturador1', correo: 'facturas@facturacion.com', habilitado: true, rol: 'Facturador' }
+    { id: 1, nombreUsuario: 'admin', correo: 'admin@facturacion.com', habilitado: true, rol: 'Administrador' },
+    { id: 2, nombreUsuario: 'facturador1', correo: 'facturas@facturacion.com', habilitado: true, rol: 'Facturador' }
   ]);
 
   const [correlativos, setCorrelativos] = useState([
@@ -19,7 +21,8 @@ export default function VistaControlSistema() {
     { id: 2, tipoDte: '03 - Crédito Fiscal', ambiente: 'Pruebas', sucursal: 'M001', puntoVenta: 'P001', ultimo: 254 }
   ]);
 
-  const [nuevoUsuario, setNuevoUsuario] = useState({ username: '', correo: '', contrasena: '', rol: 'Facturador' });
+  // Estado del formulario
+  const [nuevoUsuario, setNuevoUsuario] = useState({ nombreUsuario: '', correo: '', contrasena: '', rol: 'Facturador' });
   const [successUsuario, setSuccessUsuario] = useState(false);
   const [nextCorrelativoText, setNextCorrelativoText] = useState('');
 
@@ -29,23 +32,105 @@ export default function VistaControlSistema() {
     { label: 'Auditor', value: 'Auditor' }
   ];
 
-  const guardarUsuario = (e) => {
+  // Descomentar para conectar con la API
+  /*
+  useEffect(() => {
+    const cargarUsuarios = async () => {
+      try {
+        const respuesta = await api.get('/usuarios');
+        const listaUsuarios = (respuesta.data || []).map(u => ({
+          id: u.id,
+          nombreUsuario: u.nombreUsuario || u.username,
+          correo: u.correo,
+          habilitado: u.habilitado !== undefined ? u.habilitado : true,
+          rol: u.roles && u.roles[0] ? u.roles[0].nombre : 'Facturador'
+        }));
+        setUsuarios(listaUsuarios);
+      } catch (error) {
+        console.error("Error al cargar usuarios de la API:", error);
+      }
+    };
+    cargarUsuarios();
+  }, []);
+  */
+
+  const guardarUsuario = async (e) => {
     e.preventDefault();
-    if (!nuevoUsuario.username || !nuevoUsuario.correo || !nuevoUsuario.contrasena) return;
+    if (!nuevoUsuario.nombreUsuario || !nuevoUsuario.correo || !nuevoUsuario.contrasena) return;
+
+    // Descomentar para guardar en la API
+    /*
+    try {
+      const payload = {
+        nombreUsuario: nuevoUsuario.nombreUsuario,
+        correo: nuevoUsuario.correo,
+        contrasena: nuevoUsuario.contrasena,
+        habilitado: true
+      };
+      const respuesta = await api.post('/usuarios', payload);
+      const usuarioCreado = respuesta.data;
+      
+      setUsuarios(prev => [...prev, {
+        id: usuarioCreado.id,
+        nombreUsuario: usuarioCreado.nombreUsuario,
+        correo: usuarioCreado.correo,
+        habilitado: usuarioCreado.habilitado !== undefined ? usuarioCreado.habilitado : true,
+        rol: nuevoUsuario.rol
+      }]);
+      setNuevoUsuario({ nombreUsuario: '', correo: '', contrasena: '', rol: 'Facturador' });
+      setSuccessUsuario(true);
+      setTimeout(() => setSuccessUsuario(false), 2000);
+      return;
+    } catch (error) {
+      console.error("Error al guardar usuario en la API:", error);
+      return;
+    }
+    */
+
+    // Simulación local (comentar al conectar API)
     const nuevo = {
       id: Date.now(),
-      username: nuevoUsuario.username,
+      nombreUsuario: nuevoUsuario.nombreUsuario,
       correo: nuevoUsuario.correo,
       habilitado: true,
       rol: nuevoUsuario.rol
     };
     setUsuarios([...usuarios, nuevo]);
-    setNuevoUsuario({ username: '', correo: '', contrasena: '', rol: 'Facturador' });
+    setNuevoUsuario({ nombreUsuario: '', correo: '', contrasena: '', rol: 'Facturador' });
     setSuccessUsuario(true);
     setTimeout(() => setSuccessUsuario(false), 2000);
   };
 
-  const generarSiguienteCorrelativo = (item) => {
+  const generarSiguienteCorrelativo = async (item) => {
+    // Descomentar para conectar con la API
+    /*
+    try {
+      const params = {
+        tipoDte: item.tipoDte.substring(0, 2),
+        ambiente: item.ambiente === 'Pruebas' ? '00' : '01',
+        codEstable: item.sucursal,
+        codPuntoVenta: item.puntoVenta
+      };
+      
+      const respuesta = await api.get('/auth/correlativos/siguiente', { params });
+      const siguienteNumero = respuesta.data.siguiente || respuesta.data;
+      
+      setNextCorrelativoText(`Siguiente número generado por la API: ${siguienteNumero}`);
+      
+      const match = siguienteNumero.match(/-(\d+)$/);
+      if (match) {
+        const nuevoValor = parseInt(match[1], 10);
+        setCorrelativos(correlativos.map(c => c.id === item.id ? { ...c, ultimo: nuevoValor } : c));
+      }
+      setTimeout(() => setNextCorrelativoText(''), 8000);
+      return;
+    } catch (error) {
+      console.error("Error al obtener correlativo de la API:", error);
+      return;
+    }
+    */
+
+    // Simulación local (comentar al conectar API)
     const nuevoValor = item.ultimo + 1;
     setCorrelativos(correlativos.map(c => c.id === item.id ? { ...c, ultimo: nuevoValor } : c));
     const controlNumber = `DTE-${item.tipoDte.substring(0, 2)}-${item.sucursal}${item.puntoVenta}-${String(nuevoValor).padStart(15, '0')}`;
@@ -57,7 +142,7 @@ export default function VistaControlSistema() {
     <div className="p-4 premium-fade-in">
       <div className="mb-4">
         <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Control y Parámetros del Sistema</h2>
-        <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Gestión de correlativos DTE autorizados por Hacienda y control de accesos de personal.</p>
+        <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Gestión de correlativos DTE autorizados y control de accesos.</p>
       </div>
 
       <div className="premium-surface-card">
@@ -67,7 +152,7 @@ export default function VistaControlSistema() {
             <div className="pt-2">
               <div className="mb-3">
                 <h3 className="text-xl font-bold m-0" style={{ color: 'var(--text-primary)' }}>Rangos Autorizados</h3>
-                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Haga clic en "Generar Siguiente" para simular la petición de la API tributaria.</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Haga clic en "Generar Siguiente" para calcular el correlativo.</p>
               </div>
 
               {nextCorrelativoText && (
@@ -111,7 +196,7 @@ export default function VistaControlSistema() {
                             <label className="premium-label">Nombre de Usuario</label>
                             <div className="premium-input-group">
                               <i className="pi pi-user premium-input-icon"></i>
-                              <InputText value={nuevoUsuario.username} onChange={(e) => setNuevoUsuario({...nuevoUsuario, username: e.target.value})} placeholder="Ej. jperez" required />
+                              <InputText value={nuevoUsuario.nombreUsuario} onChange={(e) => setNuevoUsuario({...nuevoUsuario, nombreUsuario: e.target.value})} placeholder="Ej. jperez" required />
                             </div>
                           </div>
                           <div className="flex flex-column gap-1">
@@ -146,7 +231,7 @@ export default function VistaControlSistema() {
               <div className="col-12 md:col-8">
                 <div className="premium-table">
                   <DataTable value={usuarios} size="small" emptyMessage="No hay usuarios registrados">
-                    <Column field="username" header="Usuario" className="font-bold"></Column>
+                    <Column field="nombreUsuario" header="Usuario" className="font-bold"></Column>
                     <Column field="correo" header="Correo Electrónico"></Column>
                     <Column field="rol" header="Rol"></Column>
                     <Column field="habilitado" header="Estado" body={(f) => <Tag severity={f.habilitado ? "success" : "danger"} value={f.habilitado ? 'Activo' : 'Inactivo'} className="premium-tag"></Tag>}></Column>
