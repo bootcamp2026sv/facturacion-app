@@ -296,7 +296,10 @@ export default function VistaGeografia() {
                           <label className="premium-label">Nombre del Departamento</label>
                           <div className="premium-input-group">
                             <i className="pi pi-map premium-input-icon"></i>
-                            <InputText value={nuevoDepto.nombre} onChange={(e) => setNuevoDepto({...nuevoDepto, nombre: e.target.value})} placeholder="Ej. San Salvador" required />
+                            <InputText 
+                            value={nuevoDepto.nombre} 
+                            onChange={(e) => setNuevoDepto({...nuevoDepto, nombre: e.target.value})} 
+                            placeholder="Ej. San Salvador" required />
                           </div>
                         </div>
                         <Button type="submit" label="Registrar" icon="pi pi-plus" className="premium-btn mt-1" disabled={cargando} />
