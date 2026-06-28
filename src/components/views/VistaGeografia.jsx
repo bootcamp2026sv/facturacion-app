@@ -31,78 +31,31 @@ export default function VistaGeografia() {
   const [cargando, setCargando] = useState(false);
 
   // Departamentos
-  const [departamentos, setDepartamentos] = useState([
-    { id: 1, codigo: '01', nombre: 'Ahuachapán', municipios: [] },
-    { id: 2, codigo: '02', nombre: 'Santa Ana', municipios: [] },
-    { id: 3, codigo: '03', nombre: 'Sonsonate', municipios: [] },
-    { id: 4, codigo: '04', nombre: 'Chalatenango', municipios: [] },
-    { id: 5, codigo: '05', nombre: 'La Libertad', municipios: [
-      { id: 2, codigo: '02', nombre: 'La Libertad Este' },
-      { id: 3, codigo: '03', nombre: 'La Libertad Sur' }
-    ] },
-    { id: 6, codigo: '06', nombre: 'San Salvador', municipios: [
-      { id: 1, codigo: '01', nombre: 'San Salvador Centro' }
-    ] },
-    { id: 7, codigo: '07', nombre: 'Cuscatlán', municipios: [] },
-    { id: 8, codigo: '08', nombre: 'La Paz', municipios: [] },
-    { id: 9, codigo: '09', nombre: 'Cabañas', municipios: [] },
-    { id: 10, codigo: '10', nombre: 'San Vicente', municipios: [] },
-    { id: 11, codigo: '11', nombre: 'Usulután', municipios: [] },
-    { id: 12, codigo: '12', nombre: 'San Miguel', municipios: [] },
-    { id: 13, codigo: '13', nombre: 'Morazán', municipios: [] },
-    { id: 14, codigo: '14', nombre: 'La Unión', municipios: [] }
-  ]);
+  const [departamentos, setDepartamentos] = useState([]);
 
   // Municipios (lookup local)
-  const [municipios, setMunicipios] = useState([
-    { 
-      id: 1, 
-      codigo: '01', 
-      nombre: 'San Salvador Centro', 
-      departamentoId: 6,
-      departamento: { id: 6, codigo: '06', nombre: 'San Salvador' },
-      distritos: [
-        { id: 1, codigo: '01', nombre: 'San Salvador' },
-        { id: 2, codigo: '02', nombre: 'Mejicanos' }
-      ]
-    },
-    { 
-      id: 2, 
-      codigo: '02', 
-      nombre: 'La Libertad Este', 
-      departamentoId: 5,
-      departamento: { id: 5, codigo: '05', nombre: 'La Libertad' },
-      distritos: [
-        { id: 3, codigo: '03', nombre: 'Antiguo Cuscatlán' }
-      ]
-    },
-    { 
-      id: 3, 
-      codigo: '03', 
-      nombre: 'La Libertad Sur', 
-      departamentoId: 5,
-      departamento: { id: 5, codigo: '05', nombre: 'La Libertad' },
-      distritos: [
-        { id: 4, codigo: '04', nombre: 'Santa Tecla' }
-      ]
-    }
-  ]);
+  const [municipios, setMunicipios] = useState([]);
 
   // Distritos
-  const [distritos, setDistritos] = useState([
-    { id: 1, codigo: '01', nombre: 'San Salvador', municipioId: 1, municipio: { id: 1, codigo: '01', nombre: 'San Salvador Centro' } },
-    { id: 2, codigo: '02', nombre: 'Mejicanos', municipioId: 1, municipio: { id: 1, codigo: '01', nombre: 'San Salvador Centro' } },
-    { id: 3, codigo: '03', nombre: 'Antiguo Cuscatlán', municipioId: 2, municipio: { id: 2, codigo: '02', nombre: 'La Libertad Este' } },
-    { id: 4, codigo: '04', nombre: 'Santa Tecla', municipioId: 3, municipio: { id: 3, codigo: '03', nombre: 'La Libertad Sur' } }
-  ]);
+  const [distritos, setDistritos] = useState([]);
 
   // Estados de formularios
   const [nuevoDepto, setNuevoDepto] = useState({ codigo: '', nombre: '' });
-  const [nuevoMuni, setNuevoMuni] = useState({ codigo: '', nombre: '', departamentoId: 6 });
-  const [nuevoDist, setNuevoDist] = useState({ codigo: '', nombre: '', municipioId: 1 });
+  const [nuevoMuni, setNuevoMuni] = useState(
+    { codigo: '', 
+      nombre: '', 
+      departamentoId: 0 
+
+    });
+  const [nuevoDist, setNuevoDist] = useState(
+    { 
+    codigo: '', 
+    nombre: '', 
+    municipioId: 0 
+  });
 
   // Descomentar para conectar con la API
-  /*
+  
   useEffect(() => {
     const cargarGeografiaAPI = async () => {
       setCargando(true);
@@ -142,7 +95,7 @@ export default function VistaGeografia() {
 
     cargarGeografiaAPI();
   }, []);
-  */
+  
   
 
   // Opciones para Dropdowns
@@ -165,18 +118,11 @@ export default function VistaGeografia() {
 
     try {
       // Descomentar para guardar en la API
-      /*
+      
       const respuesta = await api.post('/departamentos', nuevoDepto);
       setDepartamentos(prev => [...prev, respuesta.data]);
       toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Departamento registrado en el sistema.', life: 3000 });
-      */
-
-      // Simulación local (comentar al conectar API)
-      const nuevoId = Date.now();
-      const nuevoDeptoSimulado = { id: nuevoId, ...nuevoDepto };
-      setDepartamentos(prev => [...prev, nuevoDeptoSimulado]);
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Departamento registrado localmente.', life: 3000 });
-
+      
       setNuevoDepto({ codigo: '', nombre: '' });
     } catch (error) {
       console.error(error);
@@ -196,39 +142,30 @@ export default function VistaGeografia() {
       const deptoSeleccionado = departamentos.find(d => d.id === nuevoMuni.departamentoId);
 
       // Descomentar para guardar en la API
-      /*
+      
       const payload = {
         codigo: nuevoMuni.codigo,
         nombre: nuevoMuni.nombre,
-        departamento: { id: nuevoMuni.departamentoId }
+        departamento: { 
+          id: nuevoMuni.departamentoId 
+        }
       };
+
+      
       const respuesta = await api.post('/municipios', payload);
       setMunicipios(prev => [...prev, respuesta.data]);
       toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Municipio registrado en el sistema.', life: 3000 });
-      */
-
-      // Simulación local (comentar al conectar API)
-      const nuevoId = Date.now();
-      const nuevoMuniSimulado = { 
-        id: nuevoId, 
-        codigo: nuevoMuni.codigo, 
-        nombre: nuevoMuni.nombre, 
-        departamentoId: nuevoMuni.departamentoId,
-        departamento: deptoSeleccionado,
-        distritos: []
-      };
-      setMunicipios(prev => [...prev, nuevoMuniSimulado]);
-
+      
       // Actualizar departamento para búsqueda local
       setDepartamentos(prev => prev.map(d => {
         if (d.id === nuevoMuni.departamentoId) {
           const listM = d.municipios || d.Municipios || [];
-          return { ...d, municipios: [...listM, nuevoMuniSimulado] };
+          return { ...d, municipios: [...listM, nuevoMuni] };
         }
         return d;
       }));
 
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Municipio registrado localmente.', life: 3000 });
+     // toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Municipio registrado localmente.', life: 3000 });
 
       setNuevoMuni({ codigo: '', nombre: '', departamentoId: deptoOpciones[0]?.value || 1 });
     } catch (error) {
@@ -249,7 +186,7 @@ export default function VistaGeografia() {
       const muniSeleccionado = municipios.find(m => m.id === nuevoDist.municipioId);
 
       // Descomentar para guardar en la API
-      /*
+      
       const payload = {
         codigo: nuevoDist.codigo,
         nombre: nuevoDist.nombre,
@@ -258,29 +195,18 @@ export default function VistaGeografia() {
       const respuesta = await api.post('/distritos', payload);
       setDistritos(prev => [...prev, respuesta.data]);
       toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Distrito registrado en el sistema.', life: 3000 });
-      */
-
-      // Simulación local (comentar al conectar API)
-      const nuevoId = Date.now();
-      const nuevoDistSimulado = { 
-        id: nuevoId, 
-        codigo: nuevoDist.codigo, 
-        nombre: nuevoDist.nombre, 
-        municipioId: nuevoDist.municipioId,
-        municipio: muniSeleccionado
-      };
-      setDistritos(prev => [...prev, nuevoDistSimulado]);
+      
 
       // Actualizar municipio para búsqueda local
       setMunicipios(prev => prev.map(m => {
         if (m.id === nuevoDist.municipioId) {
           const listD = m.distritos || m.Distritos || [];
-          return { ...m, distritos: [...listD, nuevoDistSimulado] };
+          return { ...m, distritos: [...listD, nuevoDist] };
         }
         return m;
       }));
 
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Distrito registrado localmente.', life: 3000 });
+      //toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Distrito registrado localmente.', life: 3000 });
 
       setNuevoDist({ codigo: '', nombre: '', municipioId: muniOpciones[0]?.value || 1 });
     } catch (error) {
@@ -347,7 +273,7 @@ export default function VistaGeografia() {
         <TabView className="premium-tabs" activeIndex={indiceTabActivo} onTabChange={(e) => setIndiceTabActivo(e.index)}>
           
           {/* TABS 1: DEPARTAMENTOS */}
-          <TabPanel header="Departamentos" leftIcon="pi pi-map">
+          <TabPanel header="Departamentos " leftIcon="pi pi-map">
             <div className="grid pt-3">
               <div className="col-12 md:col-4">
                 <div className="premium-card-static">
@@ -359,7 +285,11 @@ export default function VistaGeografia() {
                           <label className="premium-label">Código Oficial (MH)</label>
                           <div className="premium-input-group">
                             <i className="pi pi-hashtag premium-input-icon"></i>
-                            <InputText value={nuevoDepto.codigo} onChange={(e) => setNuevoDepto({...nuevoDepto, codigo: e.target.value})} placeholder="Ej. 06" required />
+                            <InputText 
+                            value={nuevoDepto.codigo} 
+                            onChange={(e) => setNuevoDepto({...nuevoDepto, codigo: e.target.value})} 
+                            placeholder="Ej. 06" 
+                            required />
                           </div>
                         </div>
                         <div className="flex flex-column gap-1">
@@ -398,13 +328,22 @@ export default function VistaGeografia() {
                       <form onSubmit={guardarMuni} className="p-fluid flex flex-column gap-3">
                         <div className="flex flex-column gap-1">
                           <label className="premium-label">Departamento Padre</label>
-                          <Dropdown value={nuevoMuni.departamentoId} options={deptoOpciones} onChange={(e) => setNuevoMuni({...nuevoMuni, departamentoId: e.value})} placeholder="Seleccione..." />
+                          <Dropdown 
+                          value={nuevoMuni.departamentoId} 
+                          options={deptoOpciones} 
+                          onChange={(e) => setNuevoMuni({...nuevoMuni, departamentoId: e.value})} 
+                          placeholder="Seleccione..." 
+                          />
                         </div>
                         <div className="flex flex-column gap-1">
                           <label className="premium-label">Código Oficial (MH)</label>
                           <div className="premium-input-group">
                             <i className="pi pi-hashtag premium-input-icon"></i>
-                            <InputText value={nuevoMuni.codigo} onChange={(e) => setNuevoMuni({...nuevoMuni, codigo: e.target.value})} placeholder="Ej. 01" required />
+                            <InputText 
+                            value={nuevoMuni.codigo} 
+                            onChange={(e) => setNuevoMuni({...nuevoMuni, codigo: e.target.value})} 
+                            placeholder="Ej. 01" required 
+                            />
                           </div>
                         </div>
                         <div className="flex flex-column gap-1">
@@ -444,7 +383,12 @@ export default function VistaGeografia() {
                       <form onSubmit={guardarDist} className="p-fluid flex flex-column gap-3">
                         <div className="flex flex-column gap-1">
                           <label className="premium-label">Municipio Padre</label>
-                          <Dropdown value={nuevoDist.municipioId} options={muniOpciones} onChange={(e) => setNuevoDist({...nuevoDist, municipioId: e.value})} placeholder="Seleccione..." />
+                          <Dropdown 
+                          value={nuevoDist.municipioId} 
+                          options={muniOpciones} 
+                          onChange={(e) => setNuevoDist({...nuevoDist, municipioId: e.value})} 
+                          placeholder="Seleccione..." 
+                          />
                         </div>
                         <div className="flex flex-column gap-1">
                           <label className="premium-label">Código Oficial (MH)</label>
