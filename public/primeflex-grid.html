@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bootstrap vs PrimeFlex Grid - Guía Visual Interactiva</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap 5 CSS (para comparación real) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- PrimeFlex v4 CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/primeflex@4.0.0/primeflex.css">
+  
+  <!-- Estilos Personalizados Premium -->
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --border-color: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --bootstrap-purple: #7952b3;
+      --bootstrap-bg: rgba(121, 82, 179, 0.1);
+      --bootstrap-border: rgba(121, 82, 179, 0.3);
+      
+      --primeflex-blue: #3b82f6;
+      --primeflex-bg: rgba(59, 130, 246, 0.1);
+      --primeflex-border: rgba(59, 130, 246, 0.3);
+      
+      --code-bg: #0b0f19;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+    
+    h1 {
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #818cf8, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto 1.5rem auto;
+    }
+    
+    .quick-comparison {
+      display: inline-flex;
+      background-color: #0f172a;
+      border: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      gap: 1.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .quick-comparison span strong {
+      color: var(--text-main);
+    }
+    
+    .container-custom {
+      max-width: 1280px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+    
+    .concept-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      margin-bottom: 3rem;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .card-header-custom {
+      background-color: rgba(15, 23, 42, 0.4);
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .card-badge {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .card-description {
+      padding: 1.25rem 1.5rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95rem;
+      background-color: rgba(30, 41, 59, 0.2);
+    }
+    
+    .split-layout {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    @media (min-width: 992px) {
+      .split-layout {
+        flex-direction: row;
+      }
+      .col-panel {
+        flex: 1;
+        width: 50%;
+      }
+      .col-panel:first-child {
+        border-right: 1px solid var(--border-color);
+      }
+    }
+    
+    .panel-header {
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .panel-bootstrap .panel-header {
+      color: #c084fc;
+      background-color: rgba(121, 82, 179, 0.05);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .panel-primeflex .panel-header {
+      color: #60a5fa;
+      background-color: rgba(59, 130, 246, 0.05);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .code-block {
+      background-color: var(--code-bg);
+      padding: 1rem 1.5rem;
+      margin: 0;
+      overflow-x: auto;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .code-html {
+      color: #e2e8f0;
+    }
+    
+    .code-tag { color: #f43f5e; }
+    .code-attr { color: #fbbf24; }
+    .code-val { color: #34d399; }
+    
+    .demo-area {
+      padding: 2rem 1.5rem;
+      background-color: rgba(15, 23, 42, 0.2);
+    }
+    
+    /* Reglas para renderizar las cañas demo de forma vistosa */
+    .demo-box {
+      border-radius: 6px;
+      padding: 1rem;
+      text-align: center;
+      font-weight: 500;
+      font-size: 0.85rem;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Demo bootstrap style */
+    .bootstrap-container .demo-box {
+      background-color: var(--bootstrap-bg);
+      border: 1px solid var(--bootstrap-border);
+      color: #d8b4fe;
+    }
+    
+    .bootstrap-container .demo-box:hover {
+      background-color: rgba(121, 82, 179, 0.2);
+      border-color: #a855f7;
+    }
+    
+    /* Demo primeflex style */
+    .primeflex-container .demo-box {
+      background-color: var(--primeflex-bg);
+      border: 1px solid var(--primeflex-border);
+      color: #93c5fd;
+    }
+    
+    .primeflex-container .demo-box:hover {
+      background-color: rgba(59, 130, 246, 0.2);
+      border-color: #3b82f6;
+    }
+    
+    /* Contenedor padre de fila */
+    .bootstrap-container .row,
+    .primeflex-container .grid {
+      background-color: rgba(15, 23, 42, 0.6);
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-left: 0;
+      margin-right: 0;
+    }
+    
+    .responsive-hint {
+      display: block;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    
+    /* Tabla comparativa al final */
+    .comparative-table-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 4rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+    
+    .table-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #f8fafc;
+    }
+    
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    
+    .comp-table th, .comp-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+    }
+    
+    .comp-table th {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    
+    .comp-table td strong {
+      color: #e2e8f0;
+    }
+    
+    .tag-bs {
+      background-color: rgba(121, 82, 179, 0.15);
+      color: #d8b4fe;
+      border: 1px solid rgba(121, 82, 179, 0.3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+    }
+    
+    .tag-pf {
+      background-color: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+    }
+    
+    .dif-badge {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    
+    /* Ayudante de breakpoint actual en pantalla */
+    .breakpoint-indicator {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background-color: #1e1b4b;
+      border: 1px solid #4f46e5;
+      color: #c7d2fe;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      z-index: 1000;
+      font-weight: 600;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Indicador del Breakpoint Actual -->
+  <div class="breakpoint-indicator">
+    Breakpoint actual en tu pantalla: 
+    <span class="d-inline d-sm-none">xs (&lt;576px)</span>
+    <span class="d-none d-sm-inline d-md-none">sm (&ge;576px)</span>
+    <span class="d-none d-md-inline d-lg-none">md (&ge;768px)</span>
+    <span class="d-none d-lg-inline d-xl-none">lg (&ge;992px)</span>
+    <span class="d-none d-xl-inline d-xxl-none">xl (&ge;1200px)</span>
+    <span class="d-none d-xxl-inline">xxl (&ge;1400px)</span>
+  </div>
+
+  <header>
+    <h1>Bootstrap vs PrimeFlex Grid</h1>
+    <p class="subtitle">Aprende a maquetar en PrimeFlex traduciendo tus conocimientos de Bootstrap. Ejemplos visuales interactivos y códigos comparados.</p>
+    <div class="quick-comparison">
+      <span>Bootstrap usa <strong>col-md-6</strong></span>
+      <span>|</span>
+      <span>PrimeFlex usa <strong>md:col-6</strong></span>
+    </div>
+  </header>
+
+  <div class="container-custom">
+    
+    <!-- CONCEPTO 1: GRID BÁSICA -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">1. Grid Básica (Distribución Equitativa)</h2>
+        <span class="card-badge">Concepto Clave: Fila y Columnas automáticas</span>
+      </div>
+      <div class="card-description">
+        En Bootstrap, una fila es <code>.row</code> y las columnas automáticas son <code>.col</code>. En PrimeFlex, una fila es <code>.grid</code> y las columnas automáticas son simplemente <code>.col</code>. Ambas distribuyen el espacio de manera uniforme.
+      </div>
+      <div class="split-layout">
+        <!-- Panel Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (.row > .col)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col"</span><span class="code-tag">&gt;</span>Col 1<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col"</span><span class="code-tag">&gt;</span>Col 2<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col"</span><span class="code-tag">&gt;</span>Col 3<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="row">
+                <div class="col"><div class="demo-box">Col 1</div></div>
+                <div class="col"><div class="demo-box">Col 2</div></div>
+                <div class="col"><div class="demo-box">Col 3</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (.grid > .col)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col"</span><span class="code-tag">&gt;</span>Col 1<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col"</span><span class="code-tag">&gt;</span>Col 2<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col"</span><span class="code-tag">&gt;</span>Col 3<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="grid">
+                <div class="col"><div class="demo-box">Col 1</div></div>
+                <div class="col"><div class="demo-box">Col 2</div></div>
+                <div class="col"><div class="demo-box">Col 3</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCEPTO 2: ANCHOS DE COLUMNAS -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">2. Anchos Fijos (Sistema de 12 Columnas)</h2>
+        <span class="card-badge">Concepto Clave: col-[1-12]</span>
+      </div>
+      <div class="card-description">
+        Ambos sistemas se basan en un sistema de 12 columnas. Bootstrap define el ancho con <code>.col-N</code>. PrimeFlex usa exactamente la misma nomenclatura: <code>.col-N</code>.
+      </div>
+      <div class="split-layout">
+        <!-- Panel Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (.col-6 / .col-3 / .col-3)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6"</span><span class="code-tag">&gt;</span>Ancho 6/12 (50%)<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-3"</span><span class="code-tag">&gt;</span>Ancho 3/12 (25%)<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-3"</span><span class="code-tag">&gt;</span>Ancho 3/12 (25%)<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="row">
+                <div class="col-6"><div class="demo-box">col-6 (50%)</div></div>
+                <div class="col-3"><div class="demo-box">col-3 (25%)</div></div>
+                <div class="col-3"><div class="demo-box">col-3 (25%)</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (.col-6 / .col-3 / .col-3)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6"</span><span class="code-tag">&gt;</span>Ancho 6/12 (50%)<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-3"</span><span class="code-tag">&gt;</span>Ancho 3/12 (25%)<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-3"</span><span class="code-tag">&gt;</span>Ancho 3/12 (25%)<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="grid">
+                <div class="col-6"><div class="demo-box">col-6 (50%)</div></div>
+                <div class="col-3"><div class="demo-box">col-3 (25%)</div></div>
+                <div class="col-3"><div class="demo-box">col-3 (25%)</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCEPTO 3: RESPONSIVE (DIFERENCIA CLAVE) -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">3. Grid Responsiva (Breakpoints)</h2>
+        <span class="card-badge dif-badge">Diferencia de Sintaxis</span>
+      </div>
+      <div class="card-description">
+        <strong>¡Atención aquí!</strong> Esta es la mayor diferencia:<br>
+        • Bootstrap pone el breakpoint en medio: <code>col-[breakpoint]-[N]</code> (ej. <code>col-md-6</code>).<br>
+        • PrimeFlex sigue el estándar moderno "mobile-first" y pone el breakpoint como prefijo: <code>[breakpoint]:col-[N]</code> (ej. <code>md:col-6</code>).
+      </div>
+      <div class="split-layout">
+        <!-- Panel Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (col-12 col-md-6 col-lg-4)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 col-md-6 col-lg-4"</span><span class="code-tag">&gt;</span>Columna 1<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 col-md-6 col-lg-4"</span><span class="code-tag">&gt;</span>Columna 2<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 col-md-12 col-lg-4"</span><span class="code-tag">&gt;</span>Columna 3<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="row">
+                <div class="col-12 col-md-6 col-lg-4">
+                  <div class="demo-box">
+                    Col 1
+                    <span class="responsive-hint">12 cols en móvil, 6 en md, 4 en lg</span>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                  <div class="demo-box">
+                    Col 2
+                    <span class="responsive-hint">12 cols en móvil, 6 en md, 4 en lg</span>
+                  </div>
+                </div>
+                <div class="col-12 col-md-12 col-lg-4">
+                  <div class="demo-box">
+                    Col 3
+                    <span class="responsive-hint">12 cols en móvil, 12 en md, 4 en lg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (col-12 md:col-6 lg:col-4)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 md:col-6 lg:col-4"</span><span class="code-tag">&gt;</span>Columna 1<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 md:col-6 lg:col-4"</span><span class="code-tag">&gt;</span>Columna 2<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 md:col-12 lg:col-4"</span><span class="code-tag">&gt;</span>Columna 3<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="grid">
+                <div class="col-12 md:col-6 lg:col-4">
+                  <div class="demo-box">
+                    Col 1
+                    <span class="responsive-hint">12 cols en móvil, 6 en md, 4 en lg</span>
+                  </div>
+                </div>
+                <div class="col-12 md:col-6 lg:col-4">
+                  <div class="demo-box">
+                    Col 2
+                    <span class="responsive-hint">12 cols en móvil, 6 en md, 4 en lg</span>
+                  </div>
+                </div>
+                <div class="col-12 md:col-12 lg:col-4">
+                  <div class="demo-box">
+                    Col 3
+                    <span class="responsive-hint">12 cols en móvil, 12 en md, 4 en lg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCEPTO 4: OFFSETS (DESPLAZAMIENTOS) -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">4. Offset (Desplazamientos)</h2>
+        <span class="card-badge dif-badge">Diferencia de Sintaxis</span>
+      </div>
+      <div class="card-description">
+        • Bootstrap usa <code>offset-md-3</code>.<br>
+        • PrimeFlex usa el breakpoint como prefijo: <code>md:col-offset-3</code>.
+      </div>
+      <div class="split-layout">
+        <!-- Panel Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (col-6 offset-3)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 offset-3"</span><span class="code-tag">&gt;</span>Centrado vía Offset<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="row">
+                <div class="col-6 offset-3">
+                  <div class="demo-box">Col 6 con Offset 3 (Bootstrap)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (col-6 col-offset-3)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 col-offset-3"</span><span class="code-tag">&gt;</span>Centrado vía Offset<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="grid">
+                <div class="col-6 col-offset-3">
+                  <div class="demo-box">col-6 con col-offset-3 (PrimeFlex)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCEPTO 5: ALINEACIÓN CON FLEXBOX -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">5. Alineamiento y Justificación (Flexbox)</h2>
+        <span class="card-badge">Concepto Clave: justify-content y align-items</span>
+      </div>
+      <div class="card-description">
+        Bootstrap y PrimeFlex usan clases flexbox muy parecidas. Sin embargo, para habilitar flex:<br>
+        • Bootstrap: <code>d-flex</code><br>
+        • PrimeFlex: <code>flex</code> (directo y corto).<br>
+        Las clases de alineamiento son casi idénticas (ej. <code>justify-content-between</code> o <code>align-items-center</code>).
+      </div>
+      <div class="split-layout">
+        <!-- Panel Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (d-flex justify-content-between)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"d-flex justify-content-between align-items-center"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div&gt;</span>Izquierda<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div&gt;</span>Derecha<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="d-flex justify-content-between align-items-center p-3 bg-dark border border-secondary rounded">
+                <div class="demo-box py-1 px-3">Izquierda</div>
+                <div class="demo-box py-1 px-3">Derecha</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (flex justify-content-between)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"flex justify-content-between align-items-center"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div&gt;</span>Izquierda<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div&gt;</span>Derecha<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="flex justify-content-between align-items-center p-3 bg-slate-900 border-1 border-slate-700 border-round">
+                <div class="demo-box py-1 px-3">Izquierda</div>
+                <div class="demo-box py-1 px-3">Derecha</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCEPTO 6: ELIMINAR ESPACIOS (GUTTERS) -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">6. Espacios entre Columnas (Gutters / Gaps)</h2>
+        <span class="card-badge">Concepto Clave: Sin Gutters</span>
+      </div>
+      <div class="card-description">
+        • Bootstrap elimina el espacio interno entre columnas agregando <code>g-0</code> a la fila.<br>
+        • PrimeFlex lo hace agregando <code>grid-nogutter</code> a la fila (o usando <code>gap-0</code>).
+      </div>
+      <div class="split-layout">
+        <!-- Panel Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (row g-0)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row g-0"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6"</span><span class="code-tag">&gt;</span>Pegado<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6"</span><span class="code-tag">&gt;</span>Pegado<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="row g-0">
+                <div class="col-6"><div class="demo-box rounded-0">Pegado</div></div>
+                <div class="col-6"><div class="demo-box rounded-0">Pegado</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (grid grid-nogutter)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid grid-nogutter"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6"</span><span class="code-tag">&gt;</span>Pegado<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6"</span><span class="code-tag">&gt;</span>Pegado<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="grid grid-nogutter">
+                <div class="col-6"><div class="demo-box border-none border-radius-none">Pegado</div></div>
+                <div class="col-6"><div class="demo-box border-none border-radius-none">Pegado</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCEPTO 7: MAQUETACIÓN DE UN DASHBOARD -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">7. Maquetación Completa de un Dashboard (Grids Anidados)</h2>
+        <span class="card-badge">Ejemplo del Mundo Real</span>
+      </div>
+      <div class="card-description">
+        Un layout clásico de Dashboard suele incluir un Header superior, una barra lateral (Sidebar) para navegación y una sección de contenido principal que a su vez contiene tarjetas de métricas y paneles de datos. Observa cómo se estructuran y anidan las filas y columnas en ambos frameworks.
+      </div>
+      <div class="split-layout">
+        <!-- Panel Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (Sidebar + Grid Anidado)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-comment">&lt;!-- Fila Principal --&gt;</span>
+<span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row g-3"</span><span class="code-tag">&gt;</span>
+  <span class="code-comment">&lt;!-- Sidebar --&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 col-md-3"</span><span class="code-tag">&gt;</span>Menu<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-comment">&lt;!-- Contenido Principal --&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 col-md-9"</span><span class="code-tag">&gt;</span>
+    <span class="code-comment">&lt;!-- Fila de Tarjetas --&gt;</span>
+    <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row g-2 mb-3"</span><span class="code-tag">&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 col-lg-3"</span><span class="code-tag">&gt;</span>Métrica 1<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 col-lg-3"</span><span class="code-tag">&gt;</span>Métrica 2<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 col-lg-3"</span><span class="code-tag">&gt;</span>Métrica 3<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 col-lg-3"</span><span class="code-tag">&gt;</span>Métrica 4<span class="code-tag">&lt;/div&gt;</span>
+    <span class="code-tag">&lt;/div&gt;</span>
+    <span class="code-comment">&lt;!-- Fila de Paneles --&gt;</span>
+    <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row g-2"</span><span class="code-tag">&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 col-lg-8"</span><span class="code-tag">&gt;</span>Gráfico Principal<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 col-lg-4"</span><span class="code-tag">&gt;</span>Feed Actividad<span class="code-tag">&lt;/div&gt;</span>
+    <span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <!-- Grid Principal -->
+              <div class="row g-2">
+                <!-- Sidebar -->
+                <div class="col-12 col-md-3">
+                  <div class="demo-box h-100 bg-secondary-subtle border-secondary py-4 text-purple">
+                    📊 Menú lateral
+                    <span class="responsive-hint">col-12 (móvil) / col-md-3</span>
+                  </div>
+                </div>
+                <!-- Main Content Area -->
+                <div class="col-12 col-md-9">
+                  <!-- Row de Tarjetas de Métricas -->
+                  <div class="row g-2 mb-2">
+                    <div class="col-6 col-lg-3">
+                      <div class="demo-box py-2" style="background: rgba(121,82,179,0.08);">
+                        <strong class="d-block">$15,400</strong>
+                        <span class="text-xs text-muted">Ventas</span>
+                      </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                      <div class="demo-box py-2" style="background: rgba(121,82,179,0.08);">
+                        <strong class="d-block">320</strong>
+                        <span class="text-xs text-muted">Clientes</span>
+                      </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                      <div class="demo-box py-2" style="background: rgba(121,82,179,0.08);">
+                        <strong class="d-block">+12%</strong>
+                        <span class="text-xs text-muted">Crecimiento</span>
+                      </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                      <div class="demo-box py-2" style="background: rgba(121,82,179,0.08);">
+                        <strong class="d-block">98.4%</strong>
+                        <span class="text-xs text-muted">Éxito</span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Row de Sección de Gráficos / Feed -->
+                  <div class="row g-2">
+                    <div class="col-12 col-lg-8">
+                      <div class="demo-box py-4" style="height: 110px;">
+                        📈 Gráfico de Tendencias
+                        <span class="responsive-hint">col-12 / col-lg-8</span>
+                      </div>
+                    </div>
+                    <div class="col-12 col-lg-4">
+                      <div class="demo-box py-4 text-truncate" style="height: 110px;">
+                        🔔 Registro de Actividades
+                        <span class="responsive-hint">col-12 / col-lg-4</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (Sidebar + Grid Anidado)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-comment">&lt;!-- Grid Principal --&gt;</span>
+<span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid"</span><span class="code-tag">&gt;</span>
+  <span class="code-comment">&lt;!-- Sidebar --&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 md:col-3"</span><span class="code-tag">&gt;</span>Menu<span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-comment">&lt;!-- Contenido Principal --&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 md:col-9"</span><span class="code-tag">&gt;</span>
+    <span class="code-comment">&lt;!-- Fila de Tarjetas --&gt;</span>
+    <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid mb-3"</span><span class="code-tag">&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 lg:col-3"</span><span class="code-tag">&gt;</span>Métrica 1<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 lg:col-3"</span><span class="code-tag">&gt;</span>Métrica 2<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 lg:col-3"</span><span class="code-tag">&gt;</span>Métrica 3<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-6 lg:col-3"</span><span class="code-tag">&gt;</span>Métrica 4<span class="code-tag">&lt;/div&gt;</span>
+    <span class="code-tag">&lt;/div&gt;</span>
+    <span class="code-comment">&lt;!-- Fila de Paneles --&gt;</span>
+    <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"grid"</span><span class="code-tag">&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 lg:col-8"</span><span class="code-tag">&gt;</span>Gráfico Principal<span class="code-tag">&lt;/div&gt;</span>
+      <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 lg:col-4"</span><span class="code-tag">&gt;</span>Feed Actividad<span class="code-tag">&lt;/div&gt;</span>
+    <span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <!-- Grid Principal -->
+              <div class="grid">
+                <!-- Sidebar -->
+                <div class="col-12 md:col-3">
+                  <div class="demo-box h-full bg-slate-900 border-slate-700 py-4 text-blue-400">
+                    📊 Menú lateral
+                    <span class="responsive-hint">col-12 (móvil) / md:col-3</span>
+                  </div>
+                </div>
+                <!-- Main Content Area -->
+                <div class="col-12 md:col-9">
+                  <!-- Row de Tarjetas de Métricas -->
+                  <div class="grid mb-2">
+                    <div class="col-6 lg:col-3">
+                      <div class="demo-box py-2" style="background: rgba(59,130,246,0.08);">
+                        <strong class="text-blue-200 block">$15,400</strong>
+                        <span class="text-xs text-muted">Ventas</span>
+                      </div>
+                    </div>
+                    <div class="col-6 lg:col-3">
+                      <div class="demo-box py-2" style="background: rgba(59,130,246,0.08);">
+                        <strong class="text-blue-200 block">320</strong>
+                        <span class="text-xs text-muted">Clientes</span>
+                      </div>
+                    </div>
+                    <div class="col-6 lg:col-3">
+                      <div class="demo-box py-2" style="background: rgba(59,130,246,0.08);">
+                        <strong class="text-blue-200 block">+12%</strong>
+                        <span class="text-xs text-muted">Crecimiento</span>
+                      </div>
+                    </div>
+                    <div class="col-6 lg:col-3">
+                      <div class="demo-box py-2" style="background: rgba(59,130,246,0.08);">
+                        <strong class="text-blue-200 block">98.4%</strong>
+                        <span class="text-xs text-muted">Éxito</span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Row de Sección de Gráficos / Feed -->
+                  <div class="grid">
+                    <div class="col-12 lg:col-8">
+                      <div class="demo-box py-4" style="height: 110px;">
+                        📈 Gráfico de Tendencias
+                        <span class="responsive-hint">col-12 / lg:col-8</span>
+                      </div>
+                    </div>
+                    <div class="col-12 lg:col-4">
+                      <div class="demo-box py-4 text-truncate" style="height: 110px;">
+                        🔔 Registro de Actividades
+                        <span class="responsive-hint">col-12 / lg:col-4</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA COMPARATIVA RESUMEN -->
+    <div class="comparative-table-card">
+      <h3 class="table-title">Cheat Sheet: Tabla de Equivalencias Rápidas</h3>
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Concepto / Propiedad</th>
+            <th>Bootstrap 5</th>
+            <th>PrimeFlex v4</th>
+            <th>Detalle / Diferencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Fila contenedora</strong></td>
+            <td><span class="tag-bs">.row</span></td>
+            <td><span class="tag-pf">.grid</span></td>
+            <td>Cambia el nombre de la clase.</td>
+          </tr>
+          <tr>
+            <td><strong>Columna automática</strong></td>
+            <td><span class="tag-bs">.col</span></td>
+            <td><span class="tag-pf">.col</span></td>
+            <td>Idénticas. Se expanden equitativamente.</td>
+          </tr>
+          <tr>
+            <td><strong>Columna de ancho fijo</strong></td>
+            <td><span class="tag-bs">.col-N</span> <span class="text-xs text-muted">(1-12)</span></td>
+            <td><span class="tag-pf">.col-N</span> <span class="text-xs text-muted">(1-12)</span></td>
+            <td>Idénticas.</td>
+          </tr>
+          <tr>
+            <td><strong>Breakpoint responsivo</strong></td>
+            <td><span class="tag-bs">.col-md-6</span></td>
+            <td><span class="tag-pf">.md:col-6</span></td>
+            <td><strong style="color: #f87171;">¡Diferencia clave!</strong> PrimeFlex antepone el breakpoint con dos puntos (<code>:</code>).</td>
+          </tr>
+          <tr>
+            <td><strong>Desplazamiento (Offset)</strong></td>
+            <td><span class="tag-bs">.offset-md-3</span></td>
+            <td><span class="tag-pf">.md:col-offset-3</span></td>
+            <td>Bootstrap usa prefijo offset; PrimeFlex combina breakpoint y <code>col-offset-N</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Habilitar Flexbox</strong></td>
+            <td><span class="tag-bs">.d-flex</span></td>
+            <td><span class="tag-pf">.flex</span></td>
+            <td>PrimeFlex es más directo.</td>
+          </tr>
+          <tr>
+            <td><strong>Quitar espacios (Gutters)</strong></td>
+            <td><span class="tag-bs">.g-0</span></td>
+            <td><span class="tag-pf">.grid-nogutter</span></td>
+            <td>PrimeFlex usa una clase específica en el contenedor <code>.grid</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Dirección de Flex</strong></td>
+            <td><span class="tag-bs">.flex-column</span></td>
+            <td><span class="tag-pf">.flex-column</span></td>
+            <td>Idénticas.</td>
+          </tr>
+          <tr>
+            <td><strong>Alineación horizontal (Justify)</strong></td>
+            <td><span class="tag-bs">.justify-content-between</span></td>
+            <td><span class="tag-pf">.justify-content-between</span></td>
+            <td>Idénticas.</td>
+          </tr>
+          <tr>
+            <td><strong>Alineación vertical (Align)</strong></td>
+            <td><span class="tag-bs">.align-items-center</span></td>
+            <td><span class="tag-pf">.align-items-center</span></td>
+            <td>Idénticas.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</body>
+</html>

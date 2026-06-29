@@ -30,7 +30,11 @@ export default function VistaCategorias() {
   const [filtroGlobal, setFiltroGlobal] = useState('');
   const toast = useRef(null);
 
+  const cargadoRef = useRef(false);
+
   useEffect(() => {
+    if (cargadoRef.current) return;
+    cargadoRef.current = true;
     cargarCategorias();
   }, []);
 

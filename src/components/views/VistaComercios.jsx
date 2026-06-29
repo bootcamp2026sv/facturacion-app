@@ -26,14 +26,15 @@ const ACTIVIDADES_SIMULADAS = [
 export default function VistaComercios() {
   const toast = useRef(null);
   const [cargando, setCargando] = useState(false);
+  const [cargandoInicial, setCargandoInicial] = useState(true);
 
   // Estados para catálogos
-  const [municipiosLista, setMunicipiosLista] = useState(MUNICIPIOS_SIMULADOS);
+  const [distritosLista, setDistritosLista] = useState([]);
   const [actividadesLista, setActividadesLista] = useState(ACTIVIDADES_SIMULADAS);
 
   // Estado del formulario
   const [datosComercio, setDatosComercio] = useState({
-    id: 1,
+    id: null,
     nombre: 'TECHSERVICES EL SALVADOR',
     nombreComercial: 'TECHSERVICES EL SALVADOR',
     nit: '0614-150822-101-9',
@@ -45,25 +46,30 @@ export default function VistaComercios() {
     tipoEstablecimiento: 2,
     codEstableMH: 'M001',
     codPuntoVentaMH: 'P001',
-    municipio_id: 1,
+    distrito_id: 1,
     actividadEconomica_id: 1
   });
 
-  // Descomentar para conectar con la API
-  /*
+  const cargadoRef = useRef(false);
+
+  // Conectar con la API para cargar catálogos y el comercio único
   useEffect(() => {
+    if (cargadoRef.current) return;
+    cargadoRef.current = true;
     const cargarDatosAPI = async () => {
       setCargando(true);
       try {
-        const resMuni = await api.get('/municipios');
-        setMunicipiosLista(resMuni.data || []);
+        const resDist = await api.get('/distritos');
+        setDistritosLista(resDist.data || []);
 
         const resAct = await api.get('/ActividadEconomicas');
         setActividadesLista(resAct.data || []);
 
         const respuesta = await api.get('/Comercios');
         const listaComercios = respuesta.data || [];
-        const comercio = listaComercios[0];
+        
+        // Tomamos el primer comercio registrado
+        const comercio = listaComercios.length > 0 ? listaComercios[0] : null;
 
         if (comercio) {
           setDatosComercio({
@@ -79,7 +85,7 @@ export default function VistaComercios() {
             tipoEstablecimiento: comercio.tipoEstablecimiento || comercio.TipoEstablecimiento || 2,
             codEstableMH: comercio.codEstableMH || comercio.CodEstableMH || '',
             codPuntoVentaMH: comercio.codPuntoVentaMH || comercio.CodPuntoVentaMH || '',
-            municipio_id: comercio.municipio_id || comercio.Municipio_id || comercio.municipio?.id || comercio.Municipio?.id || 1,
+            distrito_id: comercio.distrito_id || comercio.Distrito_id || comercio.distrito?.id || comercio.Distrito?.id || 1,
             actividadEconomica_id: comercio.actividadEconomica_id || comercio.ActividadEconomica_id || comercio.actividadEconomica?.id || comercio.ActividadEconomica?.id || 1
           });
         }
@@ -93,37 +99,65 @@ export default function VistaComercios() {
         });
       } finally {
         setCargando(false);
+        setCargandoInicial(false);
       }
     };
     cargarDatosAPI();
   }, []);
-  */
 
-  // Guardar cambios
+  // Guardar cambios a la API
   const guardarComercio = async (e) => {
     e.preventDefault();
     setCargando(true);
 
     try {
-      // Descomentar para guardar en la API
-      /*
-      const respuesta = datosComercio.id
-        ? await api.put(`/Comercios/${datosComercio.id}`, datosComercio)
-        : await api.post('/Comercios', datosComercio);
+      let respuesta;
+      if (datosComercio.id) {
+        respuesta = await api.put(`/Comercios/${datosComercio.id}`, datosComercio);
+      } else {
+        respuesta = await api.post('/Comercios', datosComercio);
+      }
 
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de comercio actualizados en el servidor.', life: 3000 });
-      */
+      const comercioGuardado = respuesta.data;
+      setDatosComercio({
+        id: comercioGuardado.id,
+        nombre: comercioGuardado.nombre || comercioGuardado.Nombre || '',
+        nombreComercial: comercioGuardado.nombreComercial || comercioGuardado.NombreComercial || '',
+        nit: comercioGuardado.nit || comercioGuardado.Nit || '',
+        nrc: comercioGuardado.nrc || comercioGuardado.Nrc || '',
+        telefono: comercioGuardado.telefono || comercioGuardado.Telefono || '',
+        correo: comercioGuardado.correo || comercioGuardado.Correo || '',
+        granContribuyente: comercioGuardado.granContribuyente !== undefined ? (comercioGuardado.granContribuyente || comercioGuardado.GranContribuyente) : false,
+        complementoDireccion: comercioGuardado.complementoDireccion || comercioGuardado.ComplementoDireccion || '',
+        tipoEstablecimiento: comercioGuardado.tipoEstablecimiento || comercioGuardado.TipoEstablecimiento || 2,
+        codEstableMH: comercioGuardado.codEstableMH || comercioGuardado.CodEstableMH || '',
+        codPuntoVentaMH: comercioGuardado.codPuntoVentaMH || comercioGuardado.CodPuntoVentaMH || '',
+        distrito_id: comercioGuardado.distrito_id || comercioGuardado.Distrito_id || comercioGuardado.distrito?.id || comercioGuardado.Distrito?.id || 1,
+        actividadEconomica_id: comercioGuardado.actividadEconomica_id || comercioGuardado.ActividadEconomica_id || comercioGuardado.actividadEconomica?.id || comercioGuardado.ActividadEconomica?.id || 1
+      });
 
-      // Guardado local de prueba
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de comercio actualizados localmente.', life: 3000 });
+      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de comercio actualizados correctamente.', life: 3000 });
 
     } catch (error) {
-      console.error(error);
-      toast.current.show({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la configuración de comercio.', life: 3000 });
+      console.error("Error al guardar comercio:", error.response?.data || error);
+      const apiMsg = error.response?.data?.message || error.response?.data?.error || 'No se pudo guardar la configuración de comercio.';
+      toast.current.show({ severity: 'error', summary: 'Error', detail: apiMsg, life: 6000 });
     } finally {
       setCargando(false);
     }
   };
+
+  if (cargandoInicial) {
+    return (
+      <div className="p-4 premium-fade-in flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+        <div className="premium-surface-card text-center p-6 flex flex-column align-items-center justify-content-center border-round-xl border-1 border-300 dark:border-slate-700" style={{ maxWidth: '400px', background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
+          <i className="pi pi-spin pi-spinner text-primary text-5xl mb-4"></i>
+          <h3 className="text-xl font-bold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>Cargando Configuración</h3>
+          <p className="text-sm m-0" style={{ color: 'var(--text-muted)' }}>Obteniendo datos del comercio emisor desde el servidor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 premium-fade-in">
@@ -260,23 +294,24 @@ export default function VistaComercios() {
                   </div>
                 </div>
                 <div className="col-12 md:col-6 flex flex-column gap-2">
-                  <label htmlFor="correo" className="font-bold text-xs text-800">Correo Comercial</label>
+                  <label htmlFor="correo" className="font-bold text-xs text-800">Correo Comercial <span className="text-red-500">*</span></label>
                   <div className="premium-input-group">
                     <i className="pi pi-envelope premium-input-icon"></i>
                     <InputText 
                       id="correo" 
-                      value={datosComercio.correo} 
+                      value={datosComercio.correo || ''} 
                       onChange={(e) => setDatosComercio({...datosComercio, correo: e.target.value})} 
+                      required
                     />
                   </div>
                 </div>
                 <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
-                  <label htmlFor="municipio_id" className="font-bold text-xs text-800">Municipio</label>
+                  <label htmlFor="distrito_id" className="font-bold text-xs text-800">Distrito</label>
                   <Dropdown 
-                    id="municipio_id" 
-                    value={datosComercio.municipio_id} 
-                    options={municipiosLista.map(m => ({ label: m.Nombre || m.nombre || 'Municipio', value: m.id }))} 
-                    onChange={(e) => setDatosComercio({...datosComercio, municipio_id: e.value})} 
+                    id="distrito_id" 
+                    value={datosComercio.distrito_id} 
+                    options={distritosLista.map(d => ({ label: d.Nombre || d.nombre || 'Distrito', value: d.id }))} 
+                    onChange={(e) => setDatosComercio({...datosComercio, distrito_id: e.value})} 
                   />
                 </div>
                 <div className="col-12 md:col-6 flex align-items-center justify-content-between mt-4 p-2 bg-transparent">

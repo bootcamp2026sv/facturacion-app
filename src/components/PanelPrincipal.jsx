@@ -26,7 +26,7 @@ export default function PanelPrincipal() {
       id: "inicio",
       etiqueta: "Inicio",
       icono: "pi pi-chart-bar",
-      componente: <VistaInicio />,
+      componente: <VistaInicio alCambiarVista={setVistaActiva} />,
     },
     {
       id: "ventas",

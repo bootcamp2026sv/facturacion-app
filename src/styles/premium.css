@@ -119,6 +119,25 @@
   font-weight: 600;
 }
 
+/* Custom thin scrollbar for premium sidebar navigation */
+.premium-sidebar nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.premium-sidebar nav::-webkit-scrollbar {
+  width: 4px;
+}
+.premium-sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.premium-sidebar nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+.premium-sidebar nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 /* --- Premium Buttons --- */
 .premium-btn {
   border-radius: 10px !important;
@@ -227,6 +246,9 @@
   font-size: 0.875rem;
   color: var(--text-muted);
   border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 .premium-tabs .p-tabview-nav li .p-tabview-nav-link:hover {
   color: #6366f1;
@@ -242,6 +264,11 @@
   background: transparent;
   border: none;
   padding: 1.5rem 0.5rem;
+}
+.p-tabview-nav-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
 }
 
 /* --- Tag subtle --- */

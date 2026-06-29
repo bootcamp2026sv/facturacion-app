@@ -46,10 +46,17 @@ export default function VistaProductos() {
 
   const [producto, setProducto] = useState(productoVacio);
   const [filtroGlobal, setFiltroGlobal] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState(null);
+  const [filtroTributacion, setFiltroTributacion] = useState(null);
+  const [filtroStock, setFiltroStock] = useState('TODOS');
   const toast = useRef(null);
+
+  const cargadoRef = useRef(false);
 
   // Cargar datos iniciales
   useEffect(() => {
+    if (cargadoRef.current) return;
+    cargadoRef.current = true;
     cargarProductos();
     cargarUnidadesMedida();
     cargarCategorias();
@@ -316,18 +323,96 @@ export default function VistaProductos() {
     </div>
   );
 
+  // Lógica de búsqueda y filtrado de productos
+  const productosFiltrados = productos.filter(p => {
+    const query = filtroGlobal.toLowerCase().trim();
+    const matchGlobal = !query ||
+      (p.codigo || '').toLowerCase().includes(query) ||
+      (p.nombre || '').toLowerCase().includes(query) ||
+      (p.marca || '').toLowerCase().includes(query) ||
+      (p.descripcion || '').toLowerCase().includes(query) ||
+      (p.categoria?.nombre || '').toLowerCase().includes(query);
+
+    const catId = p.categoria?.id || p.categoriaId;
+    const matchCat = !filtroCategoria || catId === filtroCategoria;
+
+    const matchTrib = !filtroTributacion || p.tipoTributacion === filtroTributacion;
+
+    let matchStock = true;
+    if (filtroStock === 'CON_STOCK') {
+      matchStock = (p.existencia || 0) > 0;
+    } else if (filtroStock === 'SIN_STOCK') {
+      matchStock = (p.existencia || 0) <= 0;
+    }
+
+    return matchGlobal && matchCat && matchTrib && matchStock;
+  });
+
+  const opcionesTributacion = [
+    { label: 'Todas las Tributaciones', value: null },
+    { label: 'Gravado', value: 'GRAVADO' },
+    { label: 'Exento', value: 'EXENTO' },
+    { label: 'No Sujeto', value: 'NO_SUJETO' }
+  ];
+
+  const opcionesStock = [
+    { label: 'Todos los Productos', value: 'TODOS' },
+    { label: 'Con Stock / Disponible', value: 'CON_STOCK' },
+    { label: 'Sin Stock / Agotado', value: 'SIN_STOCK' }
+  ];
+
   const headerTabla = (
-    <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-2">
-      <h3 className="m-0">Productos Registrados</h3>
-      <IconField iconPosition="left">
-        <InputIcon className="pi pi-search" />
-        <InputText
-          type="search"
-          onInput={(e) => setFiltroGlobal(e.target.value)}
-          placeholder="Buscar..."
-          className="w-full md:w-auto"
-        />
-      </IconField>
+    <div className="flex flex-column gap-3 p-2">
+      <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-2">
+        <h3 className="m-0 text-base font-bold" style={{ color: 'var(--text-primary)' }}>Productos Registrados</h3>
+        <span className="text-xs text-500" style={{ color: 'var(--text-muted)' }}>
+          Mostrando {productosFiltrados.length} de {productos.length} productos
+        </span>
+      </div>
+      <div className="grid">
+        <div className="col-12 md:col-3">
+          <div className="premium-input-group w-full">
+            <i className="pi pi-search premium-input-icon"></i>
+            <InputText
+              type="search"
+              value={filtroGlobal}
+              onChange={(e) => setFiltroGlobal(e.target.value)}
+              placeholder="Buscar por código, nombre, marca..."
+              className="w-full"
+            />
+          </div>
+        </div>
+        <div className="col-12 md:col-3">
+          <Dropdown
+            value={filtroCategoria}
+            options={[{ label: 'Todas las Categorías', value: null }, ...categorias.map(c => ({ label: c.nombre, value: c.id }))]}
+            onChange={(e) => setFiltroCategoria(e.value)}
+            placeholder="Filtrar por Categoría"
+            className="w-full"
+            filter
+            showClear
+          />
+        </div>
+        <div className="col-12 md:col-3">
+          <Dropdown
+            value={filtroTributacion}
+            options={opcionesTributacion}
+            onChange={(e) => setFiltroTributacion(e.value)}
+            placeholder="Filtrar por Tributación"
+            className="w-full"
+            showClear
+          />
+        </div>
+        <div className="col-12 md:col-3">
+          <Dropdown
+            value={filtroStock}
+            options={opcionesStock}
+            onChange={(e) => setFiltroStock(e.value)}
+            placeholder="Disponibilidad de Stock"
+            className="w-full"
+          />
+        </div>
+      </div>
     </div>
   );
 
@@ -344,14 +429,13 @@ export default function VistaProductos() {
         <Toolbar left={headerToolbar} />
 
         <DataTable
-          value={productos}
+          value={productosFiltrados}
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25]}
           loading={cargando}
-          globalFilter={filtroGlobal}
           header={headerTabla}
-          emptyMessage="No se encontraron productos."
+          emptyMessage="No se encontraron productos con los filtros aplicados."
           responsiveLayout="scroll"
         >
           <Column field="codigo" header="Código" sortable bodyClassName="font-bold"></Column>

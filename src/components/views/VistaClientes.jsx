@@ -8,6 +8,7 @@ import { Column } from 'primereact/column';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Toast } from 'primereact/toast';
 import { Tag } from 'primereact/tag';
+import { Dialog } from 'primereact/dialog';
 
 // Importar cliente Axios para la API real
 import api from '../../services/api';
@@ -36,11 +37,17 @@ export default function VistaClientes() {
   const toast = useRef(null);
   const [indiceTabActivo, setIndiceTabActivo] = useState(0);
   const [cargando, setCargando] = useState(false);
+  const [cargandoInicial, setCargandoInicial] = useState(true);
   const [distritos, setDistritos] = useState([]);
   const [actividades, setActividades] = useState([]);
 
   // Clientes de ejemplo
   const [clientes, setClientes] = useState([]);
+
+  // Estados de filtros y búsqueda
+  const [filtroGlobal, setFiltroGlobal] = useState('');
+  const [filtroGranContribuyente, setFiltroGranContribuyente] = useState('TODOS');
+  const [filtroDistrito, setFiltroDistrito] = useState(null);
 
   // Estado del formulario
   const [datosFormulario, setDatosFormulario] = useState({
@@ -53,15 +60,102 @@ export default function VistaClientes() {
     telefono: '',
     correo: '',
     granContribuyente: false,
-    activo: false,
+    activo: true,
     complementoDireccion: '',
     distrito_id: 1,
     actividadEconomica_id: 1
   });
 
+  const [editando, setEditando] = useState(false);
+  const [idSeleccionado, setIdSeleccionado] = useState(null);
+  const [dialogoEliminarVisible, setDialogoEliminarVisible] = useState(false);
+  const [clienteAEliminar, setClienteAEliminar] = useState(null);
+
+  const iniciarEdicion = (cliente) => {
+    const distId = cliente.distrito?.id || cliente.distrito_id || cliente.distritoId || (distritos[0]?.id || 1);
+    const actId = cliente.actividadEconomica?.id || cliente.actividadEconomica_id || cliente.actividadEconomicaId || (actividades[0]?.id || 1);
+    setDatosFormulario({
+      nombre: cliente.nombre || '',
+      apellidos: cliente.apellidos || '',
+      nombreComercial: cliente.nombreComercial || '',
+      tipoDocumento: cliente.tipoDocumento || 13,
+      numDocumento: cliente.numDocumento || '',
+      nrc: cliente.nrc || '',
+      telefono: cliente.telefono || '',
+      correo: cliente.correo || '',
+      granContribuyente: cliente.granContribuyente ?? false,
+      activo: cliente.activo ?? true,
+      complementoDireccion: cliente.complementoDireccion || '',
+      distrito_id: distId,
+      actividadEconomica_id: actId
+    });
+    setIdSeleccionado(cliente.id);
+    setEditando(true);
+    setIndiceTabActivo(0); // Cambiar a la pestaña de formulario
+  };
+
+  const cancelarEdicion = () => {
+    resetearFormulario();
+    setIdSeleccionado(null);
+    setEditando(false);
+    setIndiceTabActivo(1); // Volver a la pestaña del listado
+  };
+
+  const confirmarEliminarCliente = (cliente) => {
+    setClienteAEliminar(cliente);
+    setDialogoEliminarVisible(true);
+  };
+
+  const eliminarCliente = async () => {
+    if (!clienteAEliminar) return;
+    setCargando(true);
+    try {
+      await api.delete(`/Clientes/${clienteAEliminar.id}`);
+      setClientes(prev => prev.filter(c => c.id !== clienteAEliminar.id));
+      toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Cliente eliminado correctamente.', life: 3000 });
+      if (idSeleccionado === clienteAEliminar.id) {
+        cancelarEdicion();
+      }
+      setDialogoEliminarVisible(false);
+      setClienteAEliminar(null);
+    } catch (error) {
+      console.error(error);
+      toast.current.show({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el cliente.', life: 3000 });
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const plantillaAcciones = (rowData) => {
+    return (
+      <div className="flex gap-2 justify-content-center">
+        <Button
+          type="button"
+          icon="pi pi-pencil"
+          className="p-button-rounded p-button-success p-button-sm"
+          onClick={() => iniciarEdicion(rowData)}
+          tooltip="Editar"
+          tooltipOptions={{ position: 'top' }}
+        />
+        <Button
+          type="button"
+          icon="pi pi-trash"
+          className="p-button-rounded p-button-danger p-button-sm"
+          onClick={() => confirmarEliminarCliente(rowData)}
+          tooltip="Eliminar"
+          tooltipOptions={{ position: 'top' }}
+        />
+      </div>
+    );
+  };
+
   // Descomentar para conectar con la API
   
+  const cargadoRef = useRef(false);
+
   useEffect(() => {
+    if (cargadoRef.current) return;
+    cargadoRef.current = true;
     const cargarDatosAPI = async () => {
       setCargando(true);
       try {
@@ -93,6 +187,7 @@ export default function VistaClientes() {
         });
       } finally {
         setCargando(false);
+        setCargandoInicial(false);
       }
     };
     cargarDatosAPI();
@@ -128,24 +223,32 @@ export default function VistaClientes() {
     setCargando(true);
 
     try {
-      // Descomentar para guardar en la API
-      
-      const respuesta = await api.post('/Clientes', datosFormulario); 
-      
-      const clienteGuardado = respuesta.data;
-      setClientes(prev => [...prev, clienteGuardado]);
-      toast.current.show({ 
-        severity: 'success', 
-        summary: 'Registrado', 
-        detail: `Cliente guardado con ID ${clienteGuardado.id || 'N/A'} en la base de datos.`, 
-        life: 3000 
-      });
-      // -----------------------------------------------------------
-
-      resetearFormulario();
-      setIndiceTabActivo(1); // Cambiar a la pestaña de Clientes Registrados
+      if (editando) {
+        const respuesta = await api.put(`/Clientes/${idSeleccionado}`, datosFormulario);
+        const clienteActualizado = respuesta.data;
+        setClientes(prev => prev.map(c => c.id === idSeleccionado ? clienteActualizado : c));
+        toast.current.show({ 
+          severity: 'success', 
+          summary: 'Actualizado', 
+          detail: 'Cliente actualizado correctamente.', 
+          life: 3000 
+        });
+        cancelarEdicion();
+      } else {
+        const respuesta = await api.post('/Clientes', datosFormulario); 
+        const clienteGuardado = respuesta.data;
+        setClientes(prev => [...prev, clienteGuardado]);
+        toast.current.show({ 
+          severity: 'success', 
+          summary: 'Registrado', 
+          detail: `Cliente guardado con ID ${clienteGuardado.id || 'N/A'} en la base de datos.`, 
+          life: 3000 
+        });
+        resetearFormulario();
+        setIndiceTabActivo(1); // Cambiar a la pestaña de Clientes Registrados
+      }
     } catch (error) {
-      console.error("Error al registrar cliente:", error);
+      console.error("Error al registrar/actualizar cliente:", error);
       toast.current.show({ 
         severity: 'error', 
         summary: 'Error', 
@@ -175,13 +278,30 @@ export default function VistaClientes() {
     const apellidos = rowData.apellidos || rowData.Apellidos || '';
     const nombreComercial = rowData.nombreComercial || rowData.NombreComercial || '';
     const apellidosStr = apellidos ? ` ${apellidos}` : '';
+    
+    const granContribuyente = rowData.granContribuyente !== undefined ? rowData.granContribuyente : rowData.GranContribuyente;
+    const isGranContribuyente = granContribuyente || false;
+    const nrc = rowData.nrc || rowData.Nrc || '';
+
     return (
       <div className="flex flex-column">
-        <span className="font-semibold text-sm text-900">{nombre}{apellidosStr}</span>
-        {nombreComercial && (
-          <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Comercial: {nombreComercial}
-          </span>
+        <div className="flex align-items-center gap-2">
+          <span className="font-semibold text-sm text-900">{nombre}{apellidosStr}</span>
+          {isGranContribuyente && (
+            <Tag 
+              value="GC" 
+              severity="warning" 
+              style={{ fontSize: '9px', padding: '1px 4px', lineHeight: '1' }} 
+              tooltip="Gran Contribuyente" 
+              tooltipOptions={{ position: 'top' }} 
+            />
+          )}
+        </div>
+        {(nombreComercial || nrc) && (
+          <div className="flex flex-column gap-1 text-xs font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>
+            {nombreComercial && <span>Comercial: {nombreComercial}</span>}
+            {nrc && <span style={{ color: 'var(--text-muted)' }}>NRC: {nrc}</span>}
+          </div>
         )}
       </div>
     );
@@ -218,32 +338,116 @@ export default function VistaClientes() {
     );
   };
 
-  const contribuyenteTemplate = (rowData) => {
-    const granContribuyente = rowData.granContribuyente !== undefined ? rowData.granContribuyente : rowData.GranContribuyente;
-    const isGranContribuyente = granContribuyente || false;
-    const nrc = rowData.nrc || rowData.Nrc || '';
+  const footerDialogoEliminar = (
+    <div className="flex justify-content-end gap-2">
+      <Button
+        type="button"
+        label="No"
+        icon="pi pi-times"
+        className="p-button-text p-button-secondary"
+        onClick={() => setDialogoEliminarVisible(false)}
+        disabled={cargando}
+      />
+      <Button
+        type="button"
+        label="Sí, Eliminar"
+        icon="pi pi-check"
+        className="p-button-danger"
+        onClick={eliminarCliente}
+        loading={cargando}
+      />
+    </div>
+  );
+
+  // Lógica de búsqueda y filtrado de clientes
+  const clientesFiltrados = clientes.filter(cliente => {
+    const query = filtroGlobal.toLowerCase().trim();
+    const matchGlobal = !query || 
+      (cliente.nombre || '').toLowerCase().includes(query) ||
+      (cliente.apellidos || '').toLowerCase().includes(query) ||
+      (cliente.numDocumento || '').toLowerCase().includes(query) ||
+      (cliente.nombreComercial || '').toLowerCase().includes(query) ||
+      (cliente.correo || '').toLowerCase().includes(query) ||
+      (cliente.telefono || '').toLowerCase().includes(query) ||
+      (cliente.nrc || '').toLowerCase().includes(query) ||
+      ((cliente.distrito?.nombre || cliente.distrito?.Nombre) || '').toLowerCase().includes(query) ||
+      ((cliente.actividadEconomica?.descActividad || cliente.actividadEconomica?.descActividad) || '').toLowerCase().includes(query);
+
+    let matchGC = true;
+    if (filtroGranContribuyente === 'GC') {
+      matchGC = cliente.granContribuyente === true;
+    } else if (filtroGranContribuyente === 'REGULAR') {
+      matchGC = cliente.granContribuyente === false;
+    }
+
+    const distId = cliente.distrito?.id || cliente.distrito_id || cliente.distritoId;
+    const matchDist = !filtroDistrito || distId === filtroDistrito;
+
+    return matchGlobal && matchGC && matchDist;
+  });
+
+  const opcionesGC = [
+    { label: 'Todos los Clientes', value: 'TODOS' },
+    { label: 'Grandes Contribuyentes (GC)', value: 'GC' },
+    { label: 'Contribuyentes Regulares', value: 'REGULAR' }
+  ];
+
+  const headerTabla = (
+    <div className="flex flex-column gap-3 p-2">
+      <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-2">
+        <h3 className="m-0 text-base font-bold" style={{ color: 'var(--text-primary)' }}>Listado de Clientes</h3>
+        <span className="text-xs text-500" style={{ color: 'var(--text-muted)' }}>
+          Mostrando {clientesFiltrados.length} de {clientes.length} registros
+        </span>
+      </div>
+      <div className="grid">
+        <div className="col-12 md:col-4">
+          <div className="premium-input-group w-full">
+            <i className="pi pi-search premium-input-icon"></i>
+            <InputText
+              type="search"
+              value={filtroGlobal}
+              onChange={(e) => setFiltroGlobal(e.target.value)}
+              placeholder="Buscar por nombre, DUI/NIT, correo..."
+              className="w-full"
+            />
+          </div>
+        </div>
+        <div className="col-12 md:col-4">
+          <Dropdown
+            value={filtroGranContribuyente}
+            options={opcionesGC}
+            onChange={(e) => setFiltroGranContribuyente(e.value)}
+            placeholder="Clasificación Tributaria"
+            className="w-full"
+          />
+        </div>
+        <div className="col-12 md:col-4">
+          <Dropdown
+            value={filtroDistrito}
+            options={[{ label: 'Todos los Distritos', value: null }, ...distritos.map(d => ({ label: d.nombre || d.Nombre || 'Distrito', value: d.id }))]}
+            onChange={(e) => setFiltroDistrito(e.value)}
+            placeholder="Filtrar por Distrito"
+            className="w-full"
+            filter
+            showClear
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (cargandoInicial) {
     return (
-      <div className="flex flex-column align-items-center">
-        {isGranContribuyente ? 
-          <Tag value="Gran Contribuyente" severity="warning" style={{ fontSize: '10px' }} /> :
-          <Tag value="Estándar" severity="info" style={{ fontSize: '10px' }} />
-        }
-        {nrc && <span className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>NRC: {nrc}</span>}
+      <div className="p-4 premium-fade-in flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+        <div className="premium-surface-card text-center p-6 flex flex-column align-items-center justify-content-center border-round-xl border-1 border-300 dark:border-slate-700" style={{ maxWidth: '400px', background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
+          <i className="pi pi-spin pi-spinner text-primary text-5xl mb-4"></i>
+          <h3 className="text-xl font-bold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>Cargando Clientes</h3>
+          <p className="text-sm m-0" style={{ color: 'var(--text-muted)' }}>Obteniendo listado de clientes y catálogos geográficos...</p>
+        </div>
       </div>
     );
-  };
-
-  const estadoTemplate = (rowData) => {
-    const activo = rowData.activo !== undefined ? rowData.activo : rowData.Activo;
-    const estaActivo = activo !== undefined ? activo : true;
-    return (
-      <Tag 
-        value={estaActivo ? "Activo" : "Inactivo"} 
-        severity={estaActivo ? "success" : "danger"} 
-        style={{ fontSize: '10px' }} 
-      />
-    );
-  };
+  }
 
   return (
     <div className="p-4 premium-fade-in">
@@ -261,7 +465,7 @@ export default function VistaClientes() {
       <div className="premium-surface-card">
         <TabView className="premium-tabs" activeIndex={indiceTabActivo} onTabChange={(e) => setIndiceTabActivo(e.index)}>
           
-          <TabPanel header="Registrar Cliente" leftIcon="pi pi-user-plus" headerClassName="mr-2">
+          <TabPanel header={editando ? "Editar Cliente" : "Registrar Cliente"} leftIcon={editando ? "pi pi-user-edit" : "pi pi-user-plus"} headerClassName="mr-2">
             <div className="pt-3" style={{ maxWidth: '850px', margin: '0 auto' }}>
               <form onSubmit={manejarEnvio} className="p-fluid flex flex-column gap-4">
                 
@@ -443,19 +647,31 @@ export default function VistaClientes() {
 
                 {/* Acciones */}
                 <div className="flex gap-3 justify-content-end mt-2">
-                  <Button 
-                    type="button" 
-                    label="Limpiar Campos" 
-                    icon="pi pi-refresh" 
-                    className="p-button-outlined p-button-secondary" 
-                    style={{ width: '170px' }}
-                    onClick={resetearFormulario}
-                    disabled={cargando}
-                  />
+                  {editando ? (
+                    <Button 
+                      type="button" 
+                      label="Cancelar" 
+                      icon="pi pi-times" 
+                      className="p-button-outlined p-button-secondary" 
+                      style={{ width: '170px' }}
+                      onClick={cancelarEdicion}
+                      disabled={cargando}
+                    />
+                  ) : (
+                    <Button 
+                      type="button" 
+                      label="Limpiar Campos" 
+                      icon="pi pi-refresh" 
+                      className="p-button-outlined p-button-secondary" 
+                      style={{ width: '170px' }}
+                      onClick={resetearFormulario}
+                      disabled={cargando}
+                    />
+                  )}
                   <Button 
                     type="submit" 
-                    label={cargando ? "Guardando..." : "Guardar Cliente"} 
-                    icon={cargando ? "pi pi-spin pi-spinner" : "pi pi-save"} 
+                    label={cargando ? "Guardando..." : (editando ? "Guardar Cambios" : "Guardar Cliente")} 
+                    icon={cargando ? "pi pi-spin pi-spinner" : (editando ? "pi pi-check" : "pi pi-save")} 
                     className="premium-btn" 
                     style={{ width: '220px' }}
                     disabled={cargando}
@@ -468,30 +684,24 @@ export default function VistaClientes() {
 
           <TabPanel header="Clientes Registrados" leftIcon="pi pi-users">
             <div className="pt-2">
-              <div className="mb-3 flex align-items-center justify-content-between">
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  Total de registros en base de datos: {clientes.length}
-                </span>
-              </div>
-              
               <div className="premium-table">
                 <DataTable 
-                  value={clientes} 
+                  value={clientesFiltrados} 
                   paginator 
                   rows={10} 
                   loading={cargando}
+                  header={headerTabla}
                   size="small" 
-                  emptyMessage="No se encontraron registros de clientes" 
+                  emptyMessage="No se encontraron registros de clientes con los filtros aplicados" 
                   responsiveLayout="scroll"
                   className="p-datatable-sm"
                 >
-                  <Column header="ID" field="id" sortable style={{ width: '70px' }}></Column>
-                  <Column header="DUI/NIT" body={documentoTemplate} sortable></Column>
-                  <Column header="Cliente / Razón Social" body={clienteTemplate} sortable></Column>
-                  <Column header="Ubicación" body={localizacionTemplate}></Column>
-                  <Column header="Actividad Económica" body={actividadTemplate}></Column>
-                  <Column header="Contribuyente" body={contribuyenteTemplate} style={{ width: '160px' }}></Column>
-                  <Column header="Estado" body={estadoTemplate} style={{ width: '100px' }} className="text-center"></Column>
+                  <Column header="#" body={(rowData, options) => options.rowIndex + 1} style={{ width: '70px' }} className="text-center"></Column>
+                  <Column header="DUI/NIT" field="numDocumento" body={documentoTemplate} sortable></Column>
+                  <Column header="Cliente / Razón Social" field="nombre" body={clienteTemplate} sortable></Column>
+                  <Column header="Actividad Económica" field="actividadEconomica.descActividad" body={actividadTemplate} sortable></Column>
+                  <Column header="Ubicación" field="distrito.nombre" body={localizacionTemplate} sortable></Column>
+                  <Column header="Acciones" body={plantillaAcciones} exportable={false} style={{ width: '120px' }} className="text-center"></Column>
                 </DataTable>
               </div>
             </div>
@@ -499,6 +709,20 @@ export default function VistaClientes() {
 
         </TabView>
       </div>
+
+      <Dialog
+        visible={dialogoEliminarVisible}
+        style={{ width: '400px' }}
+        header="Confirmar Eliminación"
+        modal
+        footer={footerDialogoEliminar}
+        onHide={() => setDialogoEliminarVisible(false)}
+      >
+        <div className="flex align-items-center gap-3">
+          <i className="pi pi-exclamation-triangle text-red-500 text-3xl" />
+          <span>¿Está seguro de que desea eliminar al cliente <b>{clienteAEliminar ? (clienteAEliminar.nombre + (clienteAEliminar.apellidos ? ' ' + clienteAEliminar.apellidos : '')) : ''}</b>?</span>
+        </div>
+      </Dialog>
     </div>
   );
 }

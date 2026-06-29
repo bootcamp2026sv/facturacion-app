@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bootstrap vs PrimeFlex - Layout de Formularios</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- PrimeFlex v4 CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/primeflex@4.0.0/primeflex.css">
+  
+  <!-- Estilos Personalizados Premium -->
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --border-color: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --bootstrap-purple: #7952b3;
+      --bootstrap-bg: rgba(121, 82, 179, 0.05);
+      
+      --primeflex-blue: #3b82f6;
+      --primeflex-bg: rgba(59, 130, 246, 0.05);
+      
+      --code-bg: #0b0f19;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+    
+    h1 {
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto 1.5rem auto;
+    }
+    
+    .container-custom {
+      max-width: 1280px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+    
+    .concept-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      margin-bottom: 3rem;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+    
+    .card-header-custom {
+      background-color: rgba(15, 23, 42, 0.4);
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+      color: #60a5fa;
+    }
+    
+    .card-badge {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .card-description {
+      padding: 1.25rem 1.5rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95rem;
+      background-color: rgba(30, 41, 59, 0.2);
+    }
+    
+    .split-layout {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    @media (min-width: 992px) {
+      .split-layout {
+        flex-direction: row;
+      }
+      .col-panel {
+        flex: 1;
+        width: 50%;
+      }
+      .col-panel:first-child {
+        border-right: 1px solid var(--border-color);
+      }
+    }
+    
+    .panel-header {
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .panel-bootstrap .panel-header {
+      color: #c084fc;
+      background-color: rgba(121, 82, 179, 0.05);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .panel-primeflex .panel-header {
+      color: #60a5fa;
+      background-color: rgba(59, 130, 246, 0.05);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .code-block {
+      background-color: var(--code-bg);
+      padding: 1rem 1.5rem;
+      margin: 0;
+      overflow-x: auto;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .code-html { color: #e2e8f0; }
+    .code-tag { color: #f43f5e; }
+    .code-attr { color: #fbbf24; }
+    .code-val { color: #34d399; }
+    .code-comment { color: #64748b; font-style: italic; }
+    
+    .demo-area {
+      padding: 2rem 1.5rem;
+      background-color: rgba(15, 23, 42, 0.2);
+    }
+    
+    /* Simulación de inputs bonitos en PrimeFlex (ya que PrimeFlex es CSS de utilidades) */
+    .pf-input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background-color: #0f172a;
+      border: 1px solid #475569;
+      color: #f8fafc;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s ease-in-out;
+    }
+    .pf-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+    .pf-label {
+      display: inline-block;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+    .pf-help {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+    }
+    
+    .comparative-table-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 4rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+    
+    .table-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #f8fafc;
+    }
+    
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    
+    .comp-table th, .comp-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+    }
+    
+    .comp-table th {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    
+    .tag-bs {
+      background-color: rgba(121, 82, 179, 0.15);
+      color: #d8b4fe;
+      border: 1px solid rgba(121, 82, 179, 0.3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+    }
+    
+    .tag-pf {
+      background-color: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Estructura de Formularios: Bootstrap vs PrimeFlex</h1>
+    <p class="subtitle">Descubre cómo agrupar, alinear y distribuir campos en un formulario usando las utilidades de PrimeFlex.</p>
+  </header>
+
+  <div class="container-custom">
+    
+    <!-- 1. CAMPO INDIVIDUAL (VERTICAL) -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">1. Agrupación Vertical Básica (Label + Input)</h2>
+        <span class="card-badge">Concepto: .field vs .mb-3</span>
+      </div>
+      <div class="card-description">
+        • En <strong>Bootstrap 5</strong>, los inputs se agrupan verticalmente usando la utilidad de margen inferior <code>.mb-3</code>.<br>
+        • En <strong>PrimeFlex</strong>, existe una clase semántica llamada <code>.field</code> que añade automáticamente el margen inferior idóneo y el espaciado necesario para los campos.
+      </div>
+      <div class="split-layout">
+        <!-- Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (.mb-3 + .form-label + .form-control)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"mb-3"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"form-label"</span><span class="code-tag">&gt;</span>Usuario<span class="code-tag">&lt;/label&gt;</span>
+  <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"text"</span> <span class="code-attr">class</span>=<span class="code-val">"form-control"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"form-text"</span><span class="code-tag">&gt;</span>No compartas tu usuario.<span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="mb-3">
+                <label class="form-label text-white">Usuario (Bootstrap)</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="Escribe aquí...">
+                <div class="form-text text-secondary">No compartas tu usuario.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (.field + .block + inputs)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"field"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"block mb-2 font-medium"</span><span class="code-tag">&gt;</span>Usuario<span class="code-tag">&lt;/label&gt;</span>
+  <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"text"</span> <span class="code-attr">class</span>=<span class="code-val">"w-full p-2 border-round ..."</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;small</span> <span class="code-attr">class</span>=<span class="code-val">"block mt-1 text-gray-500"</span><span class="code-tag">&gt;</span>No compartas tu usuario.<span class="code-tag">&lt;/small&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="field">
+                <label class="pf-label">Usuario (PrimeFlex)</label>
+                <input type="text" class="pf-input" placeholder="Escribe aquí...">
+                <small class="pf-help block">No compartas tu usuario.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. FORMULARIO EN GRID DE MULTIPLES COLUMNAS -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">2. Layout en Columnas (Formulario en Rejilla)</h2>
+        <span class="card-badge">Concepto: .formgrid.grid vs .row</span>
+      </div>
+      <div class="card-description">
+        • En <strong>Bootstrap</strong>, para poner dos campos en la misma línea usas <code>.row</code> con columnas individuales y espaciado (ej. <code>.col-md-6</code>).<br>
+        • En <strong>PrimeFlex</strong>, es mejor utilizar la clase <code>.formgrid</code> en combinación con <code>.grid</code>. Esto optimiza los márgenes y paddings internos especialmente para inputs, y dentro aplicas <code>.field.col-12.md:col-6</code>.
+      </div>
+      <div class="split-layout">
+        <!-- Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (.row > .col-md-6 > .mb-3)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-md-6 mb-3"</span><span class="code-tag">&gt;</span>
+    <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"form-label"</span><span class="code-tag">&gt;</span>Nombre<span class="code-tag">&lt;/label&gt;</span>
+    <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"text"</span> <span class="code-attr">class</span>=<span class="code-val">"form-control"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-md-6 mb-3"</span><span class="code-tag">&gt;</span>
+    <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"form-label"</span><span class="code-tag">&gt;</span>Apellido<span class="code-tag">&lt;/label&gt;</span>
+    <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"text"</span> <span class="code-attr">class</span>=<span class="code-val">"form-control"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-white">Nombre</label>
+                  <input type="text" class="form-control bg-dark text-white border-secondary">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-white">Apellido</label>
+                  <input type="text" class="form-control bg-dark text-white border-secondary">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (.formgrid.grid > .field.col-12.md:col-6)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"formgrid grid"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"field col-12 md:col-6"</span><span class="code-tag">&gt;</span>
+    <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"block mb-2"</span><span class="code-tag">&gt;</span>Nombre<span class="code-tag">&lt;/label&gt;</span>
+    <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"text"</span> <span class="code-attr">class</span>=<span class="code-val">"w-full p-2 ..."</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"field col-12 md:col-6"</span><span class="code-tag">&gt;</span>
+    <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"block mb-2"</span><span class="code-tag">&gt;</span>Apellido<span class="code-tag">&lt;/label&gt;</span>
+    <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"text"</span> <span class="code-attr">class</span>=<span class="code-val">"w-full p-2 ..."</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="formgrid grid">
+                <div class="field col-12 md:col-6">
+                  <label class="pf-label">Nombre</label>
+                  <input type="text" class="pf-input">
+                </div>
+                <div class="field col-12 md:col-6">
+                  <label class="pf-label">Apellido</label>
+                  <input type="text" class="pf-input">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. FORMULARIO HORIZONTAL (LABEL AL LADO DEL INPUT) -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">3. Layout Horizontal (Etiquetas alineadas a la izquierda)</h2>
+        <span class="card-badge">Concepto: .field.grid vs .row.align-items-center</span>
+      </div>
+      <div class="card-description">
+        Para posicionar la etiqueta al lado del campo de entrada:<br>
+        • En <strong>Bootstrap</strong>, se usa <code>.row</code> en el contenedor y se añaden clases de columnas tanto al <code>&lt;label&gt;</code> como al contenedor del input.<br>
+        • En <strong>PrimeFlex</strong>, se agrega la clase <code>.grid</code> directamente al contenedor <code>.field</code> (quedando <code>.field.grid</code>) y luego se define la anchura del label (ej: <code>col-12 md:col-2</code>) y la del input (ej: <code>col-12 md:col-10</code>).
+      </div>
+      <div class="split-layout">
+        <!-- Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (.row + .col-form-label)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"row mb-3 align-items-center"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"col-sm-3 col-form-label"</span><span class="code-tag">&gt;</span>Email<span class="code-tag">&lt;/label&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-sm-9"</span><span class="code-tag">&gt;</span>
+    <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"email"</span> <span class="code-attr">class</span>=<span class="code-val">"form-control"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="row mb-3 align-items-center">
+                <label class="col-sm-3 col-form-label text-white">Email</label>
+                <div class="col-sm-9">
+                  <input type="email" class="form-control bg-dark text-white border-secondary">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (.field.grid > label + .col)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"field grid align-items-center"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 md:col-3 font-medium"</span><span class="code-tag">&gt;</span>Email<span class="code-tag">&lt;/label&gt;</span>
+  <span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"col-12 md:col-9"</span><span class="code-tag">&gt;</span>
+    <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"email"</span> <span class="code-attr">class</span>=<span class="code-val">"w-full p-2 ..."</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;/div&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="field grid align-items-center">
+                <label class="col-12 md:col-3 pf-label mb-md-0">Email</label>
+                <div class="col-12 md:col-9">
+                  <input type="email" class="pf-input">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. CHECKBOXES Y RADIOS -->
+    <div class="concept-card">
+      <div class="card-header-custom">
+        <h2 class="card-title">4. Checkbox y Alineación de Opciones</h2>
+        <span class="card-badge">Concepto: .field-checkbox vs .form-check</span>
+      </div>
+      <div class="card-description">
+        • En <strong>Bootstrap</strong>, los checkboxes y radios usan la estructura <code>.form-check</code> para alinear correctamente el input y el label.<br>
+        • En <strong>PrimeFlex</strong>, existe una clase semántica específica <code>.field-checkbox</code> (o <code>.field-radiobutton</code>) que se encarga de aplicar los márgenes, flex y alineación vertical óptima de forma nativa.
+      </div>
+      <div class="split-layout">
+        <!-- Bootstrap -->
+        <div class="col-panel panel-bootstrap">
+          <div class="panel-header">Bootstrap (.form-check)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"form-check mb-3"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"checkbox"</span> <span class="code-attr">class</span>=<span class="code-val">"form-check-input"</span> <span class="code-attr">id</span>=<span class="code-val">"chk1"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;label</span> <span class="code-attr">class</span>=<span class="code-val">"form-check-label"</span> <span class="code-attr">for</span>=<span class="code-val">"chk1"</span><span class="code-tag">&gt;</span>Recordarme<span class="code-tag">&lt;/label&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="bootstrap-container">
+              <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input bg-dark border-secondary" id="chk1">
+                <label class="form-check-label text-white" for="chk1">Recordarme (Bootstrap)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PrimeFlex -->
+        <div class="col-panel panel-primeflex">
+          <div class="panel-header">PrimeFlex (.field-checkbox)</div>
+          <pre class="code-block"><code class="code-html"><span class="code-tag">&lt;div</span> <span class="code-attr">class</span>=<span class="code-val">"field-checkbox"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;input</span> <span class="code-attr">type</span>=<span class="code-val">"checkbox"</span> <span class="code-attr">id</span>=<span class="code-val">"chk2"</span><span class="code-tag">&gt;</span>
+  <span class="code-tag">&lt;label</span> <span class="code-attr">for</span>=<span class="code-val">"chk2"</span><span class="code-tag">&gt;</span>Recordarme<span class="code-tag">&lt;/label&gt;</span>
+<span class="code-tag">&lt;/div&gt;</span></code></pre>
+          <div class="demo-area">
+            <div class="primeflex-container">
+              <div class="field-checkbox">
+                <input type="checkbox" id="chk2" style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="chk2" class="pl-2 font-medium" style="cursor: pointer; color: #cbd5e1;">Recordarme (PrimeFlex)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA DE EQUIVALENCIAS DE FORMULARIOS -->
+    <div class="comparative-table-card">
+      <h3 class="table-title">Resumen de Clases de Formulario</h3>
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Propósito del Diseño</th>
+            <th>Bootstrap 5</th>
+            <th>PrimeFlex v4</th>
+            <th>Recomendación de Uso</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Contenedor de Campo Vertical</strong></td>
+            <td><span class="tag-bs">.mb-3</span></td>
+            <td><span class="tag-pf">.field</span></td>
+            <td>Añade espaciado de margen inferior idóneo para agrupar etiqueta y campo.</td>
+          </tr>
+          <tr>
+            <td><strong>Grid del Formulario</strong></td>
+            <td><span class="tag-bs">.row</span></td>
+            <td><span class="tag-pf">.formgrid.grid</span></td>
+            <td>PrimeFlex usa `.formgrid.grid` para que las columnas de los campos se espacien mejor.</td>
+          </tr>
+          <tr>
+            <td><strong>Contenedor Horizontal</strong></td>
+            <td><span class="tag-bs">.row</span> <span class="text-xs text-muted">+ cols</span></td>
+            <td><span class="tag-pf">.field.grid</span></td>
+            <td>Aplica rejilla directamente sobre el campo para alineación en la misma fila.</td>
+          </tr>
+          <tr>
+            <td><strong>Checkbox</strong></td>
+            <td><span class="tag-bs">.form-check</span></td>
+            <td><span class="tag-pf">.field-checkbox</span></td>
+            <td>Alinea automáticamente el checkbox con el texto de la etiqueta en flexbox.</td>
+          </tr>
+          <tr>
+            <td><strong>Radio Button</strong></td>
+            <td><span class="tag-bs">.form-check</span></td>
+            <td><span class="tag-pf">.field-radiobutton</span></td>
+            <td>Igual que el checkbox pero especializado en botones de opción redondos.</td>
+          </tr>
+          <tr>
+            <td><strong>Texto de ayuda/secundario</strong></td>
+            <td><span class="tag-bs">.form-text</span></td>
+            <td><span class="tag-pf">.block.mt-1.text-xs</span> <span class="text-xs text-muted">(o similar)</span></td>
+            <td>PrimeFlex confía en utilidades genéricas de tipografía y espaciado.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</body>
+</html>
