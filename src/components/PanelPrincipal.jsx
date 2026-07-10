@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useTema } from "../context/ThemeContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -15,11 +15,36 @@ import VistaComercios from "./views/VistaComercios";
 import VistaGeografia from "./views/VistaGeografia";
 import VistaControlSistema from "./views/VistaControlSistema";
 
+const VISTA_ACTIVA_STORAGE_KEY = "panel.vistaActiva";
+const VISTAS_VALIDAS = [
+  "inicio",
+  "ventas",
+  "pos",
+  "pos-clasico",
+  "productos",
+  "categorias",
+  "clientes",
+  "comercios",
+  "geografia",
+  "actividades",
+  "unidades",
+  "control",
+];
+
+const obtenerVistaInicial = () => {
+  const vistaGuardada = localStorage.getItem(VISTA_ACTIVA_STORAGE_KEY);
+  return VISTAS_VALIDAS.includes(vistaGuardada) ? vistaGuardada : "inicio";
+};
+
 export default function PanelPrincipal() {
   const [estaColapsado, setEstaColapsado] = useState(false);
-  const [vistaActiva, setVistaActiva] = useState("inicio");
+  const [vistaActiva, setVistaActiva] = useState(obtenerVistaInicial);
   const { tema, alternarTema } = useTema();
   const { usuario, logout } = useAuth();
+
+  useEffect(() => {
+    localStorage.setItem(VISTA_ACTIVA_STORAGE_KEY, vistaActiva);
+  }, [vistaActiva]);
 
   const ELEMENTOS_MENU = [
     {

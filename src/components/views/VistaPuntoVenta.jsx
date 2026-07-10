@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
+import { Dropdown } from 'primereact/dropdown';
+import { InputSwitch } from 'primereact/inputswitch';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Tag } from 'primereact/tag';
+import api from '../../services/api';
 
 const PRODUCTOS = [
   { id: 1, nombre: 'Coca-Cola 355ml', precio: 1.50, categoria: 'Bebidas', icono: 'pi pi-glass', tipoIva: 'gravado' },
@@ -56,22 +59,111 @@ const ETIQUETA_IVA = {
 
 const COLOR_PAGO = { efectivo: '#10b981', tarjeta: '#6366f1', credito: '#f59e0b', transferencia: '#8b5cf6' };
 
+const ANCHOS_TICKET = [
+  { label: '80 mm', value: 80 },
+  { label: '58 mm', value: 58 },
+];
+
+const TICKET_ANCHO_STORAGE_KEY = 'pos.ticketAnchoMm';
+
+const TIPO_DOC_OPCIONES = [
+  { label: 'DUI', value: 13 },
+  { label: 'NIT', value: 36 },
+  { label: 'Pasaporte', value: 3 },
+  { label: 'Carnet residente', value: 2 },
+  { label: 'Otro', value: 37 },
+];
+
+const clienteRapidoInicial = {
+  nombre: '',
+  apellidos: '',
+  nombreComercial: '',
+  tipoDocumento: 13,
+  numDocumento: '',
+  nrc: '',
+  telefono: '',
+  correo: '',
+  granContribuyente: false,
+  activo: true,
+  complementoDireccion: '',
+  distrito_id: null,
+  actividadEconomica_id: null,
+};
+
+const TRIBUTACION_A_IVA = {
+  GRAVADO: 'gravado',
+  EXENTO: 'exento',
+  NO_SUJETO: 'noSujeto',
+  NO_GRAVADO: 'noGravado',
+};
+
+const ICONO_CATEGORIA = {
+  bebidas: 'pi pi-glass',
+  alimentos: 'pi pi-shopping-cart',
+  comida: 'pi pi-shopping-cart',
+  comidas: 'pi pi-shopping-cart',
+  postres: 'pi pi-star',
+  electronica: 'pi pi-desktop',
+  electrónica: 'pi pi-desktop',
+};
+
+let catalogosPosCache = null;
+let catalogosPosPromise = null;
+
+const obtenerCatalogosPos = async () => {
+  if (catalogosPosCache) return catalogosPosCache;
+  if (!catalogosPosPromise) {
+    catalogosPosPromise = Promise.all([
+      api.get('/Productos'),
+      api.get('/Clientes'),
+      api.get('/Comercios'),
+      api.get('/distritos'),
+      api.get('/ActividadEconomicas'),
+    ])
+      .then(([resProductos, resClientes, resComercios, resDistritos, resActividades]) => {
+        catalogosPosCache = {
+          productos: resProductos.data || [],
+          clientes: resClientes.data || [],
+          comercios: resComercios.data || [],
+          distritos: resDistritos.data || [],
+          actividades: resActividades.data || [],
+        };
+        return catalogosPosCache;
+      })
+      .catch((error) => {
+        catalogosPosPromise = null;
+        throw error;
+      });
+  }
+  return catalogosPosPromise;
+};
+
 export default function VistaPuntoVenta() {
-  const redondear = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+  const redondear = useCallback((num) => Math.round((num + Number.EPSILON) * 100) / 100, []);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState('Todas');
+  const [productos, setProductos] = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [distritos, setDistritos] = useState([]);
+  const [actividades, setActividades] = useState([]);
+  const [comercio, setComercio] = useState(null);
+  const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
+  const [errorCatalogos, setErrorCatalogos] = useState('');
+  const [errorVenta, setErrorVenta] = useState('');
+  const [guardandoVenta, setGuardandoVenta] = useState(false);
   const [carrito, setCarrito] = useState([]);
-  const [cliente, setCliente] = useState(0);
+  const [cliente, setCliente] = useState(null);
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [dialogoPago, setDialogoPago] = useState(false);
   const [pagoExitoso, setPagoExitoso] = useState(false);
+  const [dialogoTicket, setDialogoTicket] = useState(false);
+  const [ticketVenta, setTicketVenta] = useState(null);
+  const [ticketAncho, setTicketAncho] = useState(() => {
+    const guardado = Number(localStorage.getItem(TICKET_ANCHO_STORAGE_KEY));
+    return ANCHOS_TICKET.some(ancho => ancho.value === guardado) ? guardado : 80;
+  });
   const [esGranContribuyente, setEsGranContribuyente] = useState(false);
   const [tipoDte, setTipoDte] = useState('01');
-
-  useEffect(() => {
-    const cli = CLIENTES.find(c => c.value === cliente);
-    setEsGranContribuyente(!!cli?.granContribuyente);
-  }, [cliente]);
 
   const [dialogoItem, setDialogoItem] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
@@ -95,12 +187,21 @@ export default function VistaPuntoVenta() {
     }
   };
   const [dialogoCliente, setDialogoCliente] = useState(false);
+  const [dialogoNuevoCliente, setDialogoNuevoCliente] = useState(false);
+  const [guardandoCliente, setGuardandoCliente] = useState(false);
+  const [errorClienteRapido, setErrorClienteRapido] = useState('');
+  const [clienteRapido, setClienteRapido] = useState(clienteRapidoInicial);
   const [busquedaCliente, setBusquedaCliente] = useState('');
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [efectivoRecibido, setEfectivoRecibido] = useState(null);
   const [plazoValor, setPlazoValor] = useState(1);
   const [plazoTipo, setPlazoTipo] = useState('meses');
   const [referenciaPago, setReferenciaPago] = useState('');
+
+  const clienteSeleccionado = useMemo(
+    () => clientes.find(c => c.value === cliente) || null,
+    [cliente, clientes]
+  );
 
   const togglePantallaCompleta = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -129,22 +230,179 @@ export default function VistaPuntoVenta() {
     };
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem(TICKET_ANCHO_STORAGE_KEY, String(ticketAncho));
+  }, [ticketAncho]);
+
+  const mapearProductoApi = (producto) => {
+    const categoria = producto.categoria?.nombre || 'Sin categoria';
+    const categoriaKey = categoria.toLowerCase();
+    const tipoIva = TRIBUTACION_A_IVA[producto.tipoTributacion] || 'gravado';
+    return {
+      id: producto.id,
+      codigo: producto.codigo,
+      nombre: producto.nombre,
+      precio: Number(producto.precioSinIVA || 0),
+      precioConIVA: Number(producto.precioConIVA || producto.precioSinIVA || 0),
+      categoria,
+      icono: ICONO_CATEGORIA[categoriaKey] || 'pi pi-box',
+      tipoIva,
+      existencia: Number(producto.existencia || 0),
+      lineaLibre: !!producto.productoPersonalizable,
+    };
+  };
+
+  const mapearClienteApi = (cli) => ({
+    label: `${cli.nombre || ''}${cli.apellidos ? ` ${cli.apellidos}` : ''}`.trim() || cli.nombreComercial || 'Cliente',
+    value: cli.id,
+    nit: cli.numDocumento || cli.nit || cli.nrc || 'S/N',
+    tipoDocumento: cli.tipoDocumento,
+    numDocumento: cli.numDocumento || '',
+    nrc: cli.nrc || '',
+    telefono: cli.telefono || '',
+    correo: cli.correo || '',
+    nombreComercial: cli.nombreComercial || '',
+    actividadEconomica: cli.actividadEconomica || null,
+    direccion: {
+      departamento: cli.distrito?.municipio?.departamento?.Nombre || cli.distrito?.municipio?.departamento?.nombre || '',
+      municipio: cli.distrito?.municipio?.Nombre || cli.distrito?.municipio?.nombre || '',
+      distrito: cli.distrito?.Nombre || cli.distrito?.nombre || '',
+      complemento: cli.complementoDireccion || '',
+    },
+    granContribuyente: !!cli.granContribuyente,
+  });
+
+  const esClienteFinal = (cli) => {
+    const texto = `${cli.label || ''} ${cli.nombreComercial || ''} ${cli.nit || ''}`.toLowerCase();
+    return texto.includes('consumidor final') ||
+      texto.includes('cliente final') ||
+      texto.includes('clientes varios') ||
+      texto.includes('cliente varios') ||
+      texto.includes('varios') ||
+      texto.includes('000000000');
+  };
+
+  useEffect(() => {
+    let activo = true;
+
+    const cargarCatalogos = async () => {
+      setCargandoCatalogos(true);
+      setErrorCatalogos('');
+      try {
+        const catalogos = await obtenerCatalogosPos();
+
+        if (!activo) return;
+
+        const productosApi = catalogos.productos
+          .filter(producto => producto.activo !== false)
+          .map(mapearProductoApi);
+        const clientesApi = catalogos.clientes
+          .filter(cli => cli.activo !== false)
+          .map(mapearClienteApi);
+        const comercioApi = catalogos.comercios[0] || null;
+        const distritosApi = catalogos.distritos || [];
+        const actividadesApi = catalogos.actividades || [];
+
+        setProductos(productosApi);
+        setClientes(clientesApi);
+        setDistritos(distritosApi);
+        setActividades(actividadesApi);
+        setClienteRapido(prev => ({
+          ...prev,
+          distrito_id: prev.distrito_id || distritosApi[0]?.id || null,
+          actividadEconomica_id: prev.actividadEconomica_id || actividadesApi[0]?.id || null,
+        }));
+        setComercio(comercioApi);
+        const clienteDefault = clientesApi.find(esClienteFinal) || null;
+        setCliente(prev => prev || clienteDefault?.value || null);
+        setEsGranContribuyente(!!clienteDefault?.granContribuyente);
+        if (!clienteDefault) {
+          setErrorCatalogos('No se encontro el cliente final/default. Cree o active un cliente "Consumidor Final", "Cliente Final" o "Clientes Varios" antes de vender.');
+        }
+      } catch (error) {
+        console.error('Error al cargar catálogos del POS:', error);
+        console.debug('Catálogos demo ignorados por el POS real:', PRODUCTOS.length, CLIENTES.length, CATEGORIAS.length);
+        if (activo) {
+          setErrorCatalogos(error.response?.data?.message || 'No se pudieron cargar productos, clientes o comercio.');
+        }
+      } finally {
+        if (activo) setCargandoCatalogos(false);
+      }
+    };
+
+    cargarCatalogos();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const categorias = useMemo(() => {
+    const unicas = [...new Set(productos.map(p => p.categoria).filter(Boolean))];
+    return ['Todas', ...unicas];
+  }, [productos]);
+
   const clientesFiltrados = useMemo(() => {
-    if (!busquedaCliente) return CLIENTES;
+    if (!busquedaCliente) return clientes;
     const q = busquedaCliente.toLowerCase();
-    return CLIENTES.filter(c => c.label.toLowerCase().includes(q) || c.nit.toLowerCase().includes(q));
-  }, [busquedaCliente]);
+    return clientes.filter(c => c.label.toLowerCase().includes(q) || c.nit.toLowerCase().includes(q));
+  }, [busquedaCliente, clientes]);
+
+  const abrirNuevoCliente = () => {
+    setClienteRapido({
+      ...clienteRapidoInicial,
+      distrito_id: distritos[0]?.id || null,
+      actividadEconomica_id: actividades[0]?.id || null,
+    });
+    setErrorClienteRapido('');
+    setDialogoCliente(false);
+    setDialogoNuevoCliente(true);
+  };
+
+  const guardarClienteRapido = async () => {
+    if (!clienteRapido.nombre.trim()) {
+      setErrorClienteRapido('El nombre o razon social es obligatorio.');
+      return;
+    }
+
+    setGuardandoCliente(true);
+    setErrorClienteRapido('');
+
+    try {
+      const respuesta = await api.post('/Clientes', {
+        ...clienteRapido,
+        distrito_id: clienteRapido.distrito_id || distritos[0]?.id || 1,
+        actividadEconomica_id: clienteRapido.actividadEconomica_id || actividades[0]?.id || 1,
+      });
+      const clienteGuardado = respuesta.data;
+      const clienteMapeado = mapearClienteApi(clienteGuardado);
+
+      catalogosPosCache = catalogosPosCache
+        ? { ...catalogosPosCache, clientes: [...catalogosPosCache.clientes, clienteGuardado] }
+        : catalogosPosCache;
+
+      setClientes(prev => [...prev, clienteMapeado]);
+      setCliente(clienteMapeado.value);
+      setEsGranContribuyente(!!clienteMapeado.granContribuyente);
+      setDialogoNuevoCliente(false);
+      setClienteRapido(clienteRapidoInicial);
+    } catch (error) {
+      console.error('Error al crear cliente desde POS:', error);
+      setErrorClienteRapido(error.response?.data?.message || error.response?.data?.error || 'No se pudo crear el cliente.');
+    } finally {
+      setGuardandoCliente(false);
+    }
+  };
 
   const productosFiltrados = useMemo(() => {
-    return PRODUCTOS.filter(p => {
+    return productos.filter(p => {
       if (categoriaActiva !== 'Todas' && p.categoria !== categoriaActiva) return false;
       if (busqueda && !p.nombre.toLowerCase().includes(busqueda.toLowerCase())) return false;
       return true;
     });
-  }, [busqueda, categoriaActiva]);
+  }, [busqueda, categoriaActiva, productos]);
 
   const abrirPersonalizar = (producto) => {
-    if (producto.lineaLibre) {
+    if (!producto.lineaLibre) {
       setCarrito(prev => {
         const existente = prev.find(item => item.id === producto.id);
         if (existente) {
@@ -156,6 +414,7 @@ export default function VistaPuntoVenta() {
     }
     setItemEditando({
       id: producto.id,
+      codigo: producto.codigo,
       nombre: producto.nombre,
       precio: producto.precio,
       cantidad: 1,
@@ -204,7 +463,7 @@ export default function VistaPuntoVenta() {
     setCarrito(prev => prev.filter(item => item._key !== key));
   };
 
-  const calcItem = (item) => {
+  const calcItem = useCallback((item) => {
     const subtotal = item.precio * item.cantidad;
     const descuento = item.descuentoTipo === 'porcentaje'
       ? subtotal * (item.descuentoValor || 0) / 100
@@ -214,6 +473,21 @@ export default function VistaPuntoVenta() {
     const iva = redondear(ivaVal);
     const total = redondear(subtotalDesc + iva);
     return { subtotal, descuento, subtotalDesc, iva, total };
+  }, [redondear]);
+
+  const monto4 = (valor) => Number(redondear(valor || 0)).toFixed(4);
+
+  const formatoDinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
+
+  const formatoFechaTicket = (fecha) => new Intl.DateTimeFormat('es-SV', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(fecha);
+
+  const plazoNormalizado = (valor) => {
+    if (valor === 'días' || valor === 'dias') return 'dias';
+    if (valor === 'años' || valor === 'anios') return 'anios';
+    return 'meses';
   };
 
   const resumen = useMemo(() => {
@@ -243,17 +517,320 @@ export default function VistaPuntoVenta() {
       aplicaRetencion, 
       totalCobrar 
     };
-  }, [carrito, esGranContribuyente, tipoDte]);
+  }, [carrito, esGranContribuyente, calcItem]);
 
-  const cobrar = () => {
-    setDialogoPago(false);
-    setPagoExitoso(true);
-    setCarrito([]);
-    setTimeout(() => setPagoExitoso(false), 3000);
+  const crearTicketVenta = (ventaGuardada, cambio) => {
+    const items = carrito.map(item => {
+      const calculo = calcItem(item);
+      return {
+        key: item._key,
+        codigo: item.codigo,
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio: item.precio,
+        descuento: calculo.descuento,
+        iva: calculo.iva,
+        total: calculo.total,
+      };
+    });
+
+    return {
+      id: ventaGuardada?.id,
+      numeroControl: ventaGuardada?.numeroControl,
+      codigoGeneracion: ventaGuardada?.codigoGeneracion,
+      fecha: new Date(),
+      tipoDte,
+      tipoDteLabel: TIPOS_DTE.find(t => t.value === tipoDte)?.label || `DTE ${tipoDte}`,
+      metodoPago,
+      metodoPagoLabel: METODOS_PAGO.find(m => m.value === metodoPago)?.label || metodoPago,
+      referenciaPago: referenciaPago || null,
+      efectivoRecibido: metodoPago === 'efectivo' ? efectivoRecibido : null,
+      cambio,
+      plazo: metodoPago === 'credito' ? `${plazoValor} ${plazoTipo}` : null,
+      cliente: clienteSeleccionado,
+      comercio,
+      items,
+      resumen: {
+        ...resumen,
+        porTipo: { ...resumen.porTipo },
+      },
+    };
+  };
+
+  const imprimirTicket = () => {
+    requestAnimationFrame(() => window.print());
+  };
+
+  const renderTicket = (ticket) => {
+    if (!ticket) return null;
+    const nombreComercio = ticket.comercio?.nombreComercial || ticket.comercio?.nombre || 'Comercio';
+    const direccion = ticket.comercio?.complementoDireccion || ticket.comercio?.direccion || '';
+    const muestraIvaSeparado = ticket.tipoDte === '03';
+    const subtotalTicket = muestraIvaSeparado ? ticket.resumen.subtotal : ticket.resumen.total;
+    const muestraClienteCompleto = ['03', '11', '14'].includes(ticket.tipoDte);
+    const direccionCliente = ticket.cliente?.direccion || {};
+    const direccionClienteTexto = [
+      direccionCliente.departamento,
+      direccionCliente.municipio,
+      direccionCliente.distrito,
+      direccionCliente.complemento,
+    ].filter(Boolean).join(', ');
+
+    return (
+      <div className={`thermal-ticket ticket-${ticketAncho}`}>
+        <div className="ticket-center ticket-header">
+          <div className="ticket-title">{nombreComercio}</div>
+          {ticket.comercio?.nombre && ticket.comercio.nombre !== nombreComercio && <div>{ticket.comercio.nombre}</div>}
+          {ticket.comercio?.nit && <div>NIT: {ticket.comercio.nit}</div>}
+          {ticket.comercio?.nrc && <div>NRC: {ticket.comercio.nrc}</div>}
+          {direccion && <div>{direccion}</div>}
+          {ticket.comercio?.telefono && <div>Tel: {ticket.comercio.telefono}</div>}
+        </div>
+
+        <div className="ticket-line" />
+
+        <div className="ticket-row"><span>Fecha</span><span>{formatoFechaTicket(ticket.fecha)}</span></div>
+        <div className="ticket-row"><span>Documento</span><span>{ticket.tipoDteLabel}</span></div>
+        {ticket.numeroControl && <div className="ticket-small-break">No. {ticket.numeroControl}</div>}
+        {ticket.codigoGeneracion && <div className="ticket-small-break">Cod. {ticket.codigoGeneracion}</div>}
+        <div className="ticket-row"><span>Cliente</span><span>{ticket.cliente?.label || 'Cliente Final'}</span></div>
+        {muestraClienteCompleto ? (
+          <>
+            {ticket.cliente?.numDocumento && <div className="ticket-row"><span>Doc.</span><span>{ticket.cliente.numDocumento}</span></div>}
+            {ticket.cliente?.nrc && <div className="ticket-row"><span>NRC</span><span>{ticket.cliente.nrc}</span></div>}
+            {ticket.cliente?.nombreComercial && <div className="ticket-row"><span>Comercial</span><span>{ticket.cliente.nombreComercial}</span></div>}
+            {ticket.cliente?.actividadEconomica?.codActividad && <div className="ticket-row"><span>Actividad</span><span>{ticket.cliente.actividadEconomica.codActividad}</span></div>}
+            {ticket.cliente?.actividadEconomica?.descActividad && <div className="ticket-small-break">Giro: {ticket.cliente.actividadEconomica.descActividad}</div>}
+            {direccionClienteTexto && <div className="ticket-small-break">Dir: {direccionClienteTexto}</div>}
+            {ticket.cliente?.telefono && <div className="ticket-row"><span>Tel.</span><span>{ticket.cliente.telefono}</span></div>}
+            {ticket.cliente?.correo && <div className="ticket-small-break">Correo: {ticket.cliente.correo}</div>}
+          </>
+        ) : (
+          ticket.cliente?.nit && <div className="ticket-row"><span>Doc.</span><span>{ticket.cliente.nit}</span></div>
+        )}
+
+        <div className="ticket-line" />
+
+        <div className="ticket-items">
+          {ticket.items.map(item => (
+            <div key={item.key} className="ticket-item">
+              <div className="ticket-item-name">{item.nombre}</div>
+              <div className="ticket-row">
+                <span>{item.cantidad} x {formatoDinero(muestraIvaSeparado ? item.precio : item.total / item.cantidad)}</span>
+                <span>{formatoDinero(muestraIvaSeparado ? item.total - item.iva : item.total)}</span>
+              </div>
+              {item.descuento > 0 && (
+                <div className="ticket-row ticket-muted">
+                  <span>Descuento</span>
+                  <span>-{formatoDinero(item.descuento)}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="ticket-line" />
+
+        <div className="ticket-row"><span>Subtotal</span><span>{formatoDinero(subtotalTicket)}</span></div>
+        {muestraIvaSeparado && ticket.resumen.descuentoTotal > 0 && <div className="ticket-row"><span>Descuentos</span><span>-{formatoDinero(ticket.resumen.descuentoTotal)}</span></div>}
+        {muestraIvaSeparado && ticket.resumen.ivaTotal > 0 && <div className="ticket-row"><span>IVA 13%</span><span>{formatoDinero(ticket.resumen.ivaTotal)}</span></div>}
+        {ticket.resumen.retencion > 0 && <div className="ticket-row"><span>Retencion 1%</span><span>-{formatoDinero(ticket.resumen.retencion)}</span></div>}
+        <div className="ticket-row ticket-total"><span>Total</span><span>{formatoDinero(ticket.resumen.totalCobrar)}</span></div>
+
+        <div className="ticket-line" />
+
+        <div className="ticket-row"><span>Pago</span><span>{ticket.metodoPagoLabel}</span></div>
+        {ticket.referenciaPago && <div className="ticket-row"><span>Ref.</span><span>{ticket.referenciaPago}</span></div>}
+        {ticket.plazo && <div className="ticket-row"><span>Plazo</span><span>{ticket.plazo}</span></div>}
+        {ticket.efectivoRecibido !== null && <div className="ticket-row"><span>Recibido</span><span>{formatoDinero(ticket.efectivoRecibido)}</span></div>}
+        {ticket.cambio !== null && <div className="ticket-row"><span>Cambio</span><span>{formatoDinero(ticket.cambio)}</span></div>}
+
+        <div className="ticket-line" />
+
+        <div className="ticket-center ticket-footer">
+          <div>Gracias por su compra</div>
+          <div>Documento generado desde POS</div>
+        </div>
+      </div>
+    );
+  };
+
+  const cobrar = async () => {
+    if (carrito.length === 0 || !clienteSeleccionado || !comercio) return;
+
+    setGuardandoVenta(true);
+    setErrorVenta('');
+
+    const cambio = metodoPago === 'efectivo' ? Math.max(redondear((efectivoRecibido || 0) - resumen.totalCobrar), 0) : null;
+    const condicionOperacion = metodoPago === 'credito' ? 2 : 1;
+
+    const detallesVenta = carrito.map((item, index) => {
+      const calculo = calcItem(item);
+      return {
+        numItem: index + 1,
+        tipoItem: 'BIEN',
+        cantidad: monto4(item.cantidad),
+        codigo: item.codigo,
+        descripcion: item.nombre,
+        precioUni: monto4(item.precio),
+        montoDescu: monto4(calculo.descuento),
+        ventaNoSuj: monto4(item.tipoIva === 'noSujeto' ? calculo.subtotalDesc : 0),
+        ventaExenta: monto4(item.tipoIva === 'exento' ? calculo.subtotalDesc : 0),
+        ventaGravada: monto4(item.tipoIva === 'gravado' ? calculo.subtotalDesc : 0),
+        psv: monto4(item.precio),
+        noGravado: monto4(item.tipoIva === 'noGravado' ? calculo.subtotalDesc : 0),
+        ivaItem: monto4(calculo.iva),
+        producto: { id: item.id },
+      };
+    });
+
+    const payload = {
+      version: 1,
+      ambiente: '00',
+      tipoDte,
+      tipoModelo: 1,
+      tipoOperacion: 1,
+      tipoMoneda: 'USD',
+      jsonVenta: '',
+      totalGeneral: monto4(resumen.totalCobrar),
+      totalExento: monto4(resumen.porTipo.exento),
+      totalNoSujeto: monto4(resumen.porTipo.noSujeto),
+      totalGravado: monto4(resumen.porTipo.gravado),
+      totalNoGravado: monto4(resumen.porTipo.noGravado),
+      totalDescuento: monto4(resumen.descuentoTotal),
+      totalIva: monto4(resumen.ivaTotal),
+      metodoPago,
+      referenciaPago: referenciaPago || null,
+      montoPago: monto4(resumen.totalCobrar),
+      efectivoRecibido: metodoPago === 'efectivo' ? monto4(efectivoRecibido) : null,
+      cambio: cambio !== null ? monto4(cambio) : null,
+      plazoValor: metodoPago === 'credito' ? plazoValor : null,
+      plazoTipo: metodoPago === 'credito' ? plazoNormalizado(plazoTipo) : null,
+      condicionOperacion,
+      cliente: { id: clienteSeleccionado.value },
+      comercio: { id: comercio.id },
+      detallesVenta,
+    };
+
+    try {
+      const respuesta = await api.post('/Ventas', payload);
+      setTicketVenta(crearTicketVenta(respuesta.data, cambio));
+      setDialogoPago(false);
+      setDialogoTicket(true);
+      setPagoExitoso(true);
+      setCarrito([]);
+      setTimeout(() => setPagoExitoso(false), 3000);
+    } catch (error) {
+      console.error('Error al guardar venta:', error);
+      setErrorVenta(error.response?.data?.message || error.response?.data?.error || 'No se pudo guardar la venta.');
+    } finally {
+      setGuardandoVenta(false);
+    }
   };
 
   return (
     <div className="premium-fade-in" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <style>{`
+        .ticket-print-root {
+          display: none;
+        }
+        .thermal-ticket {
+          width: 80mm;
+          max-width: 100%;
+          margin: 0 auto;
+          padding: 4mm;
+          background: #fff;
+          color: #111;
+          font-family: "Courier New", monospace;
+          font-size: 11px;
+          line-height: 1.25;
+          box-sizing: border-box;
+        }
+        .thermal-ticket.ticket-58 {
+          width: 58mm;
+          padding: 3mm;
+          font-size: 10px;
+        }
+        .ticket-center {
+          text-align: center;
+        }
+        .ticket-title {
+          font-size: 13px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        .ticket-58 .ticket-title {
+          font-size: 11px;
+        }
+        .ticket-line {
+          border-top: 1px dashed #111;
+          margin: 7px 0;
+        }
+        .ticket-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          align-items: flex-start;
+        }
+        .ticket-row span:last-child {
+          text-align: right;
+          word-break: break-word;
+        }
+        .ticket-small-break {
+          word-break: break-all;
+        }
+        .ticket-item {
+          margin-bottom: 6px;
+        }
+        .ticket-item-name {
+          font-weight: 700;
+          word-break: break-word;
+        }
+        .ticket-muted {
+          color: #444;
+        }
+        .ticket-total {
+          font-size: 13px;
+          font-weight: 800;
+          margin-top: 4px;
+        }
+        .ticket-footer {
+          margin-top: 8px;
+          font-size: 10px;
+        }
+        @media print {
+          @page {
+            size: ${ticketAncho}mm auto;
+            margin: 0;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .ticket-print-root,
+          .ticket-print-root * {
+            visibility: visible !important;
+          }
+          .ticket-print-root {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: ${ticketAncho}mm;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+          }
+          .ticket-print-root .thermal-ticket {
+            width: ${ticketAncho}mm;
+            margin: 0;
+            box-shadow: none;
+          }
+        }
+      `}</style>
+
+      <div className="ticket-print-root">
+        {renderTicket(ticketVenta)}
+      </div>
 
       {pagoExitoso && (
         <div className="flex align-items-center gap-2 p-3 border-round-xl premium-fade-in-fast" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', position: 'fixed', top: '5rem', right: '1.5rem', zIndex: 1000, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.15)' }}>
@@ -262,6 +839,13 @@ export default function VistaPuntoVenta() {
             <p className="font-bold m-0 text-sm" style={{ color: 'var(--text-primary)' }}>Pago exitoso</p>
             <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>La venta se ha registrado correctamente</p>
           </div>
+        </div>
+      )}
+
+      {errorCatalogos && (
+        <div className="flex align-items-center gap-2 p-3 border-round-xl" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444' }}>
+          <i className="pi pi-exclamation-triangle"></i>
+          <span className="text-sm font-semibold">{errorCatalogos}</span>
         </div>
       )}
 
@@ -275,7 +859,7 @@ export default function VistaPuntoVenta() {
               <InputText value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." className="w-full" />
             </div>
             <div className="flex align-items-center gap-2 flex-wrap">
-              {CATEGORIAS.map(cat => (
+              {categorias.map(cat => (
                 <button key={cat} onClick={() => setCategoriaActiva(cat)}
                   className="border-none border-round-xl cursor-pointer px-3 py-2 text-sm font-semibold transition-all transition-duration-200"
                   style={{
@@ -296,7 +880,12 @@ export default function VistaPuntoVenta() {
           </div>
 
           <div className="flex-1 premium-surface-card p-3" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
-            {productosFiltrados.length === 0 ? (
+            {cargandoCatalogos ? (
+              <div className="flex flex-column align-items-center justify-content-center" style={{ height: '100%', opacity: 0.6 }}>
+                <i className="pi pi-spin pi-spinner text-4xl mb-3" style={{ color: '#6366f1' }}></i>
+                <p className="text-lg font-semibold m-0" style={{ color: 'var(--text-icon)' }}>Cargando productos</p>
+              </div>
+            ) : productosFiltrados.length === 0 ? (
               <div className="flex flex-column align-items-center justify-content-center" style={{ height: '100%', opacity: 0.5 }}>
                 <i className="pi pi-box text-6xl mb-3" style={{ color: 'var(--text-icon)' }}></i>
                 <p className="text-lg font-semibold m-0" style={{ color: 'var(--text-icon)' }}>No se encontraron productos</p>
@@ -342,14 +931,14 @@ export default function VistaPuntoVenta() {
           <button onClick={() => setDialogoCliente(true)} className="w-full border-none cursor-pointer p-3 border-bottom-1 surface-border flex align-items-center gap-3 transition-all transition-duration-200" style={{ background: 'transparent' }}
             onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-            <div className="flex align-items-center justify-content-center border-circle" style={{ width: '36px', height: '36px', minWidth: '36px', background: cliente === 0 ? 'var(--surface-border-light)' : 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
-              <i className={`${cliente === 0 ? 'pi pi-user' : 'pi pi-user-check'} text-sm`} style={{ color: cliente === 0 ? 'var(--text-muted)' : '#fff' }}></i>
+            <div className="flex align-items-center justify-content-center border-circle" style={{ width: '36px', height: '36px', minWidth: '36px', background: !cliente ? 'var(--surface-border-light)' : 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
+              <i className={`${!cliente ? 'pi pi-user' : 'pi pi-user-check'} text-sm`} style={{ color: !cliente ? 'var(--text-muted)' : '#fff' }}></i>
             </div>
             <div className="text-left flex-1 min-w-0">
               <p className="text-xs font-semibold m-0" style={{ color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Cliente</p>
               <p className="font-semibold m-0 text-sm flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                {CLIENTES.find(c => c.value === cliente)?.label}
-                {CLIENTES.find(c => c.value === cliente)?.granContribuyente && (
+                {clienteSeleccionado?.label || 'Seleccione cliente'}
+                {clienteSeleccionado?.granContribuyente && (
                   <Tag value="GC" severity="warning" style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem' }} />
                 )}
               </p>
@@ -357,7 +946,7 @@ export default function VistaPuntoVenta() {
             <i className="pi pi-chevron-down text-xs" style={{ color: 'var(--text-icon)', flexShrink: 0 }}></i>
           </button>
 
-          {cliente !== 0 && (
+          {!!cliente && (
             <div className="px-3 py-2 flex align-items-center justify-content-between border-bottom-1 surface-border" style={{ background: 'var(--surface-muted)' }}>
               <div className="flex align-items-center gap-2">
                 <i className="pi pi-percentage text-xs" style={{ color: esGranContribuyente ? '#f59e0b' : 'var(--text-icon)' }}></i>
@@ -524,7 +1113,8 @@ export default function VistaPuntoVenta() {
             </div>
 
             <Button label="Cobrar" icon="pi pi-credit-card" className="premium-btn w-full" style={{ fontSize: '1.05rem' }}
-              onClick={() => { if (carrito.length > 0) { setEfectivoRecibido(null); setPlazoValor(1); setPlazoTipo('meses'); setReferenciaPago(''); setDialogoPago(true); }}} disabled={carrito.length === 0} />
+              onClick={() => { if (carrito.length > 0) { setEfectivoRecibido(null); setPlazoValor(1); setPlazoTipo('meses'); setReferenciaPago(''); setErrorVenta(''); setDialogoPago(true); }}}
+              disabled={carrito.length === 0 || cargandoCatalogos || !clienteSeleccionado || !comercio} />
           </div>
         </div>
       </div>
@@ -636,8 +1226,8 @@ export default function VistaPuntoVenta() {
       <Dialog header="Confirmar Cobro" visible={dialogoPago} style={{ width: '500px' }} onHide={() => setDialogoPago(false)} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
-            <Button label="Cancelar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setDialogoPago(false)} />
-            <Button label="Confirmar Pago" icon="pi pi-check" className="premium-btn" onClick={cobrar} disabled={metodoPago === 'efectivo' && (!efectivoRecibido || efectivoRecibido < resumen.totalCobrar)} />
+            <Button label="Cancelar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setDialogoPago(false)} disabled={guardandoVenta} />
+            <Button label={guardandoVenta ? 'Guardando...' : 'Confirmar Pago'} icon={guardandoVenta ? 'pi pi-spin pi-spinner' : 'pi pi-check'} className="premium-btn" onClick={cobrar} disabled={guardandoVenta || (metodoPago === 'efectivo' && (!efectivoRecibido || efectivoRecibido < resumen.totalCobrar))} />
           </div>
         }>
         <div className="flex flex-column gap-3 py-2">
@@ -646,13 +1236,20 @@ export default function VistaPuntoVenta() {
               <i className="pi pi-file text-white"></i>
             </div>
             <div>
-              <p className="font-bold m-0" style={{ color: 'var(--text-primary)' }}>{CLIENTES.find(c => c.value === cliente)?.label}</p>
+              <p className="font-bold m-0" style={{ color: 'var(--text-primary)' }}>{clienteSeleccionado?.label}</p>
               <div className="flex align-items-center gap-2 mt-1 flex-wrap">
                 <Tag value={TIPOS_DTE.find(t => t.value === tipoDte)?.label} severity="info" style={{ fontSize: '0.65rem' }} />
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>• {METODOS_PAGO.find(m => m.value === metodoPago)?.label}</span>
               </div>
             </div>
           </div>
+
+          {errorVenta && (
+            <div className="flex align-items-center gap-2 p-2 border-round-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444' }}>
+              <i className="pi pi-exclamation-circle text-sm"></i>
+              <p className="text-xs font-semibold m-0">{errorVenta}</p>
+            </div>
+          )}
 
           {metodoPago === 'efectivo' && (
             <div className="flex flex-column gap-3 p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
@@ -739,9 +1336,46 @@ export default function VistaPuntoVenta() {
         </div>
       </Dialog>
 
+      {/* ===== Thermal Ticket Dialog ===== */}
+      <Dialog header="Ticket de venta" visible={dialogoTicket} style={{ width: '520px' }}
+        onHide={() => setDialogoTicket(false)} draggable={false} resizable={false}
+        footer={
+          <div className="flex gap-2 justify-content-end">
+            <Button label="Cerrar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setDialogoTicket(false)} />
+            <Button label="Imprimir" icon="pi pi-print" className="premium-btn" onClick={imprimirTicket} disabled={!ticketVenta} />
+          </div>
+        }>
+        <div className="flex flex-column gap-3 py-2">
+          <div className="flex align-items-center justify-content-between gap-2 flex-wrap p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
+            <div className="flex align-items-center gap-2">
+              <i className="pi pi-print" style={{ color: '#6366f1' }}></i>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Formato termico</span>
+            </div>
+            <div className="flex gap-1">
+              {ANCHOS_TICKET.map(ancho => (
+                <button key={ancho.value} type="button" onClick={() => setTicketAncho(ancho.value)}
+                  className="border-none border-round-lg cursor-pointer px-3 py-2 text-xs font-bold transition-all transition-duration-200"
+                  style={{
+                    background: ticketAncho === ancho.value ? '#6366f1' : 'var(--card-bg)',
+                    color: ticketAncho === ancho.value ? '#fff' : 'var(--text-secondary)',
+                    border: ticketAncho === ancho.value ? '1px solid #6366f1' : '1px solid var(--surface-border-light)',
+                  }}>
+                  {ancho.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-round-xl p-3" style={{ background: '#f8fafc', border: '1px solid var(--surface-border-light)', maxHeight: '62vh', overflow: 'auto' }}>
+            {renderTicket(ticketVenta)}
+          </div>
+        </div>
+      </Dialog>
+
       {/* ===== Customer Selection Dialog ===== */}
       <Dialog header="Seleccionar Cliente" visible={dialogoCliente} style={{ width: '480px' }} onHide={() => { setDialogoCliente(false); setBusquedaCliente(''); }} draggable={false} resizable={false}>
         <div className="flex flex-column gap-3">
+          <Button label="Registrar nuevo cliente" icon="pi pi-user-plus" className="premium-btn w-full" onClick={abrirNuevoCliente} />
           <div className="premium-input-group">
             <i className="pi pi-search premium-input-icon" style={{ fontSize: '0.85rem' }}></i>
             <InputText value={busquedaCliente} onChange={(e) => setBusquedaCliente(e.target.value)} placeholder="Buscar por nombre o NIT..." className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} autoFocus />
@@ -754,7 +1388,7 @@ export default function VistaPuntoVenta() {
               </div>
             ) : (
               clientesFiltrados.map(c => (
-                <button key={c.value} onClick={() => { setCliente(c.value); setDialogoCliente(false); setBusquedaCliente(''); }}
+                <button key={c.value} onClick={() => { setCliente(c.value); setEsGranContribuyente(!!c.granContribuyente); setDialogoCliente(false); setBusquedaCliente(''); }}
                   className="w-full border-none border-round-xl cursor-pointer p-3 flex align-items-center gap-3 transition-all transition-duration-200"
                   style={{ background: cliente === c.value ? 'rgba(99,102,241,0.1)' : 'transparent' }}
                   onMouseEnter={(e) => { if (cliente !== c.value) e.currentTarget.style.background = 'var(--surface-muted)'; }}
@@ -773,6 +1407,95 @@ export default function VistaPuntoVenta() {
                 </button>
               ))
             )}
+          </div>
+        </div>
+      </Dialog>
+
+      {/* ===== Quick Customer Creation Dialog ===== */}
+      <Dialog header="Registrar cliente" visible={dialogoNuevoCliente} style={{ width: '680px' }}
+        onHide={() => { setDialogoNuevoCliente(false); setErrorClienteRapido(''); }} draggable={false} resizable={false}
+        footer={
+          <div className="flex gap-2 justify-content-end">
+            <Button label="Cancelar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setDialogoNuevoCliente(false)} disabled={guardandoCliente} />
+            <Button label={guardandoCliente ? 'Guardando...' : 'Guardar y seleccionar'} icon={guardandoCliente ? 'pi pi-spin pi-spinner' : 'pi pi-check'} className="premium-btn" onClick={guardarClienteRapido} disabled={guardandoCliente} />
+          </div>
+        }>
+        <div className="flex flex-column gap-3 py-2">
+          {errorClienteRapido && (
+            <div className="flex align-items-center gap-2 p-2 border-round-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444' }}>
+              <i className="pi pi-exclamation-circle text-sm"></i>
+              <p className="text-xs font-semibold m-0">{errorClienteRapido}</p>
+            </div>
+          )}
+
+          <div className="grid">
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Nombre / razon social</label>
+              <InputText value={clienteRapido.nombre} onChange={(e) => setClienteRapido({ ...clienteRapido, nombre: e.target.value })}
+                placeholder="Nombre del cliente" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} autoFocus />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Apellidos</label>
+              <InputText value={clienteRapido.apellidos} onChange={(e) => setClienteRapido({ ...clienteRapido, apellidos: e.target.value })}
+                placeholder="Opcional" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Nombre comercial</label>
+              <InputText value={clienteRapido.nombreComercial} onChange={(e) => setClienteRapido({ ...clienteRapido, nombreComercial: e.target.value })}
+                placeholder="Opcional" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Tipo documento</label>
+              <Dropdown value={clienteRapido.tipoDocumento} options={TIPO_DOC_OPCIONES}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, tipoDocumento: e.value })}
+                className="w-full" />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Numero documento</label>
+              <InputText value={clienteRapido.numDocumento} onChange={(e) => setClienteRapido({ ...clienteRapido, numDocumento: e.target.value })}
+                placeholder="DUI, NIT u otro" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">NRC</label>
+              <InputText value={clienteRapido.nrc} onChange={(e) => setClienteRapido({ ...clienteRapido, nrc: e.target.value })}
+                placeholder="Opcional" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Telefono</label>
+              <InputText value={clienteRapido.telefono} onChange={(e) => setClienteRapido({ ...clienteRapido, telefono: e.target.value })}
+                placeholder="Opcional" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Correo</label>
+              <InputText value={clienteRapido.correo} onChange={(e) => setClienteRapido({ ...clienteRapido, correo: e.target.value })}
+                placeholder="correo@ejemplo.com" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Distrito</label>
+              <Dropdown value={clienteRapido.distrito_id}
+                options={distritos.map(d => ({ label: d.nombre || d.Nombre || 'Distrito', value: d.id }))}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, distrito_id: e.value })}
+                className="w-full" filter />
+            </div>
+            <div className="col-12 md:col-6 flex flex-column gap-1">
+              <label className="premium-label">Actividad economica</label>
+              <Dropdown value={clienteRapido.actividadEconomica_id}
+                options={actividades.map(a => ({ label: `${a.codActividad || a.CodActividad || ''} - ${a.descActividad || a.DescActividad || ''}`, value: a.id }))}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, actividadEconomica_id: e.value })}
+                className="w-full" filter />
+            </div>
+            <div className="col-12 flex flex-column gap-1">
+              <label className="premium-label">Direccion</label>
+              <InputText value={clienteRapido.complementoDireccion} onChange={(e) => setClienteRapido({ ...clienteRapido, complementoDireccion: e.target.value })}
+                placeholder="Calle, avenida, numero de casa, colonia..." className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+            </div>
+            <div className="col-12 flex align-items-center justify-content-between p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
+              <div>
+                <p className="font-bold m-0 text-sm" style={{ color: 'var(--text-primary)' }}>Gran contribuyente</p>
+                <p className="m-0 text-xs" style={{ color: 'var(--text-muted)' }}>Activa la retencion del 1% cuando aplique.</p>
+              </div>
+              <InputSwitch checked={clienteRapido.granContribuyente} onChange={(e) => setClienteRapido({ ...clienteRapido, granContribuyente: e.value })} />
+            </div>
           </div>
         </div>
       </Dialog>

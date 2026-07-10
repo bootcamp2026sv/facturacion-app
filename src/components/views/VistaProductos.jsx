@@ -35,6 +35,7 @@ export default function VistaProductos() {
     precioRebajado: 0,
     existencia: 0,
     consignacion: false,
+    productoPersonalizable: false,
     marca: '',
     categoriaId: null,
     tipoTributacion: 'GRAVADO',
@@ -150,6 +151,7 @@ export default function VistaProductos() {
         precioRebajado: producto.precioRebajado || 0,
         existencia: producto.existencia || 0,
         consignacion: producto.consignacion,
+        productoPersonalizable: producto.productoPersonalizable,
         marca: producto.marca || '',
         categoriaId: producto.categoriaId,
         tipoTributacion: producto.tipoTributacion || 'GRAVADO',
@@ -201,7 +203,8 @@ export default function VistaProductos() {
       ...prodSelected,
       unimedidaId: prodSelected.uniMedida?.id || null,
       categoriaId: prodSelected.categoria?.id || null,
-      tipoTributacion: prodSelected.tipoTributacion || 'GRAVADO'
+      tipoTributacion: prodSelected.tipoTributacion || 'GRAVADO',
+      productoPersonalizable: prodSelected.productoPersonalizable ?? false
     });
     setDialogoVisible(true);
   };
@@ -521,6 +524,19 @@ export default function VistaProductos() {
                   onChange={(e) => setProducto({ ...producto, descripcion: e.target.value })}
                   rows={3}
                   autoResize
+                  disabled={guardando}
+                />
+              </div>
+
+              <div className="col-12 field mb-3 flex align-items-center justify-content-between gap-3">
+                <div className="flex flex-column">
+                  <label htmlFor="productoPersonalizable" className="font-bold">Producto Personalizable</label>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Abre el modal de precio/descuento al seleccionarlo en el POS</span>
+                </div>
+                <InputSwitch
+                  inputId="productoPersonalizable"
+                  checked={producto.productoPersonalizable}
+                  onChange={(e) => setProducto({ ...producto, productoPersonalizable: e.value })}
                   disabled={guardando}
                 />
               </div>
