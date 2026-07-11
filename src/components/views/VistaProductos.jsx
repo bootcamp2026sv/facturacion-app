@@ -552,6 +552,7 @@ export default function VistaProductos() {
                   value={producto.costo}
                   onValueChange={(e) => setProducto({ ...producto, costo: e.value })}
                   mode="decimal"
+                  locale="en-US"
                   minFractionDigits={2}
                   maxFractionDigits={4}
                   disabled={guardando}
@@ -565,6 +566,7 @@ export default function VistaProductos() {
                   value={producto.precioRebajado}
                   onValueChange={(e) => setProducto({ ...producto, precioRebajado: e.value })}
                   mode="decimal"
+                  locale="en-US"
                   minFractionDigits={2}
                   maxFractionDigits={4}
                   disabled={guardando}
@@ -578,6 +580,7 @@ export default function VistaProductos() {
                   value={producto.precioSinIVA}
                   onValueChange={(e) => manejarCambioPrecios(e.value, 'precioSinIVA')}
                   mode="decimal"
+                  locale="en-US"
                   minFractionDigits={2}
                   maxFractionDigits={4}
                   disabled={guardando}
@@ -592,6 +595,7 @@ export default function VistaProductos() {
                   value={producto.precioConIVA}
                   onValueChange={(e) => manejarCambioPrecios(e.value, 'precioConIVA')}
                   mode="decimal"
+                  locale="en-US"
                   minFractionDigits={2}
                   maxFractionDigits={4}
                   disabled={guardando}

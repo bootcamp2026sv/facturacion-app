@@ -194,6 +194,7 @@ export default function VistaPuntoVenta() {
   const [busquedaCliente, setBusquedaCliente] = useState('');
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [efectivoRecibido, setEfectivoRecibido] = useState(null);
+  const [efectivoRecibidoTexto, setEfectivoRecibidoTexto] = useState('');
   const [plazoValor, setPlazoValor] = useState(1);
   const [plazoTipo, setPlazoTipo] = useState('meses');
   const [referenciaPago, setReferenciaPago] = useState('');
@@ -202,6 +203,30 @@ export default function VistaPuntoVenta() {
     () => clientes.find(c => c.value === cliente) || null,
     [cliente, clientes]
   );
+
+  const parsearMontoPago = useCallback((valor) => {
+    const limpio = String(valor ?? '')
+      .replace(',', '.')
+      .replace(/[^0-9.]/g, '');
+    const partes = limpio.split('.');
+    const normalizado = partes.length > 1
+      ? `${partes[0]}.${partes.slice(1).join('')}`
+      : limpio;
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) && normalizado !== '' ? numero : null;
+  }, []);
+
+  const actualizarEfectivoRecibido = useCallback((valor) => {
+    const limpio = String(valor ?? '')
+      .replace(',', '.')
+      .replace(/[^0-9.]/g, '');
+    const partes = limpio.split('.');
+    const texto = partes.length > 1
+      ? `${partes[0]}.${partes.slice(1).join('').slice(0, 2)}`
+      : limpio;
+    setEfectivoRecibidoTexto(texto);
+    setEfectivoRecibido(parsearMontoPago(texto));
+  }, [parsearMontoPago]);
 
   const togglePantallaCompleta = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -469,9 +494,12 @@ export default function VistaPuntoVenta() {
       ? subtotal * (item.descuentoValor || 0) / 100
       : (item.descuentoValor || 0);
     const subtotalDesc = subtotal - descuento;
+    // Mantener precisión durante la operación: redondear IVA antes de sumar
+    // puede producir diferencias de centavos (por ejemplo, $0.89 + $0.12 = $1.01
+    // aunque el precio con IVA del producto sea exactamente $1.00).
     const ivaVal = item.tipoIva === 'gravado' ? subtotalDesc * 0.13 : 0;
-    const iva = redondear(ivaVal);
-    const total = redondear(subtotalDesc + iva);
+    const iva = ivaVal;
+    const total = redondear(subtotalDesc + ivaVal);
     return { subtotal, descuento, subtotalDesc, iva, total };
   }, [redondear]);
 
@@ -538,6 +566,7 @@ export default function VistaPuntoVenta() {
       id: ventaGuardada?.id,
       numeroControl: ventaGuardada?.numeroControl,
       codigoGeneracion: ventaGuardada?.codigoGeneracion,
+      selloRecepcion: ventaGuardada?.selloRecepcion,
       fecha: new Date(),
       tipoDte,
       tipoDteLabel: TIPOS_DTE.find(t => t.value === tipoDte)?.label || `DTE ${tipoDte}`,
@@ -593,6 +622,7 @@ export default function VistaPuntoVenta() {
         <div className="ticket-row"><span>Documento</span><span>{ticket.tipoDteLabel}</span></div>
         {ticket.numeroControl && <div className="ticket-small-break">No. {ticket.numeroControl}</div>}
         {ticket.codigoGeneracion && <div className="ticket-small-break">Cod. {ticket.codigoGeneracion}</div>}
+        {ticket.selloRecepcion && <div className="ticket-small-break">Sello MH: {ticket.selloRecepcion}</div>}
         <div className="ticket-row"><span>Cliente</span><span>{ticket.cliente?.label || 'Cliente Final'}</span></div>
         {muestraClienteCompleto ? (
           <>
@@ -649,7 +679,6 @@ export default function VistaPuntoVenta() {
 
         <div className="ticket-center ticket-footer">
           <div>Gracias por su compra</div>
-          <div>Documento generado desde POS</div>
         </div>
       </div>
     );
@@ -714,6 +743,8 @@ export default function VistaPuntoVenta() {
 
     try {
       const respuesta = await api.post('/Ventas', payload);
+      // La API guarda la venta, la firma, la envía a Hacienda y devuelve
+      // la venta actualizada con su selloRecepcion.
       setTicketVenta(crearTicketVenta(respuesta.data, cambio));
       setDialogoPago(false);
       setDialogoTicket(true);
@@ -1113,7 +1144,7 @@ export default function VistaPuntoVenta() {
             </div>
 
             <Button label="Cobrar" icon="pi pi-credit-card" className="premium-btn w-full" style={{ fontSize: '1.05rem' }}
-              onClick={() => { if (carrito.length > 0) { setEfectivoRecibido(null); setPlazoValor(1); setPlazoTipo('meses'); setReferenciaPago(''); setErrorVenta(''); setDialogoPago(true); }}}
+              onClick={() => { if (carrito.length > 0) { setEfectivoRecibido(null); setEfectivoRecibidoTexto(''); setPlazoValor(1); setPlazoTipo('meses'); setReferenciaPago(''); setErrorVenta(''); setDialogoPago(true); }}}
               disabled={carrito.length === 0 || cargandoCatalogos || !clienteSeleccionado || !comercio} />
           </div>
         </div>
@@ -1157,12 +1188,12 @@ export default function VistaPuntoVenta() {
                         style={{ background: precioIncluyeIva ? '#6366f1' : 'var(--card-bg)', color: precioIncluyeIva ? '#fff' : 'var(--text-muted)', fontSize: '0.62rem' }}>Con IVA</button>
                     </div>
                   </div>
-                  <InputNumber value={itemEditando.precio} onValueChange={(e) => setItemEditando({ ...itemEditando, precio: e.value || 0 })}
+                  <InputNumber value={itemEditando.precio} locale="en-US" onValueChange={(e) => setItemEditando({ ...itemEditando, precio: e.value || 0 })}
                     min={0} className="w-full" inputStyle={{ borderRadius: '10px', padding: '0.65rem 1rem' }} onFocus={(e) => e.target.select()} />
                 </div>
                 <div className="flex-1 flex flex-column gap-1">
                   <label className="premium-label">Cantidad</label>
-                  <InputNumber value={itemEditando.cantidad} onValueChange={(e) => setItemEditando({ ...itemEditando, cantidad: e.value || 1 })}
+                  <InputNumber value={itemEditando.cantidad} locale="en-US" onValueChange={(e) => setItemEditando({ ...itemEditando, cantidad: e.value || 1 })}
                     min={1} className="w-full" inputStyle={{ borderRadius: '10px', padding: '0.65rem 1rem' }} onFocus={(e) => e.target.select()} />
                 </div>
               </div>
@@ -1194,7 +1225,7 @@ export default function VistaPuntoVenta() {
                       className="border-none cursor-pointer px-3 text-sm font-semibold transition-all transition-duration-200"
                       style={{ background: itemEditando.descuentoTipo === 'monto' ? '#6366f1' : 'var(--card-bg)', color: itemEditando.descuentoTipo === 'monto' ? '#fff' : 'var(--text-muted)', height: '100%' }}>$</button>
                   </div>
-                  <InputNumber value={itemEditando.descuentoValor} onValueChange={(e) => setItemEditando({ ...itemEditando, descuentoValor: e.value || 0 })}
+                <InputNumber value={itemEditando.descuentoValor} locale="en-US" onValueChange={(e) => setItemEditando({ ...itemEditando, descuentoValor: e.value || 0 })}
                     min={0} max={itemEditando.descuentoTipo === 'porcentaje' ? 100 : undefined} className="w-full"
                     inputStyle={{ borderRadius: '10px', padding: '0.65rem 1rem' }}
                     minFractionDigits={2} maxFractionDigits={2}
@@ -1255,9 +1286,21 @@ export default function VistaPuntoVenta() {
             <div className="flex flex-column gap-3 p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
               <div className="flex flex-column gap-1">
                 <label className="premium-label">Efectivo Recibido</label>
-                <InputNumber value={efectivoRecibido} onValueChange={(e) => setEfectivoRecibido(e.value)} min={0} minFractionDigits={2} maxFractionDigits={2}
-                  className="w-full" inputStyle={{ borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '1.1rem', fontWeight: 'bold' }}
-                  placeholder="$0.00" onFocus={(e) => e.target.select()} />
+                <InputText
+                  value={efectivoRecibidoTexto}
+                  onChange={(e) => actualizarEfectivoRecibido(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && efectivoRecibido >= resumen.totalCobrar && !guardandoVenta) {
+                      e.preventDefault();
+                      cobrar();
+                    }
+                  }}
+                  inputMode="decimal"
+                  className="w-full"
+                  style={{ borderRadius: '10px', padding: '0.65rem 1rem', fontSize: '1.1rem', fontWeight: 'bold' }}
+                  placeholder="$0.00"
+                  onFocus={(e) => e.target.select()}
+                />
               </div>
               {efectivoRecibido > 0 && (
                 <div className="flex flex-column gap-1">

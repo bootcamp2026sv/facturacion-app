@@ -31,6 +31,12 @@ export default function VistaComercios() {
   // Estados para catálogos
   const [distritosLista, setDistritosLista] = useState([]);
   const [actividadesLista, setActividadesLista] = useState(ACTIVIDADES_SIMULADAS);
+  const [ambienteActivo, setAmbienteActivo] = useState('00');
+  const [guardandoAmbiente, setGuardandoAmbiente] = useState(false);
+  const [configuraciones, setConfiguraciones] = useState({
+    '00': { claveCertificadoPublica: '', claveCertificadoPrivada: '', claveApi: '', certificado: null, nombreCertificado: '' },
+    '01': { claveCertificadoPublica: '', claveCertificadoPrivada: '', claveApi: '', certificado: null, nombreCertificado: '' }
+  });
 
   // Estado del formulario
   const [datosComercio, setDatosComercio] = useState({
@@ -88,6 +94,22 @@ export default function VistaComercios() {
             distrito_id: comercio.distrito_id || comercio.Distrito_id || comercio.distrito?.id || comercio.Distrito?.id || 1,
             actividadEconomica_id: comercio.actividadEconomica_id || comercio.ActividadEconomica_id || comercio.actividadEconomica?.id || comercio.ActividadEconomica?.id || 1
           });
+          const resConfiguracion = await api.get(`/Comercios/${comercio.id}/configuracion-facturacion`);
+          const configuracionesAPI = { ...configuraciones };
+          (resConfiguracion.data || []).forEach((config) => {
+            if (config.ambiente === '00' || config.ambiente === '01') {
+              configuracionesAPI[config.ambiente] = {
+                ...configuracionesAPI[config.ambiente],
+                nombreCertificado: config.nombreCertificado || '',
+                // La API devuelve estos valores enmascarados; no se vuelven a cargar
+                // en los inputs para evitar guardar la máscara como si fuera el secreto.
+                claveCertificadoPublica: '',
+                claveCertificadoPrivada: '',
+                claveApi: ''
+              };
+            }
+          });
+          setConfiguraciones(configuracionesAPI);
         }
       } catch (error) {
         console.error("Error al cargar datos de la API:", error);
@@ -144,6 +166,43 @@ export default function VistaComercios() {
       toast.current.show({ severity: 'error', summary: 'Error', detail: apiMsg, life: 6000 });
     } finally {
       setCargando(false);
+    }
+  };
+
+  const actualizarConfiguracion = (campo, valor) => {
+    setConfiguraciones((actual) => ({
+      ...actual,
+      [ambienteActivo]: { ...actual[ambienteActivo], [campo]: valor }
+    }));
+  };
+
+  const guardarConfiguracionFacturacion = async () => {
+    if (!datosComercio.id) {
+      toast.current.show({ severity: 'warn', summary: 'Primero guarda el comercio', detail: 'La configuración electrónica necesita un comercio emisor.', life: 4000 });
+      return;
+    }
+    const config = configuraciones[ambienteActivo];
+    const formulario = new FormData();
+    formulario.append('claveCertificadoPublica', config.claveCertificadoPublica || '');
+    formulario.append('claveCertificadoPrivada', config.claveCertificadoPrivada || '');
+    formulario.append('claveApi', config.claveApi || '');
+    if (config.certificado) formulario.append('certificado', config.certificado);
+
+    setGuardandoAmbiente(true);
+    try {
+      const respuesta = await api.put(`/Comercios/${datosComercio.id}/configuracion-facturacion/${ambienteActivo}`, formulario, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setConfiguraciones((actual) => ({
+        ...actual,
+        [ambienteActivo]: { ...actual[ambienteActivo], claveCertificadoPublica: '', claveCertificadoPrivada: '', claveApi: '', nombreCertificado: respuesta.data.nombreCertificado || actual[ambienteActivo].nombreCertificado, certificado: null }
+      }));
+      toast.current.show({ severity: 'success', summary: 'Ambiente guardado', detail: `Credenciales de ${ambienteActivo === '00' ? 'pruebas' : 'producción'} actualizadas correctamente.`, life: 3500 });
+    } catch (error) {
+      const apiMsg = error.response?.data?.message || error.response?.data?.error || 'No se pudo guardar la configuración del ambiente.';
+      toast.current.show({ severity: 'error', summary: 'Error de configuración', detail: apiMsg, life: 6000 });
+    } finally {
+      setGuardandoAmbiente(false);
     }
   };
 
@@ -335,6 +394,71 @@ export default function VistaComercios() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* 4. Credenciales de facturación electrónica */}
+            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04))', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <div className="flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold mt-0 mb-2 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                    <i className="pi pi-shield text-primary"></i> 4. Facturación electrónica
+                  </h3>
+                  <p className="text-xs m-0" style={{ color: 'var(--text-muted)', maxWidth: '560px' }}>
+                    Guarda las credenciales y el certificado del Ministerio de Hacienda por separado. Los valores existentes se muestran protegidos.
+                  </p>
+                </div>
+                <div className="flex gap-2 p-1 border-round-lg" style={{ background: 'rgba(99,102,241,0.1)' }}>
+                  {['00', '01'].map((ambiente) => (
+                    <button
+                      key={ambiente}
+                      type="button"
+                      onClick={() => setAmbienteActivo(ambiente)}
+                      className={`border-none border-round-lg px-3 py-2 cursor-pointer text-xs font-bold transition-colors ${ambienteActivo === ambiente ? 'bg-primary text-white' : 'bg-transparent text-primary'}`}
+                    >
+                      {ambiente === '00' ? '00 · Pruebas' : '01 · Producción'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid">
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="claveCertificadoPublica" className="font-bold text-xs text-800">Clave certificado pública</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-lock premium-input-icon"></i>
+                    <InputText id="claveCertificadoPublica" type="password" autoComplete="new-password" value={configuraciones[ambienteActivo].claveCertificadoPublica} onChange={(e) => actualizarConfiguracion('claveCertificadoPublica', e.target.value)} placeholder="Se conserva si lo dejas vacío" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="claveCertificadoPrivada" className="font-bold text-xs text-800">Clave certificado privada</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-key premium-input-icon"></i>
+                    <InputText id="claveCertificadoPrivada" type="password" autoComplete="new-password" value={configuraciones[ambienteActivo].claveCertificadoPrivada} onChange={(e) => actualizarConfiguracion('claveCertificadoPrivada', e.target.value)} placeholder="Se conserva si lo dejas vacío" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="claveApi" className="font-bold text-xs text-800">Clave de API de Hacienda</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-key premium-input-icon"></i>
+                    <InputText id="claveApi" type="password" autoComplete="new-password" value={configuraciones[ambienteActivo].claveApi} onChange={(e) => actualizarConfiguracion('claveApi', e.target.value)} placeholder="Se conserva si lo dejas vacío" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="certificado" className="font-bold text-xs text-800">Certificado digital (.crt)</label>
+                  <input id="certificado" type="file" accept=".crt" className="p-inputtext p-component w-full" onChange={(e) => actualizarConfiguracion('certificado', e.target.files?.[0] || null)} />
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {configuraciones[ambienteActivo].certificado?.name || configuraciones[ambienteActivo].nombreCertificado || 'Ningún certificado cargado'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.14)' }}>
+                <span className="text-xs flex align-items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                  <i className="pi pi-info-circle text-primary"></i>
+                  El certificado se guardará en la carpeta segura del ambiente seleccionado.
+                </span>
+                <Button type="button" label={guardandoAmbiente ? 'Guardando ambiente...' : `Guardar ${ambienteActivo === '00' ? 'pruebas' : 'producción'}`} icon={guardandoAmbiente ? 'pi pi-spin pi-spinner' : 'pi pi-cloud-upload'} className="premium-btn" onClick={guardarConfiguracionFacturacion} disabled={guardandoAmbiente || cargando} />
               </div>
             </div>
 

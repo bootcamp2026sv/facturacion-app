@@ -1,21 +1,66 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+import api from '../../services/api';
+
+const etiquetaTipoDte = (tipoDte) => ({
+  '01': '01 - Factura',
+  '03': '03 - Credito Fiscal',
+  '05': '05 - Nota de Credito',
+  '06': '06 - Nota de Debito'
+}[tipoDte] || tipoDte || 'DTE');
+
+const nombreCliente = (cliente) => {
+  if (!cliente) return 'Consumidor final';
+  return [cliente.nombre, cliente.nombres, cliente.apellidos]
+    .filter(Boolean).join(' ').trim() || cliente.nombreComercial || 'Consumidor final';
+};
 
 export default function VistaVentas() {
-  const ventas = [
+  const ventasSimuladas = [
     { id: 1, numeroControl: 'DTE-01-M001P001-000000000001000', codigoGeneracion: '288e60c6-aeb4-414b-9227-9b4c16d35c1e', fecha: '2026-06-07T14:30:00', cliente: 'Distribuidora Alimentos S.A.', total: 678.00, tipo: '01 - Factura' },
     { id: 2, numeroControl: 'DTE-03-M001P001-000000000000254', codigoGeneracion: '7a8b60d2-cf14-49c7-8142-2b4c16d35f4a', fecha: '2026-06-07T11:15:00', cliente: 'Juan Carlos Pérez', total: 25.50, tipo: '03 - Crédito Fiscal' }
   ];
 
+  const [ventas, setVentas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState('');
+
+  const cargarVentas = async () => {
+    setCargando(true);
+    setErrorCarga('');
+    try {
+      const respuesta = await api.get('/Ventas');
+      const ventasAPI = Array.isArray(respuesta.data) ? respuesta.data : [];
+      setVentas(ventasAPI.map((venta) => ({
+        ...venta,
+        cliente: nombreCliente(venta.cliente),
+        tipo: etiquetaTipoDte(venta.tipoDte),
+        tipoCodigo: venta.tipoDte,
+        total: Number(venta.totalGeneral || 0),
+        fecha: venta.fecha || venta.createdAt
+      })));
+    } catch (error) {
+      console.error('Error al cargar ventas:', error);
+      setErrorCarga(error.response?.data?.message || 'No se pudieron cargar las ventas reales del servidor.');
+      setVentas([]);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarVentas();
+  }, []);
+
   const tiposDte = [
     { label: 'Todos', value: '' },
-    { label: '01 - Factura', value: '01 - Factura' },
-    { label: '03 - Crédito Fiscal', value: '03 - Crédito Fiscal' }
+    { label: '01 - Factura', value: '01' },
+    { label: '03 - Crédito Fiscal', value: '03' }
   ];
 
   const [filtroTipo, setFiltroTipo] = useState('');
@@ -31,7 +76,7 @@ export default function VistaVentas() {
   const [tipoNota, setTipoNota] = useState('Crédito');
 
   const ventasFiltradas = ventas.filter(v => {
-    if (filtroTipo && v.tipo !== filtroTipo) return false;
+    if (filtroTipo && v.tipoCodigo !== filtroTipo) return false;
     if (filtroCliente && !v.cliente.toLowerCase().includes(filtroCliente.toLowerCase())) return false;
     if (filtroControl && !v.numeroControl.toLowerCase().includes(filtroControl.toLowerCase())) return false;
     return true;
@@ -163,6 +208,12 @@ export default function VistaVentas() {
 
       <div className="premium-surface-card">
         <div className="p-4">
+          {errorCarga && (
+            <div className="flex align-items-center justify-content-between gap-3 p-3 mb-4 border-round-xl" style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.22)', color: '#be123c' }}>
+              <span className="text-sm flex align-items-center gap-2"><i className="pi pi-exclamation-circle"></i>{errorCarga}</span>
+              <Button label="Reintentar" icon="pi pi-refresh" className="p-button-sm p-button-outlined" onClick={cargarVentas} />
+            </div>
+          )}
           <div className="grid align-items-end mb-4">
             <div className="col-12 md:col-3 flex flex-column gap-2">
               <label className="premium-label">Tipo DTE</label>
@@ -183,13 +234,13 @@ export default function VistaVentas() {
               </div>
             </div>
             <div className="col-12 md:col-3 flex gap-2">
-              <Button icon="pi pi-search" label="Buscar" className="premium-btn" />
+              <Button icon={cargando ? "pi pi-spin pi-spinner" : "pi pi-refresh"} label={cargando ? "Cargando..." : "Actualizar"} className="premium-btn" onClick={cargarVentas} disabled={cargando} />
               <Button icon="pi pi-times" label="Limpiar" className="p-button-outlined premium-btn-secondary" onClick={limpiarFiltros} />
             </div>
           </div>
 
           <div className="premium-table">
-            <DataTable value={ventasFiltradas} paginator rows={5} size="small" emptyMessage="No se encontraron ventas" responsiveLayout="scroll">
+            <DataTable value={ventasFiltradas} paginator rows={5} size="small" loading={cargando} emptyMessage={errorCarga ? "No se pudieron cargar las ventas" : "No hay ventas registradas"} responsiveLayout="scroll">
               <Column field="fecha" header="Fecha de Emisión" body={(f) => new Date(f.fecha).toLocaleString()} sortable></Column>
               <Column field="tipo" header="Tipo DTE" sortable></Column>
               <Column field="numeroControl" header="Número de Control" sortable body={(f) => f.numeroControl.split('-').pop()}></Column>
