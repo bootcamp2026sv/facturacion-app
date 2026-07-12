@@ -4,9 +4,18 @@ import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
 import { Tag } from 'primereact/tag';
 import api from '../../services/api';
+import './VistaPuntoVenta.css';
+import {
+  AvisoError,
+  AvisoPagoExitoso,
+  ContenedorPuntoVenta,
+  DialogoPuntoVenta,
+  ImpresionTicket,
+  PanelCarrito,
+  PanelCatalogo,
+} from './componentesPuntoVenta';
 
 const PRODUCTOS = [
   { id: 1, nombre: 'Coca-Cola 355ml', precio: 1.50, categoria: 'Bebidas', icono: 'pi pi-glass', tipoIva: 'gravado' },
@@ -272,6 +281,7 @@ export default function VistaPuntoVenta() {
       precioConIVA: Number(producto.precioConIVA || producto.precioSinIVA || 0),
       categoria,
       icono: ICONO_CATEGORIA[categoriaKey] || 'pi pi-box',
+      imagen: producto.imagen || producto.imagenUrl || producto.urlImagen || producto.foto || producto.image || null,
       tipoIva,
       existencia: Number(producto.existencia || 0),
       lineaLibre: !!producto.productoPersonalizable,
@@ -784,132 +794,34 @@ export default function VistaPuntoVenta() {
   };
 
   return (
-    <div className="premium-fade-in" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden', maxWidth: '100%', boxSizing: 'border-box' }}>
-      <style>{`
-        .ticket-print-root {
-          display: none;
-        }
-        .thermal-ticket {
-          width: 80mm;
-          max-width: 100%;
-          margin: 0 auto;
-          padding: 4mm;
-          background: #fff;
-          color: #111;
-          font-family: "Courier New", monospace;
-          font-size: 11px;
-          line-height: 1.25;
-          box-sizing: border-box;
-        }
-        .thermal-ticket.ticket-58 {
-          width: 58mm;
-          padding: 3mm;
-          font-size: 10px;
-        }
-        .ticket-center {
-          text-align: center;
-        }
-        .ticket-title {
-          font-size: 13px;
-          font-weight: 800;
-          text-transform: uppercase;
-        }
-        .ticket-58 .ticket-title {
-          font-size: 11px;
-        }
-        .ticket-line {
-          border-top: 1px dashed #111;
-          margin: 7px 0;
-        }
-        .ticket-row {
-          display: flex;
-          justify-content: space-between;
-          gap: 8px;
-          align-items: flex-start;
-        }
-        .ticket-row span:last-child {
-          text-align: right;
-          word-break: break-word;
-        }
-        .ticket-small-break {
-          word-break: break-all;
-        }
-        .ticket-item {
-          margin-bottom: 6px;
-        }
-        .ticket-item-name {
-          font-weight: 700;
-          word-break: break-word;
-        }
-        .ticket-muted {
-          color: #444;
-        }
-        .ticket-total {
-          font-size: 13px;
-          font-weight: 800;
-          margin-top: 4px;
-        }
-        .ticket-footer {
-          margin-top: 8px;
-          font-size: 10px;
-        }
-        @media print {
-          @page {
-            size: ${ticketAncho}mm auto;
-            margin: 0;
-          }
-          body * {
-            visibility: hidden !important;
-          }
-          .ticket-print-root,
-          .ticket-print-root * {
-            visibility: visible !important;
-          }
-          .ticket-print-root {
-            display: block !important;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: ${ticketAncho}mm;
-            margin: 0;
-            padding: 0;
-            background: #fff;
-          }
-          .ticket-print-root .thermal-ticket {
-            width: ${ticketAncho}mm;
-            margin: 0;
-            box-shadow: none;
-          }
-        }
-      `}</style>
-
-      <div className="ticket-print-root">
+    <ContenedorPuntoVenta style={{ '--ancho-ticket': `${ticketAncho}mm` }}>
+      <ImpresionTicket>
         {renderTicket(ticketVenta)}
-      </div>
+      </ImpresionTicket>
 
       {pagoExitoso && (
-        <div className="flex align-items-center gap-2 p-3 border-round-xl premium-fade-in-fast" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', position: 'fixed', top: '5rem', right: '1.5rem', zIndex: 1000, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.15)' }}>
+        <AvisoPagoExitoso>
           <i className="pi pi-check-circle text-xl" style={{ color: '#10b981' }}></i>
           <div>
             <p className="font-bold m-0 text-sm" style={{ color: 'var(--text-primary)' }}>Pago exitoso</p>
             <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>La venta se ha registrado correctamente</p>
           </div>
-        </div>
+        </AvisoPagoExitoso>
       )}
 
       {errorCatalogos && (
-        <div className="flex align-items-center gap-2 p-3 border-round-xl" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444' }}>
+        <AvisoError>
           <i className="pi pi-exclamation-triangle"></i>
           <span className="text-sm font-semibold">{errorCatalogos}</span>
-        </div>
+        </AvisoError>
       )}
 
-      <div className="flex" style={{ gap: '1rem', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div className="punto-venta__contenido">
 
         {/* ===== LEFT: Products Panel ===== */}
-        <div className="flex-1 flex flex-column" style={{ gap: '1rem', minWidth: 0, overflow: 'hidden' }}>
+        <PanelCatalogo>
           <div className="premium-surface-card p-3 flex flex-column sm:flex-row gap-3 align-items-start sm:align-items-center">
-            <div className="premium-input-group flex-1" style={{ maxWidth: '360px' }}>
+            <div className="premium-input-group flex-1 punto-venta__barra-herramientas">
               <i className="pi pi-search premium-input-icon" style={{ fontSize: '0.85rem' }}></i>
               <InputText value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." className="w-full" />
             </div>
@@ -943,14 +855,14 @@ export default function VistaPuntoVenta() {
             </div>
           </div>
 
-          <div className="flex-1 premium-surface-card p-3" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
+          <div className="punto-venta__productos premium-surface-card p-3">
             {cargandoCatalogos ? (
-              <div className="flex flex-column align-items-center justify-content-center" style={{ height: '100%', opacity: 0.6 }}>
+              <div className="punto-venta__estado flex flex-column align-items-center justify-content-center">
                 <i className="pi pi-spin pi-spinner text-4xl mb-3" style={{ color: '#6366f1' }}></i>
                 <p className="text-lg font-semibold m-0" style={{ color: 'var(--text-icon)' }}>Cargando productos</p>
               </div>
             ) : productosFiltrados.length === 0 ? (
-              <div className="flex flex-column align-items-center justify-content-center" style={{ height: '100%', opacity: 0.5 }}>
+              <div className="punto-venta__estado punto-venta__estado--vacio flex flex-column align-items-center justify-content-center">
                 <i className="pi pi-box text-6xl mb-3" style={{ color: 'var(--text-icon)' }}></i>
                 <p className="text-lg font-semibold m-0" style={{ color: 'var(--text-icon)' }}>No se encontraron productos</p>
               </div>
@@ -958,30 +870,37 @@ export default function VistaPuntoVenta() {
               <div className="grid">
                 {productosFiltrados.map(producto => (
                   <div key={producto.id} className="col-6 sm:col-4 lg:col-3 xl:col-2">
-                    <button onClick={() => abrirPersonalizar(producto)}
-                      className="w-full border-none border-round-xl p-3 cursor-pointer transition-all transition-duration-200 flex flex-column align-items-center gap-2"
-                      style={{ background: 'var(--card-bg)', border: '1px solid var(--surface-border-light)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+                    <button type="button" onClick={() => abrirPersonalizar(producto)}
+                      className="punto-venta__producto border-none border-round-xl p-3 cursor-pointer flex flex-column align-items-center gap-2"
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.boxShadow = '0 8px 25px -8px rgba(99,102,241,0.2)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--surface-border-light)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none' }}>
-                      <div className="flex align-items-center justify-content-center border-circle" style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)' }}>
-                        <i className={`${producto.icono} text-lg`} style={{ color: '#6366f1' }}></i>
+                      <div className="punto-venta__producto-visual flex align-items-center justify-content-center border-circle">
+                        <i className={`${producto.icono} punto-venta__producto-icono-fallback text-lg`} aria-hidden="true"></i>
+                        {producto.imagen && (
+                          <img
+                            src={producto.imagen}
+                            alt=""
+                            className="punto-venta__producto-imagen"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
                       </div>
-                      <span className="text-sm font-semibold text-center" style={{ color: 'var(--text-primary)', lineHeight: '1.2' }}>{producto.nombre}</span>
-                      <span className="text-sm font-bold" style={{ color: '#6366f1' }}>
+                      <span className="punto-venta__producto-nombre text-sm font-semibold text-center">{producto.nombre}</span>
+                      <span className="punto-venta__producto-precio text-sm font-bold">
                         ${(tipoDte === '03' ? producto.precio : (producto.tipoIva === 'gravado' ? redondear(producto.precio * 1.13) : producto.precio)).toFixed(2)}
                         {tipoDte !== '03' && producto.tipoIva === 'gravado' && <span className="text-2xs font-normal" style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}> (IVA incl.)</span>}
                       </span>
-                      <Tag value={ETIQUETA_IVA[producto.tipoIva].label} severity={ETIQUETA_IVA[producto.tipoIva].severity} className="premium-tag" style={{ fontSize: '0.6rem' }} />
+                      <Tag value={ETIQUETA_IVA[producto.tipoIva].label} severity={ETIQUETA_IVA[producto.tipoIva].severity} className="punto-venta__producto-etiqueta premium-tag" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
+        </PanelCatalogo>
 
         {/* ===== RIGHT: Cart Panel ===== */}
-        <div className="flex flex-column premium-surface-card" style={{ width: '34%', minWidth: '260px', maxWidth: '380px', flexShrink: 0 }}>
+        <PanelCarrito>
           <div className="p-3 border-bottom-1 surface-border flex align-items-center justify-content-between">
             <div className="flex align-items-center gap-2">
               <div className="flex align-items-center justify-content-center border-circle" style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
@@ -1055,9 +974,9 @@ export default function VistaPuntoVenta() {
             </div>
           </div>
 
-          <div className="flex-1" style={{ overflowY: 'auto', overflowX: 'hidden', padding: '0.75rem' }}>
+          <div className="punto-venta__carrito-contenido">
             {carrito.length === 0 ? (
-              <div className="flex flex-column align-items-center justify-content-center" style={{ height: '100%', opacity: 0.4 }}>
+              <div className="punto-venta__carrito-vacio flex flex-column align-items-center justify-content-center">
                 <i className="pi pi-cart-arrow-down text-5xl mb-2" style={{ color: 'var(--text-icon)' }}></i>
                 <p className="text-sm font-semibold m-0" style={{ color: 'var(--text-icon)' }}>Carrito vacío</p>
                 <p className="text-xs m-0" style={{ color: 'var(--text-icon)' }}>Seleccione productos</p>
@@ -1180,11 +1099,11 @@ export default function VistaPuntoVenta() {
               onClick={() => { if (carrito.length > 0) { setEfectivoRecibido(null); setEfectivoRecibidoTexto(''); setPlazoValor(1); setPlazoTipo('meses'); setReferenciaPago(''); setErrorVenta(''); setDialogoPago(true); }}}
               disabled={carrito.length === 0 || cargandoCatalogos || !clienteSeleccionado || !comercio} />
           </div>
-        </div>
+        </PanelCarrito>
       </div>
 
       {/* ===== Product Customization Dialog ===== */}
-      <Dialog header="Personalizar producto" visible={dialogoItem} style={{ width: '580px' }}
+      <DialogoPuntoVenta header="Personalizar producto" visible={dialogoItem} style={{ width: '580px' }}
         onHide={() => { setDialogoItem(false); setItemEditando(null); }} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
@@ -1284,10 +1203,10 @@ export default function VistaPuntoVenta() {
             </div>
           );
         })()}
-      </Dialog>
+      </DialogoPuntoVenta>
 
       {/* ===== Payment Confirmation Dialog ===== */}
-      <Dialog header="Confirmar Cobro" visible={dialogoPago} style={{ width: '500px' }} onHide={() => setDialogoPago(false)} draggable={false} resizable={false}
+      <DialogoPuntoVenta header="Confirmar Cobro" visible={dialogoPago} style={{ width: '500px' }} onHide={() => setDialogoPago(false)} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
             <Button label="Cancelar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setDialogoPago(false)} disabled={guardandoVenta} />
@@ -1410,10 +1329,10 @@ export default function VistaPuntoVenta() {
             </div>
           </div>
         </div>
-      </Dialog>
+      </DialogoPuntoVenta>
 
       {/* ===== Thermal Ticket Dialog ===== */}
-      <Dialog header="Ticket de venta" visible={dialogoTicket} style={{ width: '520px' }}
+      <DialogoPuntoVenta header="Ticket de venta" visible={dialogoTicket} style={{ width: '520px' }}
         onHide={() => setDialogoTicket(false)} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
@@ -1446,10 +1365,10 @@ export default function VistaPuntoVenta() {
             {renderTicket(ticketVenta)}
           </div>
         </div>
-      </Dialog>
+      </DialogoPuntoVenta>
 
       {/* ===== Customer Selection Dialog ===== */}
-      <Dialog header="Seleccionar Cliente" visible={dialogoCliente} style={{ width: '480px' }} onHide={() => { setDialogoCliente(false); setBusquedaCliente(''); }} draggable={false} resizable={false}>
+      <DialogoPuntoVenta header="Seleccionar Cliente" visible={dialogoCliente} style={{ width: '480px' }} onHide={() => { setDialogoCliente(false); setBusquedaCliente(''); }} draggable={false} resizable={false}>
         <div className="flex flex-column gap-3">
           <Button label="Registrar nuevo cliente" icon="pi pi-user-plus" className="premium-btn w-full" onClick={abrirNuevoCliente} />
           <div className="premium-input-group">
@@ -1485,10 +1404,10 @@ export default function VistaPuntoVenta() {
             )}
           </div>
         </div>
-      </Dialog>
+      </DialogoPuntoVenta>
 
       {/* ===== Quick Customer Creation Dialog ===== */}
-      <Dialog header="Registrar cliente" visible={dialogoNuevoCliente} style={{ width: '680px' }}
+      <DialogoPuntoVenta header="Registrar cliente" visible={dialogoNuevoCliente} style={{ width: '680px' }}
         onHide={() => { setDialogoNuevoCliente(false); setErrorClienteRapido(''); }} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
@@ -1574,7 +1493,7 @@ export default function VistaPuntoVenta() {
             </div>
           </div>
         </div>
-      </Dialog>
-    </div>
+      </DialogoPuntoVenta>
+    </ContenedorPuntoVenta>
   );
 }

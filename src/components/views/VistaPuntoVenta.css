@@ -1,0 +1,238 @@
+.punto-venta {
+  --espacio-punto-venta: 1rem;
+  --color-principal-punto-venta: #6366f1;
+  --color-exito-punto-venta: #10b981;
+  height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-punto-venta);
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.punto-venta__contenido {
+  display: flex;
+  gap: var(--espacio-punto-venta);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.punto-venta__catalogo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--espacio-punto-venta);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.punto-venta__barra-herramientas {
+  max-width: 360px;
+}
+
+.punto-venta__productos {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.punto-venta__estado {
+  height: 100%;
+  opacity: 0.6;
+}
+
+.punto-venta__estado--vacio {
+  opacity: 0.5;
+}
+
+.punto-venta__producto {
+  width: 100%;
+  min-height: 178px;
+  background: var(--card-bg);
+  border: 1px solid var(--surface-border-light);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease-in-out;
+}
+
+.punto-venta__producto:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 8px 25px -8px rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+}
+
+.punto-venta__producto-visual {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+}
+
+.punto-venta__producto-icono-fallback {
+  color: #6366f1;
+}
+
+.punto-venta__producto-imagen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0.35rem;
+  box-sizing: border-box;
+  border-radius: inherit;
+  object-fit: contain;
+  background: var(--card-bg);
+}
+
+.punto-venta__producto-nombre {
+  min-height: 2.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.punto-venta__producto-precio {
+  color: #6366f1;
+  white-space: nowrap;
+}
+
+.punto-venta__producto-etiqueta {
+  font-size: 0.6rem !important;
+  margin-top: auto;
+}
+
+.punto-venta__carrito {
+  width: 34%;
+  min-width: 260px;
+  max-width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.punto-venta__carrito-contenido {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.75rem;
+}
+
+.punto-venta__carrito-vacio {
+  height: 100%;
+  opacity: 0.4;
+}
+
+.punto-venta__opciones-dte {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.punto-venta__aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+}
+
+.punto-venta__aviso--exito {
+  position: fixed;
+  top: 5rem;
+  right: 1.5rem;
+  z-index: 1000;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
+}
+
+.punto-venta__aviso--error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.punto-venta__dialogo .p-dialog-content {
+  overflow-x: hidden;
+}
+
+.punto-venta__formulario-producto,
+.punto-venta__formulario-pago,
+.punto-venta__formulario-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.punto-venta__contenido-desplazable {
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.punto-venta__impresion-ticket {
+  display: none;
+}
+
+.thermal-ticket {
+  width: 80mm;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 4mm;
+  background: #fff;
+  color: #111;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.25;
+  box-sizing: border-box;
+}
+
+.thermal-ticket.ticket-58 { width: 58mm; padding: 3mm; font-size: 10px; }
+.ticket-center { text-align: center; }
+.ticket-title { font-size: 13px; font-weight: 800; text-transform: uppercase; }
+.ticket-58 .ticket-title { font-size: 11px; }
+.ticket-line { border-top: 1px dashed #111; margin: 7px 0; }
+.ticket-row { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.ticket-row span:last-child { text-align: right; word-break: break-word; }
+.ticket-small-break { word-break: break-all; }
+.ticket-item { margin-bottom: 6px; }
+.ticket-item-name { font-weight: 700; word-break: break-word; }
+.ticket-muted { color: #444; }
+.ticket-total { font-size: 13px; font-weight: 800; margin-top: 4px; }
+.ticket-footer { margin-top: 8px; font-size: 10px; }
+
+@media (max-width: 1024px) {
+  .punto-venta__contenido { overflow-y: auto; flex-direction: column; }
+  .punto-venta__catalogo { min-height: 420px; overflow: visible; }
+  .punto-venta__carrito { width: 100%; max-width: none; min-height: 420px; }
+}
+
+@media (max-width: 640px) {
+  .punto-venta { height: auto; min-height: calc(100vh - 80px); overflow: visible; }
+  .punto-venta__barra-herramientas { max-width: none; width: 100%; }
+  .punto-venta__producto { padding: 0.75rem !important; }
+  .punto-venta__aviso--exito { top: 4.5rem; right: 0.75rem; left: 0.75rem; }
+}
+
+@media print {
+  @page { size: var(--ancho-ticket) auto; margin: 0; }
+  body * { visibility: hidden !important; }
+  .punto-venta__impresion-ticket,
+  .punto-venta__impresion-ticket * { visibility: visible !important; }
+  .punto-venta__impresion-ticket {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--ancho-ticket);
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+  .punto-venta__impresion-ticket .thermal-ticket { width: var(--ancho-ticket); margin: 0; box-shadow: none; }
+}
