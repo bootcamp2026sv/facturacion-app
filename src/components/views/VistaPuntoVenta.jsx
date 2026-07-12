@@ -148,6 +148,7 @@ export default function VistaPuntoVenta() {
   const [actividades, setActividades] = useState([]);
   const [comercio, setComercio] = useState(null);
   const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
+  const [recargandoProductos, setRecargandoProductos] = useState(false);
   const [errorCatalogos, setErrorCatalogos] = useState('');
   const [errorVenta, setErrorVenta] = useState('');
   const [guardandoVenta, setGuardandoVenta] = useState(false);
@@ -275,6 +276,27 @@ export default function VistaPuntoVenta() {
       existencia: Number(producto.existencia || 0),
       lineaLibre: !!producto.productoPersonalizable,
     };
+  };
+
+  const recargarProductos = async () => {
+    setRecargandoProductos(true);
+    setErrorCatalogos('');
+    try {
+      const respuesta = await api.get('/Productos');
+      const productosApi = (respuesta.data || [])
+        .filter(producto => producto.activo !== false)
+        .map(mapearProductoApi);
+
+      setProductos(productosApi);
+      if (catalogosPosCache) {
+        catalogosPosCache = { ...catalogosPosCache, productos: respuesta.data || [] };
+      }
+    } catch (error) {
+      console.error('Error al recargar productos:', error);
+      setErrorCatalogos(error.response?.data?.message || 'No se pudieron recargar los productos.');
+    } finally {
+      setRecargandoProductos(false);
+    }
   };
 
   const mapearClienteApi = (cli) => ({
@@ -746,6 +768,8 @@ export default function VistaPuntoVenta() {
       // La API guarda la venta, la firma, la envía a Hacienda y devuelve
       // la venta actualizada con su selloRecepcion.
       setTicketVenta(crearTicketVenta(respuesta.data, cambio));
+      // La siguiente venta debe iniciar con el método de pago predeterminado.
+      setMetodoPago('efectivo');
       setDialogoPago(false);
       setDialogoTicket(true);
       setPagoExitoso(true);
@@ -900,6 +924,15 @@ export default function VistaPuntoVenta() {
                   {cat}
                 </button>
               ))}
+              <button onClick={recargarProductos} disabled={cargandoCatalogos || recargandoProductos}
+                title="Recargar productos"
+                className="flex align-items-center justify-content-center gap-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 px-3 py-2 text-sm font-semibold"
+                style={{ background: 'var(--surface-hover)', color: 'var(--text-secondary)', opacity: (cargandoCatalogos || recargandoProductos) ? 0.65 : 1 }}
+                onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'var(--surface-border-light)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}>
+                <i className={`pi ${recargandoProductos ? 'pi-spin pi-spinner' : 'pi-refresh'}`}></i>
+                <span>Recargar</span>
+              </button>
               <button onClick={togglePantallaCompleta} title={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
                 className="flex align-items-center justify-content-center border-none border-round-xl cursor-pointer transition-all transition-duration-200"
                 style={{ width: '36px', height: '36px', background: 'var(--surface-hover)', color: 'var(--text-muted)' }}

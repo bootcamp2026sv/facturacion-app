@@ -462,6 +462,7 @@ export default function VistaPuntoVentaClasico() {
     setDialogoPago(false);
     setPagoExitoso(true);
     setCarrito([]);
+    setMetodoPago("efectivo");
     setTimeout(() => setPagoExitoso(false), 3000);
   };
 
