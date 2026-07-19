@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
@@ -6,6 +6,13 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
 import api from '../../services/api';
+import {
+  calcularItemVenta as calcItem,
+  obtenerPrecioUnitarioMostrado,
+  redondearMoneda as redondear,
+  TASA_IVA,
+} from '../../utils/calculosVenta';
+import { obtenerCamposFaltantesCreditoFiscal } from '../../utils/validacionesVenta';
 import './VistaPuntoVenta.css';
 import {
   AvisoError,
@@ -148,7 +155,6 @@ const obtenerCatalogosPos = async () => {
 };
 
 export default function VistaPuntoVenta() {
-  const redondear = useCallback((num) => Math.round((num + Number.EPSILON) * 100) / 100, []);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState('Todas');
   const [productos, setProductos] = useState([]);
@@ -186,12 +192,12 @@ export default function VistaPuntoVenta() {
       if (valor) {
         setItemEditando(prev => ({
           ...prev,
-          precio: prev.tipoIva === 'gravado' ? redondear(prev.precio * 1.13) : prev.precio
+          precio: prev.tipoIva === 'gravado' ? redondear(prev.precio * (1 + TASA_IVA)) : prev.precio
         }));
       } else {
         setItemEditando(prev => ({
           ...prev,
-          precio: prev.tipoIva === 'gravado' ? redondear(prev.precio / 1.13) : prev.precio
+          precio: prev.tipoIva === 'gravado' ? redondear(prev.precio / (1 + TASA_IVA)) : prev.precio
         }));
       }
     }
@@ -207,6 +213,7 @@ export default function VistaPuntoVenta() {
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [efectivoRecibido, setEfectivoRecibido] = useState(null);
   const [efectivoRecibidoTexto, setEfectivoRecibidoTexto] = useState('');
+  const efectivoRecibidoRef = useRef(null);
   const [plazoValor, setPlazoValor] = useState(1);
   const [plazoTipo, setPlazoTipo] = useState('meses');
   const [referenciaPago, setReferenciaPago] = useState('');
@@ -215,6 +222,15 @@ export default function VistaPuntoVenta() {
     () => clientes.find(c => c.value === cliente) || null,
     [cliente, clientes]
   );
+
+  const camposFaltantesCreditoFiscal = useMemo(
+    () => tipoDte === '03' ? obtenerCamposFaltantesCreditoFiscal(clienteSeleccionado) : [],
+    [tipoDte, clienteSeleccionado]
+  );
+
+  const mensajeClienteCreditoFiscal = camposFaltantesCreditoFiscal.length > 0
+    ? `Crédito Fiscal: completa ${camposFaltantesCreditoFiscal.join(', ')} del cliente antes de cobrar.`
+    : '';
 
   const parsearMontoPago = useCallback((valor) => {
     const limpio = String(valor ?? '')
@@ -314,14 +330,17 @@ export default function VistaPuntoVenta() {
   const mapearClienteApi = (cli) => ({
     label: `${cli.nombre || ''}${cli.apellidos ? ` ${cli.apellidos}` : ''}`.trim() || cli.nombreComercial || 'Cliente',
     value: cli.id,
+    nombre: cli.nombre || '',
+    apellidos: cli.apellidos || '',
     nit: cli.numDocumento || cli.nit || cli.nrc || 'S/N',
     tipoDocumento: cli.tipoDocumento,
-    numDocumento: cli.numDocumento || '',
+    numDocumento: cli.numDocumento || cli.nit || '',
     nrc: cli.nrc || '',
     telefono: cli.telefono || '',
     correo: cli.correo || '',
     nombreComercial: cli.nombreComercial || '',
     actividadEconomica: cli.actividadEconomica || null,
+    distritoId: cli.distrito?.id || cli.distrito_id || cli.distritoId || null,
     direccion: {
       departamento: cli.distrito?.municipio?.departamento?.Nombre || cli.distrito?.municipio?.departamento?.nombre || '',
       municipio: cli.distrito?.municipio?.Nombre || cli.distrito?.municipio?.nombre || '',
@@ -339,6 +358,23 @@ export default function VistaPuntoVenta() {
       texto.includes('cliente varios') ||
       texto.includes('varios') ||
       texto.includes('000000000');
+  };
+
+  const restablecerClienteFinalYFactura = () => {
+    const clienteFinal = clientes.find(esClienteFinal) || null;
+    setCliente(clienteFinal?.value ?? null);
+    setEsGranContribuyente(!!clienteFinal?.granContribuyente);
+    setTipoDte('01');
+  };
+
+  const cerrarDialogoPago = () => {
+    setDialogoPago(false);
+    restablecerClienteFinalYFactura();
+  };
+
+  const cerrarDialogoTicket = () => {
+    setDialogoTicket(false);
+    restablecerClienteFinalYFactura();
   };
 
   const aplicarClientesApi = (clientesApi, clienteActual = cliente) => {
@@ -521,6 +557,7 @@ export default function VistaPuntoVenta() {
       codigo: producto.codigo,
       nombre: producto.nombre,
       precio: producto.precio,
+      precioConIVA: producto.precioConIVA,
       cantidad: 1,
       descuentoTipo: 'porcentaje',
       descuentoValor: 0,
@@ -533,9 +570,12 @@ export default function VistaPuntoVenta() {
   const agregarAlCarrito = () => {
     if (!itemEditando) return;
     const precioFinal = (precioIncluyeIva && itemEditando.tipoIva === 'gravado')
-      ? itemEditando.precio / 1.13
+      ? itemEditando.precio / (1 + TASA_IVA)
       : itemEditando.precio;
-    const itemConPrecioBase = { ...itemEditando, precio: precioFinal };
+    const precioConIVA = itemEditando.tipoIva === 'gravado'
+      ? (precioIncluyeIva ? itemEditando.precio : redondear(itemEditando.precio * (1 + TASA_IVA)))
+      : itemEditando.precio;
+    const itemConPrecioBase = { ...itemEditando, precio: precioFinal, precioConIVA };
     setCarrito(prev => {
       const idx = prev.findIndex(item => item._key === itemEditando._key);
       if (idx >= 0) {
@@ -566,21 +606,6 @@ export default function VistaPuntoVenta() {
   const quitarDelCarrito = (key) => {
     setCarrito(prev => prev.filter(item => item._key !== key));
   };
-
-  const calcItem = useCallback((item) => {
-    const subtotal = item.precio * item.cantidad;
-    const descuento = item.descuentoTipo === 'porcentaje'
-      ? subtotal * (item.descuentoValor || 0) / 100
-      : (item.descuentoValor || 0);
-    const subtotalDesc = subtotal - descuento;
-    // Mantener precisión durante la operación: redondear IVA antes de sumar
-    // puede producir diferencias de centavos (por ejemplo, $0.89 + $0.12 = $1.01
-    // aunque el precio con IVA del producto sea exactamente $1.00).
-    const ivaVal = item.tipoIva === 'gravado' ? subtotalDesc * 0.13 : 0;
-    const iva = ivaVal;
-    const total = redondear(subtotalDesc + ivaVal);
-    return { subtotal, descuento, subtotalDesc, iva, total };
-  }, [redondear]);
 
   const monto4 = (valor) => Number(redondear(valor || 0)).toFixed(4);
 
@@ -624,7 +649,7 @@ export default function VistaPuntoVenta() {
       aplicaRetencion, 
       totalCobrar 
     };
-  }, [carrito, esGranContribuyente, calcItem]);
+  }, [carrito, esGranContribuyente]);
 
   const crearTicketVenta = (ventaGuardada, cambio) => {
     const items = carrito.map(item => {
@@ -765,6 +790,11 @@ export default function VistaPuntoVenta() {
 
   const cobrar = async () => {
     if (carrito.length === 0 || !clienteSeleccionado || !comercio) return;
+    if (tipoDte === '03' && camposFaltantesCreditoFiscal.length > 0) {
+      setErrorVenta(mensajeClienteCreditoFiscal);
+      cerrarDialogoPago();
+      return;
+    }
 
     setGuardandoVenta(true);
     setErrorVenta('');
@@ -827,6 +857,7 @@ export default function VistaPuntoVenta() {
       setTicketVenta(crearTicketVenta(respuesta.data, cambio));
       // La siguiente venta debe iniciar con el método de pago predeterminado.
       setMetodoPago('efectivo');
+      restablecerClienteFinalYFactura();
       setDialogoPago(false);
       setDialogoTicket(true);
       setPagoExitoso(true);
@@ -934,7 +965,7 @@ export default function VistaPuntoVenta() {
                       </div>
                       <span className="punto-venta__producto-nombre text-sm font-semibold text-center">{producto.nombre}</span>
                       <span className="punto-venta__producto-precio text-sm font-bold">
-                        ${(tipoDte === '03' ? producto.precio : (producto.tipoIva === 'gravado' ? redondear(producto.precio * 1.13) : producto.precio)).toFixed(2)}
+                        ${obtenerPrecioUnitarioMostrado(producto, tipoDte !== '03').toFixed(2)}
                         {tipoDte !== '03' && producto.tipoIva === 'gravado' && <span className="text-2xs font-normal" style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}> (IVA incl.)</span>}
                       </span>
                       <Tag value={ETIQUETA_IVA[producto.tipoIva].label} severity={ETIQUETA_IVA[producto.tipoIva].severity} className="punto-venta__producto-etiqueta premium-tag" />
@@ -1059,7 +1090,7 @@ export default function VistaPuntoVenta() {
                             onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-border-light)'}>+</button>
                         </div>
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          × ${(tipoDte === '03' ? item.precio : (item.tipoIva === 'gravado' ? redondear(item.precio * 1.13) : item.precio)).toFixed(2)}
+                          × ${obtenerPrecioUnitarioMostrado(item, tipoDte !== '03').toFixed(2)}
                           {tipoDte !== '03' && item.tipoIva === 'gravado' && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}> c/IVA</span>}
                         </span>
                         {item.descuentoValor > 0 && <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>−{item.descuentoTipo === 'porcentaje' ? `${item.descuentoValor}%` : `$${item.descuentoValor}`}</span>}
@@ -1142,9 +1173,16 @@ export default function VistaPuntoVenta() {
               ))}
             </div>
 
+            {mensajeClienteCreditoFiscal && (
+              <div className="flex align-items-start gap-2 p-2 border-round-lg" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#b45309' }}>
+                <i className="pi pi-exclamation-triangle text-sm mt-1"></i>
+                <p className="text-xs font-semibold m-0 line-height-3">{mensajeClienteCreditoFiscal}</p>
+              </div>
+            )}
+
             <Button label="Cobrar" icon="pi pi-credit-card" className="premium-btn w-full" style={{ fontSize: '1.05rem' }}
               onClick={() => { if (carrito.length > 0) { setEfectivoRecibido(null); setEfectivoRecibidoTexto(''); setPlazoValor(1); setPlazoTipo('meses'); setReferenciaPago(''); setErrorVenta(''); setDialogoPago(true); }}}
-              disabled={carrito.length === 0 || cargandoCatalogos || !clienteSeleccionado || !comercio} />
+              disabled={carrito.length === 0 || cargandoCatalogos || !clienteSeleccionado || !comercio || camposFaltantesCreditoFiscal.length > 0} />
           </div>
         </PanelCarrito>
       </div>
@@ -1160,7 +1198,7 @@ export default function VistaPuntoVenta() {
         }>
         {itemEditando && (() => {
           const basePrice = (precioIncluyeIva && itemEditando.tipoIva === 'gravado')
-            ? itemEditando.precio / 1.13
+            ? itemEditando.precio / (1 + TASA_IVA)
             : itemEditando.precio;
           const sub = basePrice * itemEditando.cantidad;
           const d = itemEditando.descuentoTipo === 'porcentaje' ? sub * (itemEditando.descuentoValor || 0) / 100 : (itemEditando.descuentoValor || 0);
@@ -1253,10 +1291,15 @@ export default function VistaPuntoVenta() {
       </DialogoPuntoVenta>
 
       {/* ===== Payment Confirmation Dialog ===== */}
-      <DialogoPuntoVenta header="Confirmar Cobro" visible={dialogoPago} style={{ width: '500px' }} onHide={() => setDialogoPago(false)} draggable={false} resizable={false}
+      <DialogoPuntoVenta header="Confirmar Cobro" visible={dialogoPago} style={{ width: '500px' }} onHide={cerrarDialogoPago}
+        onShow={() => {
+          if (metodoPago === 'efectivo') {
+            requestAnimationFrame(() => efectivoRecibidoRef.current?.focus());
+          }
+        }} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
-            <Button label="Cancelar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setDialogoPago(false)} disabled={guardandoVenta} />
+            <Button label="Cancelar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={cerrarDialogoPago} disabled={guardandoVenta} />
             <Button label={guardandoVenta ? 'Guardando...' : 'Confirmar Pago'} icon={guardandoVenta ? 'pi pi-spin pi-spinner' : 'pi pi-check'} className="premium-btn" onClick={cobrar} disabled={guardandoVenta || (metodoPago === 'efectivo' && (!efectivoRecibido || efectivoRecibido < resumen.totalCobrar))} />
           </div>
         }>
@@ -1286,6 +1329,7 @@ export default function VistaPuntoVenta() {
               <div className="flex flex-column gap-1">
                 <label className="premium-label">Efectivo Recibido</label>
                 <InputText
+                  ref={efectivoRecibidoRef}
                   value={efectivoRecibidoTexto}
                   onChange={(e) => actualizarEfectivoRecibido(e.target.value)}
                   onKeyDown={(e) => {
@@ -1380,10 +1424,10 @@ export default function VistaPuntoVenta() {
 
       {/* ===== Thermal Ticket Dialog ===== */}
       <DialogoPuntoVenta header="Ticket de venta" visible={dialogoTicket} style={{ width: '520px' }}
-        onHide={() => setDialogoTicket(false)} draggable={false} resizable={false}
+        onHide={cerrarDialogoTicket} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
-            <Button label="Cerrar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setDialogoTicket(false)} />
+            <Button label="Cerrar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={cerrarDialogoTicket} />
             <Button label="Imprimir" icon="pi pi-print" className="premium-btn" onClick={imprimirTicket} disabled={!ticketVenta} />
           </div>
         }>
