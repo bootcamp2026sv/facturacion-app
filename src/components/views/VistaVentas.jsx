@@ -108,7 +108,37 @@ export default function VistaVentas() {
   };
 
   const ejecutarAccion = () => {
+
+    //Confirmó que si hay que anular
+    if(accionConfirmar === 'Anular'){
+      anulacionHacienda(ventaSeleccionada);
+    }
+
     setConfirmacionVisible(false);
+  };
+
+
+  const anulacionHacienda = async (venta = ventaSeleccionada) => {
+    setDialogoVisible(false);
+    setConsultaVisible(true);
+    setRespuestaConsulta(null);
+    setErrorConsulta('');
+
+    if (!venta?.id) {
+      setErrorConsulta('No se encontro el ID de la venta seleccionada.');
+      return;
+    }
+
+    setConsultaCargando(true);
+    try {
+      const respuesta = await api.post('/hacienda/anular-dte', { ventaId: venta.id });
+      setRespuestaConsulta(respuesta.data);
+    } catch (error) {
+      console.error('Error al anular DTE en Hacienda:', error);
+      setErrorConsulta(obtenerMensajeErrorConsulta(error));
+    } finally {
+      setConsultaCargando(false);
+    }
   };
 
   const obtenerMensajeErrorConsulta = (error) => {
