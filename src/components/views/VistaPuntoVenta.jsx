@@ -199,6 +199,8 @@ export default function VistaPuntoVenta() {
   const [dialogoCliente, setDialogoCliente] = useState(false);
   const [dialogoNuevoCliente, setDialogoNuevoCliente] = useState(false);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
+  const [cargandoClientes, setCargandoClientes] = useState(false);
+  const [errorClientes, setErrorClientes] = useState('');
   const [errorClienteRapido, setErrorClienteRapido] = useState('');
   const [clienteRapido, setClienteRapido] = useState(clienteRapidoInicial);
   const [busquedaCliente, setBusquedaCliente] = useState('');
@@ -339,6 +341,51 @@ export default function VistaPuntoVenta() {
       texto.includes('000000000');
   };
 
+  const aplicarClientesApi = (clientesApi, clienteActual = cliente) => {
+    setClientes(clientesApi);
+
+    const clienteVigente = clientesApi.find(c => c.value === clienteActual);
+    const clienteDefault = clientesApi.find(esClienteFinal) || null;
+    const siguienteCliente = clienteVigente || clienteDefault || null;
+
+    setCliente(siguienteCliente?.value || null);
+    setEsGranContribuyente(!!siguienteCliente?.granContribuyente);
+    return clienteDefault;
+  };
+
+  const recargarClientes = async () => {
+    setCargandoClientes(true);
+    setErrorClientes('');
+
+    try {
+      const respuesta = await api.get('/Clientes');
+      const clientesApi = (respuesta.data || [])
+        .filter(cli => cli.activo !== false)
+        .map(mapearClienteApi);
+
+      const clienteDefault = aplicarClientesApi(clientesApi);
+
+      if (catalogosPosCache) {
+        catalogosPosCache = { ...catalogosPosCache, clientes: respuesta.data || [] };
+      }
+
+      if (!clienteDefault) {
+        setErrorClientes('No se encontro el cliente final/default.');
+      }
+    } catch (error) {
+      console.error('Error al recargar clientes del POS:', error);
+      setErrorClientes(error.response?.data?.message || 'No se pudieron actualizar los clientes.');
+    } finally {
+      setCargandoClientes(false);
+    }
+  };
+
+  const abrirDialogoCliente = () => {
+    setDialogoCliente(true);
+    setBusquedaCliente('');
+    recargarClientes();
+  };
+
   useEffect(() => {
     let activo = true;
 
@@ -359,6 +406,7 @@ export default function VistaPuntoVenta() {
         const comercioApi = catalogos.comercios[0] || null;
         const distritosApi = catalogos.distritos || [];
         const actividadesApi = catalogos.actividades || [];
+        const clienteDefault = clientesApi.find(esClienteFinal) || null;
 
         setProductos(productosApi);
         setClientes(clientesApi);
@@ -370,7 +418,6 @@ export default function VistaPuntoVenta() {
           actividadEconomica_id: prev.actividadEconomica_id || actividadesApi[0]?.id || null,
         }));
         setComercio(comercioApi);
-        const clienteDefault = clientesApi.find(esClienteFinal) || null;
         setCliente(prev => prev || clienteDefault?.value || null);
         setEsGranContribuyente(!!clienteDefault?.granContribuyente);
         if (!clienteDefault) {
@@ -911,7 +958,7 @@ export default function VistaPuntoVenta() {
             <Tag value={`${carrito.reduce((s, i) => s + i.cantidad, 0)} items`} className="premium-tag" severity="info" />
           </div>
 
-          <button onClick={() => setDialogoCliente(true)} className="w-full border-none cursor-pointer p-3 border-bottom-1 surface-border flex align-items-center gap-3 transition-all transition-duration-200" style={{ background: 'transparent' }}
+          <button onClick={abrirDialogoCliente} className="w-full border-none cursor-pointer p-3 border-bottom-1 surface-border flex align-items-center gap-3 transition-all transition-duration-200" style={{ background: 'transparent' }}
             onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
             <div className="flex align-items-center justify-content-center border-circle" style={{ width: '36px', height: '36px', minWidth: '36px', background: !cliente ? 'var(--surface-border-light)' : 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
@@ -1371,6 +1418,12 @@ export default function VistaPuntoVenta() {
       <DialogoPuntoVenta header="Seleccionar Cliente" visible={dialogoCliente} style={{ width: '480px' }} onHide={() => { setDialogoCliente(false); setBusquedaCliente(''); }} draggable={false} resizable={false}>
         <div className="flex flex-column gap-3">
           <Button label="Registrar nuevo cliente" icon="pi pi-user-plus" className="premium-btn w-full" onClick={abrirNuevoCliente} />
+          {(cargandoClientes || errorClientes) && (
+            <div className="flex align-items-center gap-2 p-2 border-round-lg" style={{ background: errorClientes ? 'rgba(239,68,68,0.1)' : 'var(--surface-muted)', border: errorClientes ? '1px solid rgba(239,68,68,0.25)' : '1px solid var(--surface-border-light)', color: errorClientes ? '#ef4444' : 'var(--text-muted)' }}>
+              <i className={`pi ${cargandoClientes ? 'pi-spin pi-spinner' : 'pi-exclamation-circle'} text-sm`}></i>
+              <p className="text-xs font-semibold m-0">{cargandoClientes ? 'Actualizando clientes...' : errorClientes}</p>
+            </div>
+          )}
           <div className="premium-input-group">
             <i className="pi pi-search premium-input-icon" style={{ fontSize: '0.85rem' }}></i>
             <InputText value={busquedaCliente} onChange={(e) => setBusquedaCliente(e.target.value)} placeholder="Buscar por nombre o NIT..." className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} autoFocus />

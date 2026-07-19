@@ -234,6 +234,127 @@
   border-radius: 8px;
 }
 
+/* --- Vista Ventas responsive refinements --- */
+.vista-ventas {
+  min-width: 0;
+}
+.vista-ventas .premium-input-group,
+.vista-ventas .premium-input-group .p-inputtext,
+.vista-ventas .p-dropdown {
+  width: 100%;
+}
+.vista-ventas .premium-btn,
+.vista-ventas .premium-btn-secondary {
+  justify-content: center;
+  min-width: 0;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+.vista-ventas h2 {
+  font-size: clamp(1.5rem, 2vw, 1.875rem);
+  line-height: 1.15;
+}
+.vista-ventas > .mb-4 > p {
+  font-size: clamp(0.9rem, 1.4vw, 1rem);
+  line-height: 1.35;
+}
+.vista-ventas .overflow-wrap-anywhere,
+.vista-ventas .p-dialog-header,
+.vista-ventas .p-datatable .p-datatable-tbody > tr > td {
+  overflow-wrap: anywhere;
+}
+.ventas-dialog .p-dialog-header {
+  min-width: 0;
+}
+.ventas-dialog .p-dialog-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ventas-modal-actions {
+  max-width: 100%;
+  gap: 0.25rem;
+}
+.ventas-modal-actions > button {
+  flex: 0 1 16.666%;
+  min-height: 76px;
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
+}
+.ventas-modal-actions > button span {
+  max-width: 100%;
+  overflow-wrap: normal;
+  word-break: normal;
+  font-size: 0.68rem !important;
+}
+
+@media (max-width: 1024px) {
+  .vista-ventas .premium-surface-card {
+    border-radius: 12px;
+  }
+  .ventas-table .p-datatable-thead {
+    display: none;
+  }
+  .ventas-table .p-datatable-tbody > tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--table-row-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--card-bg-solid);
+  }
+  .ventas-table .p-datatable-tbody > tr > td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+  }
+  .ventas-table .p-column-title {
+    flex: 0 0 38%;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  .ventas-table .p-datatable-tbody > tr > td > :not(.p-column-title) {
+    min-width: 0;
+    text-align: right;
+  }
+  .ventas-table .p-datatable-tbody > tr > td:last-child {
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 0.25rem;
+  }
+  .ventas-table .p-datatable-tbody > tr > td:last-child .p-column-title {
+    display: none;
+  }
+  .ventas-table .p-paginator {
+    gap: 0.25rem;
+  }
+  .ventas-table .p-paginator .p-paginator-current,
+  .ventas-table .p-paginator .p-paginator-rpp-options {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .ventas-table .p-datatable-tbody > tr > td {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .ventas-table .p-column-title {
+    flex-basis: auto;
+  }
+  .ventas-table .p-datatable-tbody > tr > td > :not(.p-column-title) {
+    width: 100%;
+    text-align: left;
+  }
+}
+
 /* --- Premium TabView --- */
 .premium-tabs .p-tabview-nav {
   background: transparent;

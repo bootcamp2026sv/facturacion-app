@@ -192,9 +192,9 @@ export default function VistaVentas() {
   );
 
   const pieDialogo = ventaSeleccionada && (
-    <div className="flex flex-nowrap gap-1 justify-content-center">
+    <div className="ventas-modal-actions flex flex-nowrap justify-content-between w-full">
       {acciones.map((accion) => (
-        <button key={accion.id} className="flex flex-column align-items-center gap-1 p-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200" style={{ background: 'transparent', minWidth: '72px' }}
+        <button key={accion.id} className="flex flex-column align-items-center gap-1 p-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 min-w-0" style={{ background: 'transparent' }}
           onClick={() => accion.id === 'Consultar Hacienda' ? consultarHacienda(ventaSeleccionada) : confirmarAccion(accion.id)}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-muted)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)' }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
@@ -208,14 +208,14 @@ export default function VistaVentas() {
   );
 
   const pieConsulta = (
-    <div className="flex gap-2 justify-content-end">
+    <div className="flex flex-column sm:flex-row gap-2 justify-content-end">
       <Button label="Cerrar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setConsultaVisible(false)} />
       <Button label={consultaCargando ? 'Consultando...' : 'Reintentar'} icon={consultaCargando ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} className="p-button-sm premium-btn" onClick={() => consultarHacienda(ventaSeleccionada)} disabled={consultaCargando || !ventaSeleccionada?.id} />
     </div>
   );
 
   const pieConfirmacion = accionConfirmar && (
-    <div className="flex gap-2 justify-content-end">
+    <div className="flex flex-column sm:flex-row gap-2 justify-content-end">
       <Button label="No" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setConfirmacionVisible(false)} />
       {(accionConfirmar === 'Enviar Correo' || accionConfirmar === 'Nota Créd/Déb')
         ? <Button label={mensajesConfirmacion[accionConfirmar].btn} icon={mensajesConfirmacion[accionConfirmar].icono} className="p-button-sm" style={{ background: mensajesConfirmacion[accionConfirmar].color, borderColor: mensajesConfirmacion[accionConfirmar].color }}
@@ -245,7 +245,7 @@ export default function VistaVentas() {
 
         {accionConfirmar === 'Nota Créd/Déb' && (
           <div className="w-full flex flex-column gap-2">
-            <div className="flex gap-3 w-full">
+            <div className="flex flex-column sm:flex-row gap-3 w-full">
               {['Crédito', 'Débito'].map((tipo) => (
                 <button key={tipo} onClick={() => setTipoNota(tipo)}
                   className="flex-1 flex flex-column align-items-center gap-2 p-3 border-round-xl cursor-pointer transition-all transition-duration-200"
@@ -274,47 +274,47 @@ export default function VistaVentas() {
   };
 
   return (
-    <div className="p-4 premium-fade-in">
+    <div className="vista-ventas p-3 md:p-4 premium-fade-in">
       <div className="mb-4">
         <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Gestión de Ventas (DTE)</h2>
         <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Emisión de documentos electrónicos y consulta histórica de ventas.</p>
       </div>
 
       <div className="premium-surface-card">
-        <div className="p-4">
+        <div className="p-3 md:p-4">
           {errorCarga && (
-            <div className="flex align-items-center justify-content-between gap-3 p-3 mb-4 border-round-xl" style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.22)', color: '#be123c' }}>
-              <span className="text-sm flex align-items-center gap-2"><i className="pi pi-exclamation-circle"></i>{errorCarga}</span>
-              <Button label="Reintentar" icon="pi pi-refresh" className="p-button-sm p-button-outlined" onClick={cargarVentas} />
+            <div className="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 p-3 mb-4 border-round-xl" style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.22)', color: '#be123c' }}>
+              <span className="text-sm flex align-items-start gap-2 min-w-0"><i className="pi pi-exclamation-circle mt-1"></i><span className="overflow-wrap-anywhere">{errorCarga}</span></span>
+              <Button label="Reintentar" icon="pi pi-refresh" className="p-button-sm p-button-outlined w-full sm:w-auto" onClick={cargarVentas} />
             </div>
           )}
           <div className="grid align-items-end mb-4">
-            <div className="col-12 md:col-3 flex flex-column gap-2">
+            <div className="col-12 sm:col-6 xl:col-3 flex flex-column gap-2">
               <label className="premium-label">Tipo DTE</label>
-              <Dropdown value={filtroTipo} options={tiposDte} onChange={(e) => setFiltroTipo(e.value)} placeholder="Todos" />
+              <Dropdown value={filtroTipo} options={tiposDte} onChange={(e) => setFiltroTipo(e.value)} placeholder="Todos" className="w-full" />
             </div>
-            <div className="col-12 md:col-3 flex flex-column gap-2">
+            <div className="col-12 sm:col-6 xl:col-3 flex flex-column gap-2">
               <label className="premium-label">Cliente</label>
               <div className="premium-input-group">
                 <i className="pi pi-search premium-input-icon" style={{ fontSize: '0.8rem' }}></i>
-                <InputText value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} placeholder="Buscar por cliente..." />
+                <InputText value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} placeholder="Buscar por cliente..." className="w-full" />
               </div>
             </div>
-            <div className="col-12 md:col-3 flex flex-column gap-2">
+            <div className="col-12 sm:col-6 xl:col-3 flex flex-column gap-2">
               <label className="premium-label">N° Control</label>
               <div className="premium-input-group">
                 <i className="pi pi-hashtag premium-input-icon" style={{ fontSize: '0.8rem' }}></i>
                 <InputText value={filtroControl} onChange={(e) => setFiltroControl(e.target.value)} placeholder="Buscar por número..." />
               </div>
             </div>
-            <div className="col-12 md:col-3 flex gap-2">
-              <Button icon={cargando ? "pi pi-spin pi-spinner" : "pi pi-refresh"} label={cargando ? "Cargando..." : "Actualizar"} className="premium-btn" onClick={cargarVentas} disabled={cargando} />
-              <Button icon="pi pi-times" label="Limpiar" className="p-button-outlined premium-btn-secondary" onClick={limpiarFiltros} />
+            <div className="col-12 xl:col-3 flex flex-column sm:flex-row gap-2">
+              <Button icon={cargando ? "pi pi-spin pi-spinner" : "pi pi-refresh"} label={cargando ? "Cargando..." : "Actualizar"} className="premium-btn w-full" onClick={cargarVentas} disabled={cargando} />
+              <Button icon="pi pi-times" label="Limpiar" className="p-button-outlined premium-btn-secondary w-full" onClick={limpiarFiltros} />
             </div>
           </div>
 
-          <div className="premium-table">
-            <DataTable value={ventasFiltradas} paginator rows={5} size="small" loading={cargando} emptyMessage={errorCarga ? "No se pudieron cargar las ventas" : "No hay ventas registradas"} responsiveLayout="scroll" sortField="fechaOrden" sortOrder={-1}>
+          <div className="premium-table ventas-table">
+            <DataTable value={ventasFiltradas} paginator rows={5} size="small" loading={cargando} emptyMessage={errorCarga ? "No se pudieron cargar las ventas" : "No hay ventas registradas"} responsiveLayout="stack" breakpoint="1024px" sortField="fechaOrden" sortOrder={-1}>
               <Column field="fecha" sortField="fechaOrden" header="Fecha de Emisión" body={(f) => new Date(f.fecha).toLocaleString()} sortable></Column>
               <Column field="tipo" header="Tipo DTE" sortable></Column>
               <Column field="numeroControl" header="Número de Control" sortable body={(f) => f.numeroControl.split('-').pop()}></Column>
@@ -326,7 +326,7 @@ export default function VistaVentas() {
         </div>
       </div>
 
-      <Dialog header={ventaSeleccionada ? ventaSeleccionada.numeroControl : 'Acciones'} visible={dialogoVisible} style={{ width: '580px' }} onHide={() => setDialogoVisible(false)} footer={pieDialogo} draggable={false} resizable={false}>
+      <Dialog header={ventaSeleccionada ? ventaSeleccionada.numeroControl : 'Acciones'} visible={dialogoVisible} style={{ width: '580px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '760px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setDialogoVisible(false)} footer={pieDialogo} draggable={false} resizable={false}>
         {ventaSeleccionada && (
           <div className="flex flex-column gap-3">
             <div className="flex align-items-center gap-3 p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
@@ -369,11 +369,11 @@ export default function VistaVentas() {
         )}
       </Dialog>
 
-      <Dialog header={accionConfirmar ? mensajesConfirmacion[accionConfirmar].titulo : ''} visible={confirmacionVisible} style={{ width: '440px' }} onHide={() => setConfirmacionVisible(false)} footer={pieConfirmacion} draggable={false} resizable={false}>
+      <Dialog header={accionConfirmar ? mensajesConfirmacion[accionConfirmar].titulo : ''} visible={confirmacionVisible} style={{ width: '440px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '640px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConfirmacionVisible(false)} footer={pieConfirmacion} draggable={false} resizable={false}>
         {cuerpoConfirmacion()}
       </Dialog>
 
-      <Dialog header="Consulta Hacienda" visible={consultaVisible} style={{ width: '560px', maxWidth: 'calc(100vw - 2rem)' }} onHide={() => setConsultaVisible(false)} footer={pieConsulta} draggable={false} resizable={false}>
+      <Dialog header="Consulta Hacienda" visible={consultaVisible} style={{ width: '560px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '760px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConsultaVisible(false)} footer={pieConsulta} draggable={false} resizable={false}>
         <div className="flex flex-column gap-3" style={{ maxWidth: '100%', overflow: 'hidden' }}>
           {ventaSeleccionada && (
             <div className="flex align-items-center gap-3 p-3 border-round-xl" style={{ background: 'var(--surface-muted)', minWidth: 0 }}>
