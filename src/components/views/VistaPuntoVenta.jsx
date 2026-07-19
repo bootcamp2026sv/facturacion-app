@@ -13,6 +13,7 @@ import {
   TASA_IVA,
 } from '../../utils/calculosVenta';
 import { obtenerCamposFaltantesCreditoFiscal } from '../../utils/validacionesVenta';
+import { obtenerErrorFormatoCliente, soloDigitos } from '../../utils/validacionesCliente';
 import './VistaPuntoVenta.css';
 import {
   AvisoError,
@@ -451,7 +452,6 @@ export default function VistaPuntoVenta() {
         setClienteRapido(prev => ({
           ...prev,
           distrito_id: prev.distrito_id || distritosApi[0]?.id || null,
-          actividadEconomica_id: prev.actividadEconomica_id || actividadesApi[0]?.id || null,
         }));
         setComercio(comercioApi);
         setCliente(prev => prev || clienteDefault?.value || null);
@@ -491,7 +491,7 @@ export default function VistaPuntoVenta() {
     setClienteRapido({
       ...clienteRapidoInicial,
       distrito_id: distritos[0]?.id || null,
-      actividadEconomica_id: actividades[0]?.id || null,
+      actividadEconomica_id: null,
     });
     setErrorClienteRapido('');
     setDialogoCliente(false);
@@ -504,6 +504,12 @@ export default function VistaPuntoVenta() {
       return;
     }
 
+    const errorFormato = obtenerErrorFormatoCliente(clienteRapido);
+    if (errorFormato) {
+      setErrorClienteRapido(errorFormato);
+      return;
+    }
+
     setGuardandoCliente(true);
     setErrorClienteRapido('');
 
@@ -511,7 +517,7 @@ export default function VistaPuntoVenta() {
       const respuesta = await api.post('/Clientes', {
         ...clienteRapido,
         distrito_id: clienteRapido.distrito_id || distritos[0]?.id || 1,
-        actividadEconomica_id: clienteRapido.actividadEconomica_id || actividades[0]?.id || 1,
+        actividadEconomica_id: clienteRapido.actividadEconomica_id || null,
       });
       const clienteGuardado = respuesta.data;
       const clienteMapeado = mapearClienteApi(clienteGuardado);
@@ -1543,19 +1549,19 @@ export default function VistaPuntoVenta() {
                 className="w-full" />
             </div>
             <div className="col-12 md:col-6 flex flex-column gap-1">
-              <label className="premium-label">Numero documento</label>
-              <InputText value={clienteRapido.numDocumento} onChange={(e) => setClienteRapido({ ...clienteRapido, numDocumento: e.target.value })}
-                placeholder="DUI, NIT u otro" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+              <label className="premium-label">Numero documento <span style={{ color: '#ef4444' }}>*</span></label>
+              <InputText value={clienteRapido.numDocumento} onChange={(e) => setClienteRapido({ ...clienteRapido, numDocumento: soloDigitos(e.target.value).slice(0, 14) })}
+                inputMode="numeric" maxLength={14} placeholder="9 o 14 dígitos, sin guiones" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
             </div>
             <div className="col-12 md:col-6 flex flex-column gap-1">
               <label className="premium-label">NRC</label>
-              <InputText value={clienteRapido.nrc} onChange={(e) => setClienteRapido({ ...clienteRapido, nrc: e.target.value })}
-                placeholder="Opcional" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+              <InputText value={clienteRapido.nrc} onChange={(e) => setClienteRapido({ ...clienteRapido, nrc: soloDigitos(e.target.value) })}
+                inputMode="numeric" placeholder="Solo números, sin guiones" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
             </div>
             <div className="col-12 md:col-6 flex flex-column gap-1">
-              <label className="premium-label">Telefono</label>
-              <InputText value={clienteRapido.telefono} onChange={(e) => setClienteRapido({ ...clienteRapido, telefono: e.target.value })}
-                placeholder="Opcional" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
+              <label className="premium-label">Telefono <span style={{ color: '#ef4444' }}>*</span></label>
+              <InputText value={clienteRapido.telefono} onChange={(e) => setClienteRapido({ ...clienteRapido, telefono: soloDigitos(e.target.value) })}
+                inputMode="numeric" placeholder="Mínimo 8 dígitos, sin guiones" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
             </div>
             <div className="col-12 md:col-6 flex flex-column gap-1">
               <label className="premium-label">Correo</label>
@@ -1574,7 +1580,7 @@ export default function VistaPuntoVenta() {
               <Dropdown value={clienteRapido.actividadEconomica_id}
                 options={actividades.map(a => ({ label: `${a.codActividad || a.CodActividad || ''} - ${a.descActividad || a.DescActividad || ''}`, value: a.id }))}
                 onChange={(e) => setClienteRapido({ ...clienteRapido, actividadEconomica_id: e.value })}
-                className="w-full" filter />
+                placeholder="Seleccione una actividad económica" className="w-full" filter showClear />
             </div>
             <div className="col-12 flex flex-column gap-1">
               <label className="premium-label">Direccion</label>

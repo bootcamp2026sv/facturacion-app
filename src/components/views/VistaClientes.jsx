@@ -12,6 +12,7 @@ import { Dialog } from 'primereact/dialog';
 
 // Importar cliente Axios para la API real
 import api from '../../services/api';
+import { obtenerErrorFormatoCliente, soloDigitos } from '../../utils/validacionesCliente';
 
 // Tipos de documento
 const TIPO_DOC_OPCIONES = [
@@ -63,7 +64,7 @@ export default function VistaClientes() {
     activo: true,
     complementoDireccion: '',
     distrito_id: 1,
-    actividadEconomica_id: 1
+    actividadEconomica_id: null
   });
 
   const [editando, setEditando] = useState(false);
@@ -73,15 +74,15 @@ export default function VistaClientes() {
 
   const iniciarEdicion = (cliente) => {
     const distId = cliente.distrito?.id || cliente.distrito_id || cliente.distritoId || (distritos[0]?.id || 1);
-    const actId = cliente.actividadEconomica?.id || cliente.actividadEconomica_id || cliente.actividadEconomicaId || (actividades[0]?.id || 1);
+    const actId = cliente.actividadEconomica?.id || cliente.actividadEconomica_id || cliente.actividadEconomicaId || null;
     setDatosFormulario({
       nombre: cliente.nombre || '',
       apellidos: cliente.apellidos || '',
       nombreComercial: cliente.nombreComercial || '',
       tipoDocumento: cliente.tipoDocumento || 13,
-      numDocumento: cliente.numDocumento || '',
-      nrc: cliente.nrc || '',
-      telefono: cliente.telefono || '',
+      numDocumento: soloDigitos(cliente.numDocumento || ''),
+      nrc: soloDigitos(cliente.nrc || ''),
+      telefono: soloDigitos(cliente.telefono || ''),
       correo: cliente.correo || '',
       granContribuyente: cliente.granContribuyente ?? false,
       activo: cliente.activo ?? true,
@@ -208,7 +209,7 @@ export default function VistaClientes() {
       activo: true,
       complementoDireccion: '',
       distrito_id: 1,
-      actividadEconomica_id: 1
+      actividadEconomica_id: null
     });
   };
 
@@ -217,6 +218,12 @@ export default function VistaClientes() {
 
     if (!datosFormulario.nombre.trim()) {
       toast.current.show({ severity: 'warn', summary: 'Validación', detail: 'El nombre o razón social es requerido.', life: 3000 });
+      return;
+    }
+
+    const errorFormato = obtenerErrorFormatoCliente(datosFormulario);
+    if (errorFormato) {
+      toast.current.show({ severity: 'warn', summary: 'Validación', detail: errorFormato, life: 4000 });
       return;
     }
 
@@ -485,14 +492,16 @@ export default function VistaClientes() {
                       />
                     </div>
                     <div className="col-12 md:col-6 flex flex-column gap-2">
-                      <label htmlFor="numDocumento" className="font-bold text-xs text-800">Número de Documento</label>
+                      <label htmlFor="numDocumento" className="font-bold text-xs text-800">Número de Documento <span className="text-red-500">*</span></label>
                       <div className="premium-input-group">
                         <i className="pi pi-hashtag premium-input-icon"></i>
                         <InputText 
                           id="numDocumento" 
                           value={datosFormulario.numDocumento} 
-                          onChange={(e) => setDatosFormulario({ ...datosFormulario, numDocumento: e.target.value })} 
-                          placeholder={datosFormulario.tipoDocumento === 13 ? "Ej. 01234567-8" : "Ej. 0614-200595-101-5"} 
+                          onChange={(e) => setDatosFormulario({ ...datosFormulario, numDocumento: soloDigitos(e.target.value).slice(0, 14) })}
+                          inputMode="numeric"
+                          maxLength={14}
+                          placeholder={datosFormulario.tipoDocumento === 13 ? "Ej. 012345678" : "Ej. 06142005951015"}
                         />
                       </div>
                     </div>
@@ -503,8 +512,9 @@ export default function VistaClientes() {
                         <InputText 
                           id="nrc" 
                           value={datosFormulario.nrc} 
-                          onChange={(e) => setDatosFormulario({ ...datosFormulario, nrc: e.target.value })} 
-                          placeholder="Ej. 123456-7" 
+                          onChange={(e) => setDatosFormulario({ ...datosFormulario, nrc: soloDigitos(e.target.value) })}
+                          inputMode="numeric"
+                          placeholder="Ej. 1234567"
                         />
                       </div>
                     </div>
@@ -576,14 +586,15 @@ export default function VistaClientes() {
                   </h3>
                   <div className="grid">
                     <div className="col-12 md:col-6 flex flex-column gap-2">
-                      <label htmlFor="telefono" className="font-bold text-xs text-800">Teléfono</label>
+                      <label htmlFor="telefono" className="font-bold text-xs text-800">Teléfono <span className="text-red-500">*</span></label>
                       <div className="premium-input-group">
                         <i className="pi pi-phone premium-input-icon"></i>
                         <InputText 
                           id="telefono" 
                           value={datosFormulario.telefono} 
-                          onChange={(e) => setDatosFormulario({ ...datosFormulario, telefono: e.target.value })} 
-                          placeholder="Ej. +503 2222-3333" 
+                          onChange={(e) => setDatosFormulario({ ...datosFormulario, telefono: soloDigitos(e.target.value) })}
+                          inputMode="numeric"
+                          placeholder="Ej. 22223333"
                         />
                       </div>
                     </div>
@@ -615,7 +626,9 @@ export default function VistaClientes() {
                         id="actividadEconomica_id" 
                         value={datosFormulario.actividadEconomica_id} 
                         options={actividades.map(a => ({ label: `${a.codActividad || a.CodActividad || ''} - ${a.descActividad || a.DescActividad || ''}`, value: a.id }))} 
-                        onChange={(e) => setDatosFormulario({ ...datosFormulario, actividadEconomica_id: e.value })} 
+                        onChange={(e) => setDatosFormulario({ ...datosFormulario, actividadEconomica_id: e.value })}
+                        placeholder="Seleccione una actividad económica"
+                        showClear
                       />
                     </div>
                     <div className="col-12 flex flex-column gap-2 mt-2">
