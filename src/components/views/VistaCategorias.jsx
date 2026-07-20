@@ -38,7 +38,7 @@ export default function VistaCategorias() {
     cargarCategorias();
   }, []);
 
-  const cargarCategorias = async () => {
+  async function cargarCategorias() {
     setCargando(true);
     try {
       const response = await api.get('/Categorias');
@@ -54,7 +54,7 @@ export default function VistaCategorias() {
     } finally {
       setCargando(false);
     }
-  };
+  }
 
   const abrirNuevo = () => {
     setCategoria(categoriaVacia);

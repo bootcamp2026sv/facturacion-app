@@ -36,7 +36,7 @@ export default function VistaUnidadesMedida() {
     cargarUnidades();
   }, []);
 
-  const cargarUnidades = async () => {
+  async function cargarUnidades() {
     setCargando(true);
     try {
       const response = await api.get('/UnidadDeMedidas');
@@ -52,7 +52,7 @@ export default function VistaUnidadesMedida() {
     } finally {
       setCargando(false);
     }
-  };
+  }
 
   const abrirNuevo = () => {
     setUnidad(unidadVacia);

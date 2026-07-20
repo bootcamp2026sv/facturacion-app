@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
@@ -15,6 +15,8 @@ const MUNICIPIOS_SIMULADOS = [
   { id: 4, Nombre: 'San Miguel Centro', Codigo: '1201' },
   { id: 5, Nombre: 'La Libertad Sur', Codigo: '0502' }
 ];
+
+void MUNICIPIOS_SIMULADOS;
 
 const ACTIVIDADES_SIMULADAS = [
   { id: 1, CodActividad: '62010', DescActividad: 'Actividades de programación informática (Desarrollo de software)' },
@@ -95,7 +97,8 @@ export default function VistaComercios() {
             actividadEconomica_id: comercio.actividadEconomica_id || comercio.ActividadEconomica_id || comercio.actividadEconomica?.id || comercio.ActividadEconomica?.id || 1
           });
           const resConfiguracion = await api.get(`/Comercios/${comercio.id}/configuracion-facturacion`);
-          const configuracionesAPI = { ...configuraciones };
+          setConfiguraciones((actual) => {
+            const configuracionesAPI = { ...actual };
           (resConfiguracion.data || []).forEach((config) => {
             if (config.ambiente === '00' || config.ambiente === '01') {
               configuracionesAPI[config.ambiente] = {
@@ -109,7 +112,8 @@ export default function VistaComercios() {
               };
             }
           });
-          setConfiguraciones(configuracionesAPI);
+            return configuracionesAPI;
+          });
         }
       } catch (error) {
         console.error("Error al cargar datos de la API:", error);

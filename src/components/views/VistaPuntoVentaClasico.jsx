@@ -5,6 +5,22 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { Tag } from "primereact/tag";
 
+const redondear = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+
+const calcularItem = (item) => {
+  const subtotal = item.precio * item.cantidad;
+  const descuento =
+    item.descuentoTipo === "porcentaje"
+      ? (subtotal * (item.descuentoValor || 0)) / 100
+      : item.descuentoValor || 0;
+  const subtotalDesc = subtotal - descuento;
+  const ivaVal = item.tipoIva === "gravado" ? subtotalDesc * 0.13 : 0;
+  const iva = redondear(ivaVal);
+  const total = redondear(subtotalDesc + iva);
+
+  return { subtotal, descuento, subtotalDesc, iva, total };
+};
+
 const PRODUCTOS = [
   {
     id: 1,
@@ -149,7 +165,6 @@ const ETIQUETA_IVA = {
 };
 
 export default function VistaPuntoVentaClasico() {
-  const redondear = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
   const [busqueda, setBusqueda] = useState("");
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
   const [productoSeleccionado, setProductoSeleccionado] = useState(0);
@@ -160,11 +175,6 @@ export default function VistaPuntoVentaClasico() {
   const [pagoExitoso, setPagoExitoso] = useState(false);
   const [esGranContribuyente, setEsGranContribuyente] = useState(false);
   const [tipoDte, setTipoDte] = useState("01");
-
-  useEffect(() => {
-    const cli = CLIENTES.find((c) => c.value === cliente);
-    setEsGranContribuyente(!!cli?.granContribuyente);
-  }, [cliente]);
 
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [dialogoItem, setDialogoItem] = useState(false);
@@ -407,25 +417,6 @@ export default function VistaPuntoVentaClasico() {
     setCarrito((prev) => prev.filter((item) => item._key !== key));
   };
 
-  const calcItem = (item) => {
-    const subtotal = item.precio * item.cantidad;
-    const descuento =
-      item.descuentoTipo === "porcentaje"
-        ? (subtotal * (item.descuentoValor || 0)) / 100
-        : item.descuentoValor || 0;
-    const subtotalDesc = subtotal - descuento;
-    const ivaVal = item.tipoIva === "gravado" ? subtotalDesc * 0.13 : 0;
-    const iva = redondear(ivaVal);
-    const total = redondear(subtotalDesc + iva);
-    return {
-      subtotal,
-      descuento,
-      subtotalDesc,
-      iva,
-      total,
-    };
-  };
-
   const resumen = useMemo(() => {
     let subtotal = 0,
       descuentoTotal = 0,
@@ -433,7 +424,7 @@ export default function VistaPuntoVentaClasico() {
       total = 0;
     const porTipo = { gravado: 0, exento: 0, noSujeto: 0, noGravado: 0 };
     carrito.forEach((item) => {
-      const c = calcItem(item);
+      const c = calcularItem(item);
       subtotal += c.subtotal;
       descuentoTotal += c.descuento;
       ivaTotal += c.iva;
@@ -456,7 +447,7 @@ export default function VistaPuntoVentaClasico() {
       aplicaRetencion, 
       totalCobrar 
     };
-  }, [carrito, esGranContribuyente, tipoDte]);
+  }, [carrito, esGranContribuyente]);
 
   const cobrar = () => {
     setDialogoPago(false);
@@ -852,7 +843,7 @@ export default function VistaPuntoVentaClasico() {
               </div>
             ) : (
               carrito.map((item) => {
-                const c = calcItem(item);
+                const c = calcularItem(item);
                 return (
                   <div
                     key={item._key}
@@ -1889,6 +1880,7 @@ export default function VistaPuntoVentaClasico() {
                   key={c.value}
                   onClick={() => {
                     setCliente(c.value);
+                    setEsGranContribuyente(!!c.granContribuyente);
                     setDialogoCliente(false);
                     setBusquedaCliente("");
                   }}

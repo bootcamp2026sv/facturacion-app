@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
@@ -6,11 +6,8 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
-import { Checkbox } from 'primereact/checkbox';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
-import { IconField } from 'primereact/iconfield';
-import { InputIcon } from 'primereact/inputicon';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { InputSwitch } from 'primereact/inputswitch';
 import { InputTextarea } from 'primereact/inputtextarea';
@@ -63,7 +60,7 @@ export default function VistaProductos() {
     cargarCategorias();
   }, []);
 
-  const cargarProductos = async () => {
+  async function cargarProductos() {
     setCargando(true);
     try {
       const response = await api.get('/Productos');
@@ -79,25 +76,25 @@ export default function VistaProductos() {
     } finally {
       setCargando(false);
     }
-  };
+  }
 
-  const cargarCategorias = async () => {
+  async function cargarCategorias() {
     try {
       const response = await api.get('/Categorias');
       setCategorias(response.data);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
     }
-  };
+  }
 
-  const cargarUnidadesMedida = async () => {
+  async function cargarUnidadesMedida() {
     try {
       const response = await api.get('/UnidadDeMedidas');
       setUnidadesMedida(response.data);
     } catch (error) {
       console.error('Error al cargar unidades de medida:', error);
     }
-  };
+  }
 
   const abrirNuevo = () => {
     setProducto(productoVacio);
@@ -275,7 +272,7 @@ export default function VistaProductos() {
 
   const headerToolbar = () => {
     return (
-      <React.Fragment>
+      <>
         <div className="flex flex-wrap gap-2">
           <Button
             label="Nuevo Producto"
@@ -284,7 +281,7 @@ export default function VistaProductos() {
             onClick={abrirNuevo}
           />
         </div>
-      </React.Fragment>
+      </>
     );
   };
 

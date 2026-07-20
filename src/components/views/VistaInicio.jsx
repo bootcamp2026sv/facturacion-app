@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 

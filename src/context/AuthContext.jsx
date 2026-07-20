@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService, onAutoLogout } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -17,12 +18,23 @@ export const AuthProvider = ({ children }) => {
   const [cargando, setCargando] = useState(false);
   const [motivoCierreSesion, setMotivoCierreSesion] = useState(null);
 
+  const logoutLocal = useCallback(() => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('usuario');
+    setUsuario(null);
+  }, []);
+
+  const logoutPorInactividad = useCallback(() => {
+    logoutLocal();
+    setMotivoCierreSesion('inactividad');
+  }, [logoutLocal]);
+
   // Escuchar eventos de cierre de sesión automático desde el cliente API (Axios)
   useEffect(() => {
-    onAutoLogout(() => {
-      logoutLocal();
-    });
-  }, []);
+    onAutoLogout(logoutLocal);
+    return () => onAutoLogout(null);
+  }, [logoutLocal]);
 
   // Configuración del detector de inactividad (Idle Timer)
   useEffect(() => {
@@ -56,7 +68,7 @@ export const AuthProvider = ({ children }) => {
         window.removeEventListener(evento, reiniciarTemporizador);
       });
     };
-  }, [usuario]);
+  }, [usuario, logoutPorInactividad]);
 
   const login = async (username, password) => {
     setCargando(true);
@@ -81,13 +93,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logoutLocal = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('usuario');
-    setUsuario(null);
-  };
-
   const logout = async () => {
     setCargando(true);
     try {
@@ -99,11 +104,6 @@ export const AuthProvider = ({ children }) => {
       setMotivoCierreSesion(null); // Cerrado manualmente, sin motivo de alerta
       setCargando(false);
     }
-  };
-
-  const logoutPorInactividad = () => {
-    logoutLocal();
-    setMotivoCierreSesion('inactividad');
   };
 
   const limpiarMotivoCierre = () => {

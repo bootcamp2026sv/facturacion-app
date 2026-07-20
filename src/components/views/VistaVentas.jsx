@@ -28,6 +28,7 @@ export default function VistaVentas() {
     { id: 2, numeroControl: 'DTE-03-M001P001-000000000000254', codigoGeneracion: '7a8b60d2-cf14-49c7-8142-2b4c16d35f4a', fecha: '2026-06-07T11:15:00', cliente: 'Juan Carlos Pérez', total: 25.50, tipo: '03 - Crédito Fiscal' }
   ];
 
+  void ventasSimuladas;
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState('');
@@ -57,7 +58,7 @@ export default function VistaVentas() {
   };
 
   useEffect(() => {
-    cargarVentas();
+    queueMicrotask(() => cargarVentas());
   }, []);
 
   const tiposDte = [
