@@ -14,6 +14,7 @@ import VistaPuntoVentaClasico from "./views/VistaPuntoVentaClasico";
 import VistaComercios from "./views/VistaComercios";
 import VistaGeografia from "./views/VistaGeografia";
 import VistaControlSistema from "./views/VistaControlSistema";
+import VistaCatalogosExportacion from "./views/VistaCatalogosExportacion";
 
 const VISTA_ACTIVA_STORAGE_KEY = "panel.vistaActiva";
 const VISTAS_VALIDAS = [
@@ -29,6 +30,7 @@ const VISTAS_VALIDAS = [
   "actividades",
   "unidades",
   "control",
+  "catalogos-exportacion",
 ];
 
 const obtenerVistaInicial = () => {
@@ -112,6 +114,12 @@ export default function PanelPrincipal() {
       etiqueta: "Unidades de Medida",
       icono: "pi pi-calculator",
       componente: <VistaUnidadesMedida />,
+    },
+    {
+      id: "catalogos-exportacion",
+      etiqueta: "Catálogos Exportación",
+      icono: "pi pi-globe",
+      componente: <VistaCatalogosExportacion />,
     },
     {
       id: "control",
