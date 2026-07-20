@@ -204,8 +204,14 @@ export default function VistaPuntoVenta() {
     return ANCHOS_TICKET.some(ancho => ancho.value === guardado) ? guardado : 80;
   });
   const [esGranContribuyente, setEsGranContribuyente] = useState(false);
+  const [retenerRenta, setRetenerRenta] = useState(false);
   const [tipoDte, setTipoDte] = useState('01');
   const documentoSinIva = esTipoDteSinIva(tipoDte);
+
+  const seleccionarTipoDte = (nuevoTipoDte) => {
+    setTipoDte(nuevoTipoDte);
+    if (nuevoTipoDte !== '14') setRetenerRenta(false);
+  };
 
   const [dialogoItem, setDialogoItem] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
@@ -394,6 +400,7 @@ export default function VistaPuntoVenta() {
     const clienteFinal = clientes.find(esClienteFinal) || null;
     setCliente(clienteFinal?.value ?? null);
     setEsGranContribuyente(!!clienteFinal?.granContribuyente);
+    setRetenerRenta(false);
     setTipoDte('01');
   };
 
@@ -697,7 +704,9 @@ export default function VistaPuntoVenta() {
     const aplicaRetencion = !documentoSinIva && esGranContribuyente && porTipo.gravado >= 100;
     const retencionVal = aplicaRetencion ? Number((porTipo.gravado * 0.01).toFixed(4)) : 0;
     const retencion = Number(retencionVal.toFixed(2));
-    const totalCobrar = Number((total - retencion).toFixed(2));
+    const aplicaReteRenta = tipoDte === '14' && retenerRenta && total > 0;
+    const reteRenta = aplicaReteRenta ? redondear(total * 0.10) : 0;
+    const totalCobrar = Number((total - retencion - reteRenta).toFixed(2));
 
     return { 
       subtotal, 
@@ -707,9 +716,11 @@ export default function VistaPuntoVenta() {
       porTipo, 
       retencion, 
       aplicaRetencion, 
+      reteRenta,
+      aplicaReteRenta,
       totalCobrar 
     };
-  }, [carrito, documentoSinIva, esGranContribuyente, tipoDte]);
+  }, [carrito, documentoSinIva, esGranContribuyente, retenerRenta, tipoDte]);
 
   const crearTicketVenta = (ventaGuardada, cambio) => {
     const items = carrito.map(item => {
@@ -829,6 +840,7 @@ export default function VistaPuntoVenta() {
         {muestraIvaSeparado && ticket.resumen.descuentoTotal > 0 && <div className="ticket-row"><span>Descuentos</span><span>-{formatoDinero(ticket.resumen.descuentoTotal)}</span></div>}
         {muestraIvaSeparado && ticket.resumen.ivaTotal > 0 && <div className="ticket-row"><span>IVA 13%</span><span>{formatoDinero(ticket.resumen.ivaTotal)}</span></div>}
         {ticket.resumen.retencion > 0 && <div className="ticket-row"><span>Retencion 1%</span><span>-{formatoDinero(ticket.resumen.retencion)}</span></div>}
+        {ticket.resumen.reteRenta > 0 && <div className="ticket-row"><span>Retencion renta 10%</span><span>-{formatoDinero(ticket.resumen.reteRenta)}</span></div>}
         <div className="ticket-row ticket-total"><span>Total</span><span>{formatoDinero(ticket.resumen.totalCobrar)}</span></div>
 
         <div className="ticket-line" />
@@ -900,6 +912,7 @@ export default function VistaPuntoVenta() {
       totalNoGravado: monto4(resumen.porTipo.noGravado),
       totalDescuento: monto4(resumen.descuentoTotal),
       totalIva: monto4(resumen.ivaTotal),
+      reteRenta: monto4(resumen.reteRenta),
       metodoPago,
       referenciaPago: referenciaPago || null,
       montoPago: monto4(resumen.totalCobrar),
@@ -1070,7 +1083,7 @@ export default function VistaPuntoVenta() {
             <i className="pi pi-chevron-down text-xs" style={{ color: 'var(--text-icon)', flexShrink: 0 }}></i>
           </button>
 
-          {!!cliente && (
+          {!!cliente && !documentoSinIva && (
             <div className="px-3 py-2 flex align-items-center justify-content-between border-bottom-1 surface-border" style={{ background: 'var(--surface-muted)' }}>
               <div className="flex align-items-center gap-2">
                 <i className="pi pi-percentage text-xs" style={{ color: !documentoSinIva && esGranContribuyente ? '#f59e0b' : 'var(--text-icon)' }}></i>
@@ -1098,7 +1111,7 @@ export default function VistaPuntoVenta() {
               {TIPOS_DTE.map(t => {
                 const esActivo = tipoDte === t.value;
                 return (
-                  <button key={t.value} onClick={() => setTipoDte(t.value)}
+                  <button key={t.value} onClick={() => seleccionarTipoDte(t.value)}
                     className="border-none cursor-pointer p-2 flex align-items-center justify-content-center gap-2 transition-all transition-duration-150"
                     style={{
                       background: esActivo ? `${t.color}15` : 'transparent',
@@ -1116,6 +1129,23 @@ export default function VistaPuntoVenta() {
               })}
             </div>
           </div>
+
+          {tipoDte === '14' && (
+            <div className="px-3 py-2 border-bottom-1 surface-border flex align-items-center justify-content-between gap-3" style={{ background: retenerRenta ? 'rgba(245,158,11,0.10)' : 'var(--surface-muted)' }}>
+              <div className="flex align-items-center gap-2 min-w-0">
+                <div className="flex align-items-center justify-content-center border-circle" style={{ width: '30px', height: '30px', minWidth: '30px', background: retenerRenta ? 'rgba(245,158,11,0.18)' : 'var(--surface-hover)' }}>
+                  <i className="pi pi-percentage text-xs" style={{ color: retenerRenta ? '#d97706' : 'var(--text-icon)' }}></i>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold m-0" style={{ color: 'var(--text-primary)' }}>Retención de renta 10%</p>
+                  <p className="m-0" style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>
+                    {retenerRenta ? `Se descontarán $${resumen.reteRenta.toFixed(2)} del total.` : 'Opcional para sujeto excluido.'}
+                  </p>
+                </div>
+              </div>
+              <InputSwitch checked={retenerRenta} onChange={(e) => setRetenerRenta(e.value)} aria-label="Aplicar retención de renta del 10%" />
+            </div>
+          )}
 
           <div className="punto-venta__carrito-contenido">
             {carrito.length === 0 ? (
@@ -1217,6 +1247,12 @@ export default function VistaPuntoVenta() {
                 <div className="flex justify-content-between">
                   <span className="text-sm font-semibold" style={{ color: '#f59e0b' }}>Retención (1%)</span>
                   <span className="text-sm font-semibold" style={{ color: '#f59e0b' }}>-${resumen.retencion.toFixed(2)}</span>
+                </div>
+              )}
+              {resumen.reteRenta > 0 && (
+                <div className="flex justify-content-between">
+                  <span className="text-sm font-semibold" style={{ color: '#d97706' }}>Retención renta (10%)</span>
+                  <span className="text-sm font-semibold" style={{ color: '#d97706' }}>-${resumen.reteRenta.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-content-between pt-2 border-top-1 surface-border">
@@ -1497,6 +1533,7 @@ export default function VistaPuntoVenta() {
             {resumen.descuentoTotal > 0 && <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>Descuentos</span><span className="font-semibold" style={{ color: '#ef4444' }}>-${resumen.descuentoTotal.toFixed(2)}</span></div>}
             {resumen.ivaTotal > 0 && <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>IVA (13%)</span><span style={{ color: 'var(--text-muted)' }}>${resumen.ivaTotal.toFixed(2)}</span></div>}
             {resumen.retencion > 0 && <div className="flex justify-content-between text-sm"><span className="font-semibold" style={{ color: '#f59e0b' }}>Retención 1%</span><span className="font-semibold" style={{ color: '#f59e0b' }}>-${resumen.retencion.toFixed(2)}</span></div>}
+            {resumen.reteRenta > 0 && <div className="flex justify-content-between text-sm"><span className="font-semibold" style={{ color: '#d97706' }}>Retención renta 10%</span><span className="font-semibold" style={{ color: '#d97706' }}>-${resumen.reteRenta.toFixed(2)}</span></div>}
             <div className="flex justify-content-between pt-1 border-top-1 surface-border">
               <span className="font-bold" style={{ color: 'var(--text-primary)' }}>Total a cobrar</span>
               <span className="font-bold text-xl" style={{ color: '#6366f1' }}>${resumen.totalCobrar.toFixed(2)}</span>
@@ -1507,6 +1544,7 @@ export default function VistaPuntoVenta() {
 
       {/* ===== Thermal Ticket Dialog ===== */}
       <DialogoPuntoVenta header="Ticket de venta" visible={dialogoTicket} style={{ width: '520px' }}
+        className="punto-venta__dialogo--ticket"
         onHide={cerrarDialogoTicket} draggable={false} resizable={false}
         footer={
           <div className="flex gap-2 justify-content-end">
@@ -1535,7 +1573,7 @@ export default function VistaPuntoVenta() {
             </div>
           </div>
 
-          <div className="border-round-xl p-3" style={{ background: '#f8fafc', border: '1px solid var(--surface-border-light)', maxHeight: '62vh', overflow: 'auto' }}>
+          <div className="punto-venta__vista-previa-ticket border-round-xl p-3">
             {renderTicket(ticketVenta)}
           </div>
         </div>
