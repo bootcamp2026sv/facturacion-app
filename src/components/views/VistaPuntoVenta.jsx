@@ -406,7 +406,6 @@ export default function VistaPuntoVenta() {
 
   const cerrarDialogoPago = () => {
     setDialogoPago(false);
-    restablecerClienteFinalYFactura();
   };
 
   const cerrarDialogoTicket = () => {
@@ -741,7 +740,7 @@ export default function VistaPuntoVenta() {
       id: ventaGuardada?.id,
       numeroControl: ventaGuardada?.numeroControl,
       codigoGeneracion: ventaGuardada?.codigoGeneracion,
-      selloRecepcion: ventaGuardada?.selloRecepcion,
+      selloRecepcion: String(ventaGuardada?.selloRecepcion || '').trim(),
       fecha: new Date(),
       tipoDte,
       tipoDteLabel: TIPOS_DTE.find(t => t.value === tipoDte)?.label || `DTE ${tipoDte}`,
@@ -797,7 +796,7 @@ export default function VistaPuntoVenta() {
         <div className="ticket-row"><span>Documento</span><span>{ticket.tipoDteLabel}</span></div>
         {ticket.numeroControl && <div className="ticket-small-break">No. {ticket.numeroControl}</div>}
         {ticket.codigoGeneracion && <div className="ticket-small-break">Cod. {ticket.codigoGeneracion}</div>}
-        {ticket.selloRecepcion && <div className="ticket-small-break">Sello MH: {ticket.selloRecepcion}</div>}
+        <div className="ticket-small-break">Sello MH: {ticket.selloRecepcion || 'Emisión en contingencia'}</div>
         <div className="ticket-row"><span>Cliente</span><span>{ticket.cliente?.label || 'Cliente Final'}</span></div>
         {muestraClienteCompleto ? (
           <>
@@ -933,7 +932,6 @@ export default function VistaPuntoVenta() {
       setTicketVenta(crearTicketVenta(respuesta.data, cambio));
       // La siguiente venta debe iniciar con el método de pago predeterminado.
       setMetodoPago('efectivo');
-      restablecerClienteFinalYFactura();
       setDialogoPago(false);
       setDialogoTicket(true);
       setPagoExitoso(true);
