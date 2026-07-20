@@ -6,6 +6,7 @@ import { Toast } from 'primereact/toast';
 import { InputSwitch } from 'primereact/inputswitch';
 
 import api from '../../services/api';
+import { obtenerValoresCorreoPorDefecto } from '../../utils/configuracionCorreo';
 
 // Catálogos de prueba locales
 const MUNICIPIOS_SIMULADOS = [
@@ -25,6 +26,41 @@ const ACTIVIDADES_SIMULADAS = [
   { id: 4, CodActividad: '56101', DescActividad: 'Restaurantes y servicios móviles de comidas' }
 ];
 
+const PROVEEDORES_CORREO = [
+  { label: 'Gmail / Google Workspace', value: 'GMAIL' },
+  { label: 'cPanel', value: 'CPANEL' },
+  { label: 'Plesk', value: 'PLESK' },
+  { label: 'Servidor personalizado', value: 'PERSONALIZADO' }
+];
+
+const SEGURIDADES_SMTP = [
+  { label: 'STARTTLS (puerto 587)', value: 'STARTTLS' },
+  { label: 'SSL/TLS (puerto 465)', value: 'SSL' },
+  { label: 'Sin cifrado', value: 'NINGUNA' }
+];
+
+const crearConfiguracionInicial = () => ({
+  claveCertificadoPublica: '',
+  claveCertificadoPrivada: '',
+  claveApi: '',
+  certificado: null,
+  nombreCertificado: ''
+});
+
+const crearConfiguracionCorreoInicial = () => ({
+  correoActivo: false,
+  proveedorCorreo: 'GMAIL',
+  servidorSmtp: 'smtp.gmail.com',
+  puertoSmtp: 587,
+  seguridadSmtp: 'STARTTLS',
+  usuarioSmtp: '',
+  contrasenaSmtp: '',
+  correoRemitente: '',
+  nombreRemitente: '',
+  destinatarioPrueba: '',
+  contrasenaConfigurada: false
+});
+
 export default function VistaComercios() {
   const toast = useRef(null);
   const [cargando, setCargando] = useState(false);
@@ -35,10 +71,13 @@ export default function VistaComercios() {
   const [actividadesLista, setActividadesLista] = useState(ACTIVIDADES_SIMULADAS);
   const [ambienteActivo, setAmbienteActivo] = useState('00');
   const [guardandoAmbiente, setGuardandoAmbiente] = useState(false);
+  const [guardandoCorreo, setGuardandoCorreo] = useState(false);
+  const [probandoCorreo, setProbandoCorreo] = useState(false);
   const [configuraciones, setConfiguraciones] = useState({
-    '00': { claveCertificadoPublica: '', claveCertificadoPrivada: '', claveApi: '', certificado: null, nombreCertificado: '' },
-    '01': { claveCertificadoPublica: '', claveCertificadoPrivada: '', claveApi: '', certificado: null, nombreCertificado: '' }
+    '00': crearConfiguracionInicial(),
+    '01': crearConfiguracionInicial()
   });
+  const [configuracionCorreo, setConfiguracionCorreo] = useState(crearConfiguracionCorreoInicial());
 
   // Estado del formulario
   const [datosComercio, setDatosComercio] = useState({
@@ -114,6 +153,21 @@ export default function VistaComercios() {
           });
             return configuracionesAPI;
           });
+          const resCorreo = await api.get(`/Comercios/${comercio.id}/configuracion-correo`);
+          setConfiguracionCorreo((actual) => ({
+            ...actual,
+            correoActivo: Boolean(resCorreo.data?.correoActivo),
+            proveedorCorreo: resCorreo.data?.proveedorCorreo || actual.proveedorCorreo,
+            servidorSmtp: resCorreo.data?.servidorSmtp || actual.servidorSmtp,
+            puertoSmtp: resCorreo.data?.puertoSmtp || actual.puertoSmtp,
+            seguridadSmtp: resCorreo.data?.seguridadSmtp || actual.seguridadSmtp,
+            usuarioSmtp: resCorreo.data?.usuarioSmtp || '',
+            correoRemitente: resCorreo.data?.correoRemitente || comercio.correo || '',
+            nombreRemitente: resCorreo.data?.nombreRemitente || comercio.nombreComercial || comercio.nombre || '',
+            destinatarioPrueba: comercio.correo || '',
+            contrasenaSmtp: '',
+            contrasenaConfigurada: Boolean(resCorreo.data?.contrasenaConfigurada)
+          }));
         }
       } catch (error) {
         console.error("Error al cargar datos de la API:", error);
@@ -180,6 +234,19 @@ export default function VistaComercios() {
     }));
   };
 
+  const actualizarConfiguracionCorreo = (campo, valor) => {
+    setConfiguracionCorreo((actual) => ({ ...actual, [campo]: valor }));
+  };
+
+  const aplicarValoresCorreo = (proveedor) => {
+    const valores = obtenerValoresCorreoPorDefecto(
+      proveedor,
+      configuracionCorreo.correoRemitente || datosComercio.correo
+    );
+
+    setConfiguracionCorreo((actual) => ({ ...actual, ...valores }));
+  };
+
   const guardarConfiguracionFacturacion = async () => {
     if (!datosComercio.id) {
       toast.current.show({ severity: 'warn', summary: 'Primero guarda el comercio', detail: 'La configuración electrónica necesita un comercio emisor.', life: 4000 });
@@ -207,6 +274,75 @@ export default function VistaComercios() {
       toast.current.show({ severity: 'error', summary: 'Error de configuración', detail: apiMsg, life: 6000 });
     } finally {
       setGuardandoAmbiente(false);
+    }
+  };
+
+  const guardarConfiguracionCorreo = async () => {
+    if (!datosComercio.id) {
+      toast.current.show({ severity: 'warn', summary: 'Primero guarda el comercio', detail: 'La configuración SMTP necesita un comercio emisor.', life: 4000 });
+      return;
+    }
+
+    setGuardandoCorreo(true);
+    try {
+      const respuesta = await api.put(`/Comercios/${datosComercio.id}/configuracion-correo`, {
+        correoActivo: configuracionCorreo.correoActivo,
+        proveedorCorreo: configuracionCorreo.proveedorCorreo,
+        servidorSmtp: configuracionCorreo.servidorSmtp,
+        puertoSmtp: Number(configuracionCorreo.puertoSmtp),
+        seguridadSmtp: configuracionCorreo.seguridadSmtp,
+        usuarioSmtp: configuracionCorreo.usuarioSmtp,
+        contrasenaSmtp: configuracionCorreo.contrasenaSmtp,
+        correoRemitente: configuracionCorreo.correoRemitente,
+        nombreRemitente: configuracionCorreo.nombreRemitente
+      });
+
+      setConfiguracionCorreo((actual) => ({
+        ...actual,
+        contrasenaSmtp: '',
+        contrasenaConfigurada: Boolean(respuesta.data?.contrasenaConfigurada)
+      }));
+      toast.current.show({ severity: 'success', summary: 'SMTP guardado', detail: 'La configuración de correo se guardó correctamente.', life: 3500 });
+    } catch (error) {
+      const apiMsg = error.response?.data?.message || error.response?.data?.error || 'No se pudo guardar la configuración SMTP.';
+      toast.current.show({ severity: 'error', summary: 'Error SMTP', detail: apiMsg, life: 6000 });
+    } finally {
+      setGuardandoCorreo(false);
+    }
+  };
+
+  const probarConfiguracionCorreo = async () => {
+    if (!datosComercio.id) {
+      toast.current.show({ severity: 'warn', summary: 'Primero guarda el comercio', detail: 'La prueba SMTP necesita un comercio emisor.', life: 4000 });
+      return;
+    }
+
+    const destinatario = configuracionCorreo.destinatarioPrueba || datosComercio.correo;
+    if (!destinatario) {
+      toast.current.show({ severity: 'warn', summary: 'Destinatario requerido', detail: 'Indica un correo para recibir la prueba SMTP.', life: 4000 });
+      return;
+    }
+
+    setProbandoCorreo(true);
+    try {
+      const respuesta = await api.post(`/Comercios/${datosComercio.id}/configuracion-correo/test`, {
+        correoActivo: configuracionCorreo.correoActivo,
+        proveedorCorreo: configuracionCorreo.proveedorCorreo,
+        servidorSmtp: configuracionCorreo.servidorSmtp,
+        puertoSmtp: Number(configuracionCorreo.puertoSmtp),
+        seguridadSmtp: configuracionCorreo.seguridadSmtp,
+        usuarioSmtp: configuracionCorreo.usuarioSmtp,
+        contrasenaSmtp: configuracionCorreo.contrasenaSmtp,
+        correoRemitente: configuracionCorreo.correoRemitente,
+        nombreRemitente: configuracionCorreo.nombreRemitente,
+        destinatarioPrueba: destinatario
+      });
+      toast.current.show({ severity: 'success', summary: 'Prueba SMTP exitosa', detail: respuesta.data?.mensaje || 'Correo de prueba enviado correctamente.', life: 5000 });
+    } catch (error) {
+      const apiMsg = error.response?.data?.message || error.response?.data?.error || 'No fue posible enviar el correo de prueba.';
+      toast.current.show({ severity: 'error', summary: 'Prueba SMTP fallida', detail: apiMsg, life: 7000 });
+    } finally {
+      setProbandoCorreo(false);
     }
   };
 
@@ -463,6 +599,106 @@ export default function VistaComercios() {
                   El certificado se guardará en la carpeta segura del ambiente seleccionado.
                 </span>
                 <Button type="button" label={guardandoAmbiente ? 'Guardando ambiente...' : `Guardar ${ambienteActivo === '00' ? 'pruebas' : 'producción'}`} icon={guardandoAmbiente ? 'pi pi-spin pi-spinner' : 'pi pi-cloud-upload'} className="premium-btn" onClick={guardarConfiguracionFacturacion} disabled={guardandoAmbiente || cargando} />
+              </div>
+            </div>
+
+            {/* 5. Correo SMTP para documentos */}
+            <div className="border-round-xl p-4 mt-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.07), rgba(59,130,246,0.05))', border: '1px solid rgba(16,185,129,0.22)' }}>
+              <div className="flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold mt-0 mb-2 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                    <i className="pi pi-envelope text-green-500"></i> 5. Configuración de correo para documentos
+                  </h3>
+                  <p className="text-xs m-0" style={{ color: 'var(--text-muted)', maxWidth: '620px' }}>
+                    Esta configuración pertenece al comercio y se utiliza para enviar documentos tanto en pruebas como en producción. La contraseña no se muestra después de guardarla.
+                  </p>
+                </div>
+                <div className="flex align-items-center gap-2 px-3 py-2 border-round-lg" style={{ background: configuracionCorreo.contrasenaConfigurada ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' }}>
+                  <i className={`pi ${configuracionCorreo.contrasenaConfigurada ? 'pi-check-circle text-green-500' : 'pi-info-circle text-orange-500'}`}></i>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                    {configuracionCorreo.contrasenaConfigurada ? 'Contraseña guardada' : 'Sin contraseña guardada'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex align-items-center justify-content-between gap-3 mb-4 p-3 border-round-lg" style={{ background: 'rgba(255,255,255,0.42)', border: '1px solid rgba(16,185,129,0.14)' }}>
+                <div>
+                  <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Activar envío de correo</span>
+                  <p className="text-xs m-0 mt-1" style={{ color: 'var(--text-muted)' }}>Permite enviar documentos desde cualquier ambiente fiscal.</p>
+                </div>
+                <InputSwitch checked={Boolean(configuracionCorreo.correoActivo)} onChange={(e) => actualizarConfiguracionCorreo('correoActivo', e.value)} />
+              </div>
+
+              <div className="grid">
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="proveedorCorreo" className="font-bold text-xs text-800">Proveedor</label>
+                  <Dropdown id="proveedorCorreo" value={configuracionCorreo.proveedorCorreo} options={PROVEEDORES_CORREO} optionLabel="label" optionValue="value" onChange={(e) => aplicarValoresCorreo(e.value)} className="w-full" />
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2">
+                  <label htmlFor="seguridadSmtp" className="font-bold text-xs text-800">Seguridad SMTP</label>
+                  <Dropdown id="seguridadSmtp" value={configuracionCorreo.seguridadSmtp} options={SEGURIDADES_SMTP} optionLabel="label" optionValue="value" onChange={(e) => actualizarConfiguracionCorreo('seguridadSmtp', e.value)} className="w-full" />
+                </div>
+                <div className="col-12 md:col-8 flex flex-column gap-2 mt-2">
+                  <label htmlFor="servidorSmtp" className="font-bold text-xs text-800">Servidor SMTP</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-server premium-input-icon"></i>
+                    <InputText id="servidorSmtp" value={configuracionCorreo.servidorSmtp} onChange={(e) => actualizarConfiguracionCorreo('servidorSmtp', e.target.value)} placeholder="smtp.gmail.com o mail.tudominio.com" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-4 flex flex-column gap-2 mt-2">
+                  <label htmlFor="puertoSmtp" className="font-bold text-xs text-800">Puerto</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-hashtag premium-input-icon"></i>
+                    <InputText id="puertoSmtp" type="number" min="1" max="65535" value={configuracionCorreo.puertoSmtp} onChange={(e) => actualizarConfiguracionCorreo('puertoSmtp', e.target.value)} />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="usuarioSmtp" className="font-bold text-xs text-800">Usuario SMTP</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-user premium-input-icon"></i>
+                    <InputText id="usuarioSmtp" value={configuracionCorreo.usuarioSmtp} onChange={(e) => actualizarConfiguracionCorreo('usuarioSmtp', e.target.value)} placeholder="correo@tudominio.com" autoComplete="username" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="contrasenaSmtp" className="font-bold text-xs text-800">Contraseña SMTP / contraseña de aplicación</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-key premium-input-icon"></i>
+                    <InputText id="contrasenaSmtp" type="password" value={configuracionCorreo.contrasenaSmtp} onChange={(e) => actualizarConfiguracionCorreo('contrasenaSmtp', e.target.value)} placeholder="Se conserva si lo dejas vacío" autoComplete="new-password" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="correoRemitente" className="font-bold text-xs text-800">Correo remitente</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-at premium-input-icon"></i>
+                    <InputText id="correoRemitente" type="email" value={configuracionCorreo.correoRemitente} onChange={(e) => actualizarConfiguracionCorreo('correoRemitente', e.target.value)} placeholder="facturacion@tudominio.com" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-2 mt-2">
+                  <label htmlFor="nombreRemitente" className="font-bold text-xs text-800">Nombre del remitente</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-id-card premium-input-icon"></i>
+                    <InputText id="nombreRemitente" value={configuracionCorreo.nombreRemitente} onChange={(e) => actualizarConfiguracionCorreo('nombreRemitente', e.target.value)} placeholder="Nombre del comercio" />
+                  </div>
+                </div>
+                <div className="col-12 flex flex-column gap-2 mt-2">
+                  <label htmlFor="destinatarioPrueba" className="font-bold text-xs text-800">Destinatario del correo de prueba</label>
+                  <div className="premium-input-group">
+                    <i className="pi pi-send premium-input-icon"></i>
+                    <InputText id="destinatarioPrueba" type="email" value={configuracionCorreo.destinatarioPrueba} onChange={(e) => actualizarConfiguracionCorreo('destinatarioPrueba', e.target.value)} placeholder="correo donde recibirás la prueba" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3" style={{ borderTop: '1px solid rgba(16,185,129,0.16)' }}>
+                <span className="text-xs flex align-items-start gap-2" style={{ color: 'var(--text-muted)', maxWidth: '620px' }}>
+                  <i className="pi pi-info-circle text-green-500 mt-1"></i>
+                  <span>Gmail normalmente usa una contraseña de aplicación. En cPanel y Plesk confirma el nombre exacto del servidor y el puerto con tu proveedor.</span>
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" label="Aplicar valores recomendados" icon="pi pi-sliders-h" className="p-button-outlined p-button-secondary" onClick={() => aplicarValoresCorreo(configuracionCorreo.proveedorCorreo)} disabled={guardandoCorreo || probandoCorreo || cargando || !datosComercio.id} />
+                  <Button type="button" label={probandoCorreo ? 'Enviando prueba...' : 'Enviar correo de prueba'} icon={probandoCorreo ? 'pi pi-spin pi-spinner' : 'pi pi-send'} className="p-button-outlined p-button-success" onClick={probarConfiguracionCorreo} disabled={probandoCorreo || guardandoCorreo || cargando || !datosComercio.id} />
+                  <Button type="button" label={guardandoCorreo ? 'Guardando SMTP...' : 'Guardar SMTP'} icon={guardandoCorreo ? 'pi pi-spin pi-spinner' : 'pi pi-save'} className="premium-btn" onClick={guardarConfiguracionCorreo} disabled={guardandoCorreo || probandoCorreo || cargando || !datosComercio.id} />
+                </div>
               </div>
             </div>
 

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+import { Toast } from 'primereact/toast';
 import api from '../../services/api';
 
 const etiquetaTipoDte = (tipoDte) => ({
@@ -23,6 +24,7 @@ const nombreCliente = (cliente) => {
 const obtenerSelloRecepcion = (venta) => String(venta?.selloRecepcion || '').trim();
 
 export default function VistaVentas() {
+  const toast = useRef(null);
   const ventasSimuladas = [
     { id: 1, numeroControl: 'DTE-01-M001P001-000000000001000', codigoGeneracion: '288e60c6-aeb4-414b-9227-9b4c16d35c1e', fecha: '2026-06-07T14:30:00', cliente: 'Distribuidora Alimentos S.A.', total: 678.00, tipo: '01 - Factura' },
     { id: 2, numeroControl: 'DTE-03-M001P001-000000000000254', codigoGeneracion: '7a8b60d2-cf14-49c7-8142-2b4c16d35f4a', fecha: '2026-06-07T11:15:00', cliente: 'Juan Carlos Pérez', total: 25.50, tipo: '03 - Crédito Fiscal' }
@@ -76,6 +78,7 @@ export default function VistaVentas() {
 
   const [confirmacionVisible, setConfirmacionVisible] = useState(false);
   const [accionConfirmar, setAccionConfirmar] = useState(null);
+  const [accionCargando, setAccionCargando] = useState(false);
   const [emailDestino, setEmailDestino] = useState('');
   const [tipoNota, setTipoNota] = useState('Crédito');
   const [consultaVisible, setConsultaVisible] = useState(false);
@@ -108,14 +111,39 @@ export default function VistaVentas() {
     setConfirmacionVisible(true);
   };
 
-  const ejecutarAccion = () => {
+  const ejecutarAccion = async () => {
+    if (!ventaSeleccionada?.id || accionCargando) return;
 
-    //Confirmó que si hay que anular
-    if(accionConfirmar === 'Anular'){
-      anulacionHacienda(ventaSeleccionada);
+    setAccionCargando(true);
+    try {
+      if (accionConfirmar === 'Anular') {
+        await anulacionHacienda(ventaSeleccionada);
+      } else if (accionConfirmar === 'Enviar Correo') {
+        const respuesta = await api.post(`/Ventas/${ventaSeleccionada.id}/correo`, { destinatario: emailDestino });
+        toast.current.show({ severity: 'success', summary: 'Correo enviado', detail: respuesta.data?.mensaje || 'El DTE fue enviado correctamente.', life: 5000 });
+      } else if (accionConfirmar === 'Ver PDF') {
+        const respuesta = await api.get(`/Ventas/${ventaSeleccionada.id}/pdf`, { responseType: 'blob' });
+        const url = URL.createObjectURL(respuesta.data);
+        window.open(url, '_blank', 'noopener,noreferrer');
+        window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else if (accionConfirmar === 'Descargar JSON') {
+        const respuesta = await api.get(`/Ventas/${ventaSeleccionada.id}/json`, { responseType: 'blob' });
+        const url = URL.createObjectURL(respuesta.data);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `Factura-${ventaSeleccionada.numeroControl || ventaSeleccionada.id}.json`;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      const mensaje = error.response?.data?.message || error.response?.data?.error || 'No fue posible completar la acción.';
+      toast.current.show({ severity: 'error', summary: 'Acción no completada', detail: mensaje, life: 6500 });
+    } finally {
+      setAccionCargando(false);
+      setConfirmacionVisible(false);
     }
-
-    setConfirmacionVisible(false);
   };
 
 
@@ -220,9 +248,9 @@ export default function VistaVentas() {
       <Button label="No" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setConfirmacionVisible(false)} />
       {(accionConfirmar === 'Enviar Correo' || accionConfirmar === 'Nota Créd/Déb')
         ? <Button label={mensajesConfirmacion[accionConfirmar].btn} icon={mensajesConfirmacion[accionConfirmar].icono} className="p-button-sm" style={{ background: mensajesConfirmacion[accionConfirmar].color, borderColor: mensajesConfirmacion[accionConfirmar].color }}
-            disabled={accionConfirmar === 'Enviar Correo' && !emailDestino}
+            disabled={accionCargando || (accionConfirmar === 'Enviar Correo' && !emailDestino)}
             onClick={ejecutarAccion} />
-        : <Button label={mensajesConfirmacion[accionConfirmar].btn} icon={mensajesConfirmacion[accionConfirmar].icono} className="p-button-sm" style={{ background: mensajesConfirmacion[accionConfirmar].color, borderColor: mensajesConfirmacion[accionConfirmar].color }} onClick={ejecutarAccion} />
+        : <Button label={accionCargando ? 'Procesando...' : mensajesConfirmacion[accionConfirmar].btn} icon={accionCargando ? 'pi pi-spin pi-spinner' : mensajesConfirmacion[accionConfirmar].icono} className="p-button-sm" style={{ background: mensajesConfirmacion[accionConfirmar].color, borderColor: mensajesConfirmacion[accionConfirmar].color }} onClick={ejecutarAccion} disabled={accionCargando} />
       }
     </div>
   );
@@ -276,6 +304,7 @@ export default function VistaVentas() {
 
   return (
     <div className="vista-ventas p-3 md:p-4 premium-fade-in">
+      <Toast ref={toast} />
       <div className="mb-4">
         <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Gestión de Ventas (DTE)</h2>
         <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Emisión de documentos electrónicos y consulta histórica de ventas.</p>
