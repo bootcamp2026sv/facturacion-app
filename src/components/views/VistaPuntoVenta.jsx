@@ -78,6 +78,47 @@ const TIPOS_DTE_SIN_IVA = new Set(['11', '14']);
 
 const esTipoDteSinIva = (tipoDte) => TIPOS_DTE_SIN_IVA.has(tipoDte);
 
+const interpretarErrorHacienda = (mensaje) => {
+  const texto = typeof mensaje === 'string' ? mensaje : String(mensaje || '');
+  const inicioJson = texto.indexOf('{');
+  const finJson = texto.lastIndexOf('}');
+
+  if (inicioJson === -1 || finJson <= inicioJson) {
+    return {
+      esRespuestaHacienda: false,
+      titulo: 'No se pudo guardar la venta',
+      descripcion: texto,
+      observaciones: [],
+      respuestaTecnica: texto,
+    };
+  }
+
+  try {
+    const respuesta = JSON.parse(texto.slice(inicioJson, finJson + 1));
+    const observaciones = Array.isArray(respuesta.observaciones)
+      ? respuesta.observaciones.filter(Boolean)
+      : [];
+
+    return {
+      esRespuestaHacienda: true,
+      titulo: respuesta.estado === 'RECHAZADO' ? 'Documento rechazado por Hacienda' : 'Respuesta de Hacienda',
+      descripcion: respuesta.descripcionMsg || 'Hacienda devolvió un error al procesar el documento.',
+      observaciones,
+      codigo: respuesta.codigoMsg || respuesta.codigo,
+      clasificacion: respuesta.clasificaMsg || respuesta.clasificacion,
+      respuestaTecnica: texto,
+    };
+  } catch {
+    return {
+      esRespuestaHacienda: false,
+      titulo: 'No se pudo guardar la venta',
+      descripcion: texto,
+      observaciones: [],
+      respuestaTecnica: texto,
+    };
+  }
+};
+
 const obtenerPrecioParaDte = (item, tipoDte) =>
   obtenerPrecioUnitarioMostrado(item, tipoDte !== '03');
 
@@ -129,6 +170,11 @@ const clienteRapidoInicial = {
   complementoDireccion: '',
   distrito_id: null,
   actividadEconomica_id: null,
+};
+
+const datosReceptorVentaInicial = {
+  nombre: '',
+  correo: '',
 };
 
 const TRIBUTACION_A_IVA = {
@@ -194,9 +240,13 @@ export default function VistaPuntoVenta() {
   const [guardandoVenta, setGuardandoVenta] = useState(false);
   const [carrito, setCarrito] = useState([]);
   const [cliente, setCliente] = useState(null);
+  const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false);
+  const [datosReceptorVenta, setDatosReceptorVenta] = useState(datosReceptorVentaInicial);
+  const [mostrarDatosReceptor, setMostrarDatosReceptor] = useState(false);
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [dialogoPago, setDialogoPago] = useState(false);
   const [pagoExitoso, setPagoExitoso] = useState(false);
+  const [avisoCorreo, setAvisoCorreo] = useState(null);
   const [dialogoTicket, setDialogoTicket] = useState(false);
   const [ticketVenta, setTicketVenta] = useState(null);
   const [ticketAncho, setTicketAncho] = useState(() => {
@@ -211,6 +261,10 @@ export default function VistaPuntoVenta() {
   const seleccionarTipoDte = (nuevoTipoDte) => {
     setTipoDte(nuevoTipoDte);
     if (nuevoTipoDte !== '14') setRetenerRenta(false);
+    if (nuevoTipoDte !== '01') {
+      setDatosReceptorVenta(datosReceptorVentaInicial);
+      setMostrarDatosReceptor(false);
+    }
   };
 
   const [dialogoItem, setDialogoItem] = useState(false);
@@ -258,6 +312,30 @@ export default function VistaPuntoVenta() {
     () => clientes.find(c => c.value === cliente) || null,
     [cliente, clientes]
   );
+  const nombreClienteSeleccionado = clienteSeleccionado
+    ? [clienteSeleccionado.nombre, clienteSeleccionado.apellidos].filter(Boolean).join(' ').trim()
+      || clienteSeleccionado.nombreComercial
+      || clienteSeleccionado.label
+    : '';
+  const direccionClienteSeleccionado = clienteSeleccionado?.direccion
+    ? [
+      clienteSeleccionado.direccion.departamento,
+      clienteSeleccionado.direccion.municipio,
+      clienteSeleccionado.direccion.distrito,
+      clienteSeleccionado.direccion.complemento,
+    ].filter(Boolean).join(', ')
+    : '';
+  const actividadClienteSeleccionado = clienteSeleccionado?.actividadEconomica;
+  const actividadClienteTexto = actividadClienteSeleccionado
+    ? [
+      actividadClienteSeleccionado.codActividad || actividadClienteSeleccionado.CodActividad,
+      actividadClienteSeleccionado.descActividad || actividadClienteSeleccionado.DescActividad,
+    ].filter(Boolean).join(' - ')
+    : '';
+  const tipoDocumentoClienteSeleccionado = TIPO_DOC_OPCIONES.find(
+    opcion => opcion.value === clienteSeleccionado?.tipoDocumento
+  )?.label || '';
+  const detalleErrorVenta = useMemo(() => interpretarErrorHacienda(errorVenta), [errorVenta]);
 
   const camposFaltantesCreditoFiscal = useMemo(
     () => tipoDte === '03' ? obtenerCamposFaltantesCreditoFiscal(clienteSeleccionado) : [],
@@ -363,28 +441,35 @@ export default function VistaPuntoVenta() {
     }
   };
 
-  const mapearClienteApi = (cli) => ({
-    label: `${cli.nombre || ''}${cli.apellidos ? ` ${cli.apellidos}` : ''}`.trim() || cli.nombreComercial || 'Cliente',
-    value: cli.id,
-    nombre: cli.nombre || '',
-    apellidos: cli.apellidos || '',
-    nit: cli.numDocumento || cli.nit || cli.nrc || 'S/N',
-    tipoDocumento: cli.tipoDocumento,
-    numDocumento: cli.numDocumento || cli.nit || '',
-    nrc: cli.nrc || '',
-    telefono: cli.telefono || '',
-    correo: cli.correo || '',
-    nombreComercial: cli.nombreComercial || '',
-    actividadEconomica: cli.actividadEconomica || null,
-    distritoId: cli.distrito?.id || cli.distrito_id || cli.distritoId || null,
-    direccion: {
-      departamento: cli.distrito?.municipio?.departamento?.Nombre || cli.distrito?.municipio?.departamento?.nombre || '',
-      municipio: cli.distrito?.municipio?.Nombre || cli.distrito?.municipio?.nombre || '',
-      distrito: cli.distrito?.Nombre || cli.distrito?.nombre || '',
-      complemento: cli.complementoDireccion || '',
-    },
-    granContribuyente: !!cli.granContribuyente,
-  });
+  const mapearClienteApi = (cli) => {
+    const actividadEconomica = cli.actividadEconomica || cli.ActividadEconomica || null;
+    const distrito = cli.distrito || cli.Distrito || null;
+    const municipio = distrito?.municipio || distrito?.Municipio || null;
+    const departamento = municipio?.departamento || municipio?.Departamento || null;
+
+    return {
+      label: `${cli.nombre || ''}${cli.apellidos ? ` ${cli.apellidos}` : ''}`.trim() || cli.nombreComercial || 'Cliente',
+      value: cli.id,
+      nombre: cli.nombre || '',
+      apellidos: cli.apellidos || '',
+      nit: cli.numDocumento || cli.nit || cli.nrc || 'S/N',
+      tipoDocumento: cli.tipoDocumento,
+      numDocumento: cli.numDocumento || cli.nit || '',
+      nrc: cli.nrc || '',
+      telefono: cli.telefono || '',
+      correo: cli.correo || '',
+      nombreComercial: cli.nombreComercial || '',
+      actividadEconomica,
+      distritoId: distrito?.id || cli.distrito_id || cli.distritoId || null,
+      direccion: {
+        departamento: departamento?.Nombre || departamento?.nombre || '',
+        municipio: municipio?.Nombre || municipio?.nombre || '',
+        distrito: distrito?.Nombre || distrito?.nombre || '',
+        complemento: cli.complementoDireccion || cli.ComplementoDireccion || '',
+      },
+      granContribuyente: !!cli.granContribuyente,
+    };
+  };
 
   const esClienteFinal = (cli) => {
     const texto = `${cli.label || ''} ${cli.nombreComercial || ''} ${cli.nit || ''}`.toLowerCase();
@@ -396,12 +481,46 @@ export default function VistaPuntoVenta() {
       texto.includes('000000000');
   };
 
+  const esClienteVariosParaFactura = tipoDte === '01'
+    && clienteSeleccionado
+    && esClienteFinal(clienteSeleccionado);
+  const tieneDatosReceptorVenta = Boolean(
+    datosReceptorVenta.nombre.trim() || datosReceptorVenta.correo.trim()
+  );
+
+  const obtenerDatosReceptorVenta = () => {
+    if (!esClienteVariosParaFactura) {
+      return datosReceptorVentaInicial;
+    }
+
+    return {
+      nombre: datosReceptorVenta.nombre.trim(),
+      correo: datosReceptorVenta.correo.trim(),
+    };
+  };
+
+  const seleccionarCliente = (clienteSeleccionadoNuevo) => {
+    setCliente(clienteSeleccionadoNuevo.value);
+    setEsGranContribuyente(!!clienteSeleccionadoNuevo.granContribuyente);
+    if (!esClienteFinal(clienteSeleccionadoNuevo)) {
+      setDatosReceptorVenta(datosReceptorVentaInicial);
+      setMostrarDatosReceptor(false);
+    }
+    setMostrarDatosCliente(false);
+    setDialogoCliente(false);
+    setBusquedaCliente('');
+  };
+
   const restablecerClienteFinalYFactura = () => {
     const clienteFinal = clientes.find(esClienteFinal) || null;
     setCliente(clienteFinal?.value ?? null);
     setEsGranContribuyente(!!clienteFinal?.granContribuyente);
     setRetenerRenta(false);
     setTipoDte('01');
+    setMostrarDatosCliente(false);
+    setDatosReceptorVenta(datosReceptorVentaInicial);
+    setMostrarDatosReceptor(false);
+    setAvisoCorreo(null);
   };
 
   const cerrarDialogoPago = () => {
@@ -722,6 +841,7 @@ export default function VistaPuntoVenta() {
   }, [carrito, documentoSinIva, esGranContribuyente, retenerRenta, tipoDte]);
 
   const crearTicketVenta = (ventaGuardada, cambio) => {
+    const datosReceptor = obtenerDatosReceptorVenta();
     const items = carrito.map(item => {
       const calculo = calcularItemParaDte(item, tipoDte);
       return {
@@ -750,7 +870,11 @@ export default function VistaPuntoVenta() {
       efectivoRecibido: metodoPago === 'efectivo' ? efectivoRecibido : null,
       cambio,
       plazo: metodoPago === 'credito' ? `${plazoValor} ${plazoTipo}` : null,
-      cliente: clienteSeleccionado,
+      cliente: {
+        ...clienteSeleccionado,
+        label: datosReceptor.nombre || clienteSeleccionado?.label || 'Consumidor Final',
+        correo: datosReceptor.correo || clienteSeleccionado?.correo || '',
+      },
       comercio,
       items,
       resumen: {
@@ -769,7 +893,9 @@ export default function VistaPuntoVenta() {
     const nombreComercio = ticket.comercio?.nombreComercial || ticket.comercio?.nombre || 'Comercio';
     const direccion = ticket.comercio?.complementoDireccion || ticket.comercio?.direccion || '';
     const muestraIvaSeparado = ticket.tipoDte === '03';
-    const subtotalTicket = muestraIvaSeparado ? ticket.resumen.subtotal : ticket.resumen.total;
+    const subtotalTicket = muestraIvaSeparado
+      ? Object.values(ticket.resumen.porTipo || {}).reduce((acumulado, valor) => acumulado + Number(valor || 0), 0)
+      : ticket.resumen.total;
     const muestraClienteCompleto = ['03', '11', '14'].includes(ticket.tipoDte);
     const direccionCliente = ticket.cliente?.direccion || {};
     const direccionClienteTexto = [
@@ -867,17 +993,22 @@ export default function VistaPuntoVenta() {
       return;
     }
 
+    const datosReceptor = obtenerDatosReceptorVenta();
+    if (datosReceptor.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosReceptor.correo)) {
+      setErrorVenta('El correo del receptor no tiene un formato válido.');
+      return;
+    }
+
     setGuardandoVenta(true);
     setErrorVenta('');
+    setAvisoCorreo(null);
 
     const cambio = metodoPago === 'efectivo' ? Math.max(redondear((efectivoRecibido || 0) - resumen.totalCobrar), 0) : null;
     const condicionOperacion = metodoPago === 'credito' ? 2 : 1;
 
     const detallesVenta = carrito.map((item, index) => {
       const calculo = calcularItemParaDte(item, tipoDte);
-      const precioUnitario = documentoSinIva
-        ? obtenerPrecioParaDte(item, tipoDte)
-        : item.precio;
+      const precioUnitario = obtenerPrecioParaDte(item, tipoDte);
       return {
         numItem: index + 1,
         tipoItem: 'BIEN',
@@ -920,6 +1051,8 @@ export default function VistaPuntoVenta() {
       plazoValor: metodoPago === 'credito' ? plazoValor : null,
       plazoTipo: metodoPago === 'credito' ? plazoNormalizado(plazoTipo) : null,
       condicionOperacion,
+      nombreReceptor: datosReceptor.nombre || null,
+      correoReceptor: datosReceptor.correo || null,
       cliente: { id: clienteSeleccionado.value },
       comercio: { id: comercio.id },
       detallesVenta,
@@ -929,7 +1062,26 @@ export default function VistaPuntoVenta() {
       const respuesta = await api.post('/Ventas', payload);
       // La API guarda la venta, la firma, la envía a Hacienda y devuelve
       // la venta actualizada con su selloRecepcion.
+      if (datosReceptor.correo) {
+        try {
+          await api.post(`/Ventas/${respuesta.data.id}/correo`, {
+            destinatario: datosReceptor.correo,
+          });
+          setAvisoCorreo({
+            tipo: 'exito',
+            mensaje: `DTE enviado a ${datosReceptor.correo}.`,
+          });
+        } catch (errorCorreo) {
+          console.error('La venta se guardó, pero no se pudo enviar el correo:', errorCorreo);
+          setAvisoCorreo({
+            tipo: 'error',
+            mensaje: 'La venta se guardó, pero no se pudo enviar el DTE al correo indicado.',
+          });
+        }
+      }
       setTicketVenta(crearTicketVenta(respuesta.data, cambio));
+      setDatosReceptorVenta(datosReceptorVentaInicial);
+      setMostrarDatosReceptor(false);
       // La siguiente venta debe iniciar con el método de pago predeterminado.
       setMetodoPago('efectivo');
       setDialogoPago(false);
@@ -959,6 +1111,20 @@ export default function VistaPuntoVenta() {
             <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>La venta se ha registrado correctamente</p>
           </div>
         </AvisoPagoExitoso>
+      )}
+
+      {avisoCorreo && (
+        avisoCorreo.tipo === 'exito' ? (
+          <AvisoPagoExitoso>
+            <i className="pi pi-envelope text-xl" style={{ color: '#10b981' }}></i>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{avisoCorreo.mensaje}</span>
+          </AvisoPagoExitoso>
+        ) : (
+          <AvisoError>
+            <i className="pi pi-envelope text-xl"></i>
+            <span className="text-sm font-semibold">{avisoCorreo.mensaje}</span>
+          </AvisoError>
+        )
       )}
 
       {errorCatalogos && (
@@ -1063,23 +1229,74 @@ export default function VistaPuntoVenta() {
             <Tag value={`${carrito.reduce((s, i) => s + i.cantidad, 0)} items`} className="premium-tag" severity="info" />
           </div>
 
-          <button onClick={abrirDialogoCliente} className="w-full border-none cursor-pointer p-3 border-bottom-1 surface-border flex align-items-center gap-3 transition-all transition-duration-200" style={{ background: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-            <div className="flex align-items-center justify-content-center border-circle" style={{ width: '36px', height: '36px', minWidth: '36px', background: !cliente ? 'var(--surface-border-light)' : 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
-              <i className={`${!cliente ? 'pi pi-user' : 'pi pi-user-check'} text-sm`} style={{ color: !cliente ? 'var(--text-muted)' : '#fff' }}></i>
-            </div>
-            <div className="text-left flex-1 min-w-0">
-              <p className="text-xs font-semibold m-0" style={{ color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Cliente</p>
-              <p className="font-semibold m-0 text-sm flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                {clienteSeleccionado?.label || 'Seleccione cliente'}
-                {clienteSeleccionado?.granContribuyente && (
-                  <Tag value="GC" severity="warning" style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem' }} />
+          <div className="w-full border-bottom-1 surface-border flex align-items-stretch" style={{ background: 'transparent' }}>
+            <button type="button" onClick={abrirDialogoCliente} className="border-none cursor-pointer p-3 flex align-items-center gap-3 transition-all transition-duration-200 flex-1 min-w-0" style={{ background: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-muted)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+              <div className="flex align-items-center justify-content-center border-circle" style={{ width: '36px', height: '36px', minWidth: '36px', background: !cliente ? 'var(--surface-border-light)' : 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
+                <i className={`${!cliente ? 'pi pi-user' : 'pi pi-user-check'} text-sm`} style={{ color: !cliente ? 'var(--text-muted)' : '#fff' }}></i>
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <p className="text-xs font-semibold m-0" style={{ color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Cliente</p>
+                <p className="font-semibold m-0 text-sm flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  {clienteSeleccionado?.label || 'Seleccione cliente'}
+                  {clienteSeleccionado?.granContribuyente && (
+                    <Tag value="GC" severity="warning" style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem' }} />
+                  )}
+                </p>
+              </div>
+            </button>
+            <button type="button" onClick={() => setMostrarDatosCliente(prev => !prev)} className="border-none cursor-pointer px-3 transition-all transition-duration-200" style={{ background: 'transparent', color: 'var(--text-icon)' }}
+              aria-label={mostrarDatosCliente ? 'Ocultar datos del cliente' : 'Mostrar datos del cliente'}
+              disabled={!clienteSeleccionado}
+              onMouseEnter={(e) => { if (clienteSeleccionado) e.currentTarget.style.background = 'var(--surface-muted)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+              <i className={`pi ${mostrarDatosCliente ? 'pi-chevron-up' : 'pi-chevron-down'} text-xs`}></i>
+            </button>
+          </div>
+
+          {mostrarDatosCliente && clienteSeleccionado && (
+            <div className="punto-venta__cliente-detalles px-2 py-1 border-bottom-1 surface-border" style={{ background: 'var(--surface-muted)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', columnGap: '0.4rem', rowGap: '0.1rem' }}>
+                <div className="col-12 md:col-6">
+                  <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Nombre</span>
+                  <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{nombreClienteSeleccionado || 'No registrado'}</span>
+                </div>
+                {clienteSeleccionado.nombreComercial && (
+                  <div className="col-12 md:col-6">
+                    <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Comercial</span>
+                    <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{clienteSeleccionado.nombreComercial}</span>
+                  </div>
                 )}
-              </p>
+                <div className="col-6 md:col-3">
+                  <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Documento</span>
+                  <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{tipoDocumentoClienteSeleccionado ? `${tipoDocumentoClienteSeleccionado}: ` : ''}{clienteSeleccionado.numDocumento || clienteSeleccionado.nit || 'No registrado'}</span>
+                </div>
+                <div className="col-6 md:col-3">
+                  <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>NRC</span>
+                  <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{clienteSeleccionado.nrc || 'No registrado'}</span>
+                </div>
+                <div className="col-12 md:col-6">
+                  <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Correo</span>
+                  <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{clienteSeleccionado.correo || 'No registrado'}</span>
+                </div>
+                <div className="col-12 md:col-6">
+                  <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Teléfono</span>
+                   <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{clienteSeleccionado.telefono || 'No registrado'}</span>
+                 </div>
+                {actividadClienteTexto && (
+                  <div className="col-12">
+                    <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Actividad / giro</span>
+                    <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{actividadClienteTexto}</span>
+                  </div>
+                )}
+                 <div className="col-12">
+                  <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Dirección</span>
+                  <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{direccionClienteSeleccionado || 'No registrada'}</span>
+                </div>
+              </div>
             </div>
-            <i className="pi pi-chevron-down text-xs" style={{ color: 'var(--text-icon)', flexShrink: 0 }}></i>
-          </button>
+          )}
 
           {!!cliente && !documentoSinIva && (
             <div className="px-3 py-2 flex align-items-center justify-content-between border-bottom-1 surface-border" style={{ background: 'var(--surface-muted)' }}>
@@ -1434,10 +1651,87 @@ export default function VistaPuntoVenta() {
             </div>
           </div>
 
+          {esClienteVariosParaFactura && (
+            <div className="flex flex-column gap-2 p-2 border-round-xl" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.18)' }}>
+              <div className="flex align-items-center justify-content-between gap-2">
+                <i className="pi pi-user-edit" style={{ color: '#6366f1' }}></i>
+                <div>
+                  <p className="font-bold m-0 text-sm" style={{ color: 'var(--text-primary)' }}>Datos opcionales del receptor</p>
+                  {!mostrarDatosReceptor && tieneDatosReceptorVenta && (
+                    <p className="m-0 text-xs text-overflow-ellipsis white-space-nowrap overflow-hidden" style={{ color: 'var(--text-muted)' }}>
+                      {[datosReceptorVenta.nombre.trim(), datosReceptorVenta.correo.trim()].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  <p className="m-0 text-xs" style={{ color: 'var(--text-muted)' }}>No se registrará un cliente nuevo.</p>
+                </div>
+              <Button
+                label={mostrarDatosReceptor ? 'Ocultar' : tieneDatosReceptorVenta ? 'Editar' : 'Agregar'}
+                icon={mostrarDatosReceptor ? 'pi pi-chevron-up' : 'pi pi-chevron-down'}
+                className="p-button-text p-button-sm"
+                onClick={() => setMostrarDatosReceptor(prev => !prev)}
+                type="button"
+              />
+            </div>
+            {mostrarDatosReceptor && (
+              <div className="grid mt-1">
+                <div className="col-12 md:col-6 flex flex-column gap-1">
+                  <label className="premium-label">Nombre <span style={{ color: 'var(--text-icon)' }}>(opcional)</span></label>
+                <InputText
+                  value={datosReceptorVenta.nombre}
+                  onChange={(e) => setDatosReceptorVenta(prev => ({ ...prev, nombre: e.target.value }))}
+                  placeholder="Nombre del comprador"
+                  className="w-full"
+                  style={{ borderRadius: '10px', padding: '0.55rem 0.75rem' }}
+                />
+                </div>
+                <div className="col-12 md:col-6 flex flex-column gap-1">
+                  <label className="premium-label">Correo <span style={{ color: 'var(--text-icon)' }}>(opcional)</span></label>
+                <InputText
+                  type="email"
+                  value={datosReceptorVenta.correo}
+                  onChange={(e) => setDatosReceptorVenta(prev => ({ ...prev, correo: e.target.value }))}
+                  placeholder="correo@ejemplo.com"
+                  className="w-full"
+                  style={{ borderRadius: '10px', padding: '0.55rem 0.75rem' }}
+                />
+                </div>
+              </div>
+            )}
+            </div>
+          )}
+
           {errorVenta && (
-            <div className="flex align-items-center gap-2 p-2 border-round-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444' }}>
-              <i className="pi pi-exclamation-circle text-sm"></i>
-              <p className="text-xs font-semibold m-0">{errorVenta}</p>
+            <div className="punto-venta__error-hacienda" role="alert">
+              <div className="punto-venta__error-hacienda-cabecera">
+                <i className="pi pi-exclamation-circle punto-venta__error-hacienda-icono"></i>
+                <div className="punto-venta__error-hacienda-resumen">
+                  <p className="punto-venta__error-hacienda-titulo">{detalleErrorVenta.titulo}</p>
+                  {detalleErrorVenta.esRespuestaHacienda && (
+                    <div className="punto-venta__error-hacienda-meta">
+                      {detalleErrorVenta.codigo && <span>Código: {detalleErrorVenta.codigo}</span>}
+                      {detalleErrorVenta.clasificacion && <span>Clasificación: {detalleErrorVenta.clasificacion}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <p className="punto-venta__error-hacienda-descripcion">{detalleErrorVenta.descripcion}</p>
+
+              {detalleErrorVenta.observaciones.length > 0 && (
+                <div className="punto-venta__error-hacienda-observaciones">
+                  <span className="punto-venta__error-hacienda-etiqueta">Qué debes revisar</span>
+                  <ul className="punto-venta__error-hacienda-lista">
+                    {detalleErrorVenta.observaciones.map((observacion, index) => (
+                      <li key={`${observacion}-${index}`}>{observacion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <details className="punto-venta__error-hacienda-tecnico">
+                <summary>Ver respuesta técnica</summary>
+                <pre>{detalleErrorVenta.respuestaTecnica}</pre>
+              </details>
             </div>
           )}
 
@@ -1599,7 +1893,7 @@ export default function VistaPuntoVenta() {
               </div>
             ) : (
               clientesFiltrados.map(c => (
-                <button key={c.value} onClick={() => { setCliente(c.value); setEsGranContribuyente(!!c.granContribuyente); setDialogoCliente(false); setBusquedaCliente(''); }}
+                <button key={c.value} onClick={() => seleccionarCliente(c)}
                   className="w-full border-none border-round-xl cursor-pointer p-3 flex align-items-center gap-3 transition-all transition-duration-200"
                   style={{ background: cliente === c.value ? 'rgba(99,102,241,0.1)' : 'transparent' }}
                   onMouseEnter={(e) => { if (cliente !== c.value) e.currentTarget.style.background = 'var(--surface-muted)'; }}

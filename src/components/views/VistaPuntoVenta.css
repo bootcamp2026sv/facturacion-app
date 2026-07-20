@@ -106,6 +106,39 @@
   margin-top: auto;
 }
 
+.punto-venta__cliente-detalles {
+  font-size: 0.54rem;
+}
+
+.punto-venta__cliente-detalles > div {
+  min-width: 0;
+  width: auto;
+  padding: 0.04rem 0.1rem;
+}
+
+.punto-venta__cliente-detalles > div[class*="col-12"] {
+  grid-column: 1 / -1;
+}
+
+.punto-venta__cliente-detalles > div[class*="col-6"] {
+  grid-column: span 1;
+}
+
+.punto-venta__cliente-detalles > div[class*="md:col-6"] {
+  grid-column: span 1;
+}
+
+.punto-venta__cliente-detalles > div > span:first-child {
+  font-size: 0.44rem !important;
+  line-height: 0.9;
+}
+
+.punto-venta__cliente-detalles > div > span:last-child {
+  font-size: 0.52rem !important;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
 .punto-venta__carrito {
   width: 34%;
   min-width: 260px;
@@ -155,6 +188,147 @@
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.25);
   color: #ef4444;
+}
+
+.punto-venta__error-hacienda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.85rem 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #b42318;
+}
+
+.punto-venta__error-hacienda-cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.punto-venta__error-hacienda-icono {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+  color: #dc2626;
+}
+
+.punto-venta__error-hacienda-resumen {
+  min-width: 0;
+}
+
+.punto-venta__error-hacienda-titulo,
+.punto-venta__error-hacienda-descripcion {
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.punto-venta__error-hacienda-titulo {
+  color: #991b1b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.punto-venta__error-hacienda-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin-top: 0.2rem;
+  color: #b91c1c;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.punto-venta__error-hacienda-descripcion {
+  color: #b42318;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.punto-venta__error-hacienda-observaciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(239, 68, 68, 0.18);
+}
+
+.punto-venta__error-hacienda-etiqueta {
+  color: #991b1b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.punto-venta__error-hacienda-lista {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #b42318;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.punto-venta__error-hacienda-lista li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.punto-venta__error-hacienda-tecnico {
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(239, 68, 68, 0.18);
+}
+
+.punto-venta__error-hacienda-tecnico summary {
+  color: #991b1b;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.punto-venta__error-hacienda-tecnico pre {
+  max-height: 180px;
+  margin: 0.55rem 0 0;
+  padding: 0.65rem;
+  overflow: auto;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #7f1d1d;
+  font-family: "Courier New", monospace;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+[data-theme='dark'] .punto-venta__error-hacienda {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(127, 29, 29, 0.2);
+}
+
+[data-theme='dark'] .punto-venta__error-hacienda-titulo,
+[data-theme='dark'] .punto-venta__error-hacienda-etiqueta,
+[data-theme='dark'] .punto-venta__error-hacienda-tecnico summary {
+  color: #fca5a5;
+}
+
+[data-theme='dark'] .punto-venta__error-hacienda-meta,
+[data-theme='dark'] .punto-venta__error-hacienda-descripcion,
+[data-theme='dark'] .punto-venta__error-hacienda-lista {
+  color: #fecaca;
+}
+
+[data-theme='dark'] .punto-venta__error-hacienda-tecnico pre {
+  background: rgba(15, 23, 42, 0.45);
+  color: #fecaca;
 }
 
 .punto-venta__dialogo .p-dialog-content {

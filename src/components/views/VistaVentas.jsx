@@ -22,6 +22,40 @@ const nombreCliente = (cliente) => {
 };
 
 const obtenerSelloRecepcion = (venta) => String(venta?.selloRecepcion || '').trim();
+const obtenerSelloAnulacion = (venta) => String(venta?.selloAnulacion || '').trim();
+
+const obtenerEstadoVenta = (venta) => {
+  const selloRecepcion = obtenerSelloRecepcion(venta);
+  const selloAnulacion = obtenerSelloAnulacion(venta);
+
+  if (!selloRecepcion) {
+    return {
+      etiqueta: 'Inválido',
+      icono: 'pi-exclamation-circle',
+      color: '#be123c',
+      fondo: 'rgba(225, 29, 72, 0.10)',
+      titulo: 'Documento inválido: no tiene sello de recepción'
+    };
+  }
+
+  if (selloAnulacion) {
+    return {
+      etiqueta: 'Anulado',
+      icono: 'pi-ban',
+      color: '#b45309',
+      fondo: 'rgba(245, 158, 11, 0.12)',
+      titulo: `Sello de anulación: ${selloAnulacion}`
+    };
+  }
+
+  return {
+    etiqueta: 'Válido',
+    icono: 'pi-check-circle',
+    color: '#047857',
+    fondo: 'rgba(16, 185, 129, 0.10)',
+    titulo: `Documento válido. Sello de recepción: ${selloRecepcion}`
+  };
+};
 
 export default function VistaVentas() {
   const toast = useRef(null);
@@ -43,7 +77,7 @@ export default function VistaVentas() {
       const ventasAPI = Array.isArray(respuesta.data) ? respuesta.data : [];
       setVentas(ventasAPI.map((venta) => ({
         ...venta,
-        cliente: nombreCliente(venta.cliente),
+        cliente: venta.nombreReceptor || nombreCliente(venta.cliente),
         tipo: etiquetaTipoDte(venta.tipoDte),
         tipoCodigo: venta.tipoDte,
         total: Number(venta.totalGeneral || 0),
@@ -162,6 +196,13 @@ export default function VistaVentas() {
     try {
       const respuesta = await api.post('/hacienda/anular-dte', { ventaId: venta.id });
       setRespuestaConsulta(respuesta.data);
+      const sello = respuesta.data?.selloRecibido || respuesta.data?.selloRecepcion;
+      if (sello) {
+        setVentaSeleccionada((actual) => ({ ...actual, selloAnulacion: sello }));
+        setVentas((actuales) => actuales.map((actual) => (
+          actual.id === venta.id ? { ...actual, selloAnulacion: sello } : actual
+        )));
+      }
     } catch (error) {
       console.error('Error al anular DTE en Hacienda:', error);
       setErrorConsulta(obtenerMensajeErrorConsulta(error));
@@ -219,6 +260,23 @@ export default function VistaVentas() {
   const accionesTemplate = (fila) => (
     <Button icon="pi pi-ellipsis-h" className="p-button-rounded p-button-text premium-btn-secondary" onClick={() => abrirAcciones(fila)} />
   );
+
+  const estadoVentaTemplate = (fila) => {
+    const estado = obtenerEstadoVenta(fila);
+    return (
+      <span
+        className="inline-flex align-items-center gap-2 px-2 py-1 border-round-lg text-xs font-bold"
+        title={estado.titulo}
+        style={{
+          color: estado.color,
+          background: estado.fondo
+        }}
+      >
+        <i className={`pi ${estado.icono}`}></i>
+        {estado.etiqueta}
+      </span>
+    );
+  };
 
   const pieDialogo = ventaSeleccionada && (
     <div className="ventas-modal-actions flex flex-nowrap justify-content-between w-full">
@@ -350,6 +408,7 @@ export default function VistaVentas() {
               <Column field="numeroControl" header="Número de Control" sortable body={(f) => f.numeroControl.split('-').pop()}></Column>
               <Column field="cliente" header="Cliente" sortable></Column>
               <Column field="total" header="Total" body={(f) => `$${f.total.toFixed(2)}`} sortable></Column>
+              <Column header="Estado" body={estadoVentaTemplate}></Column>
               <Column header="Acciones" body={accionesTemplate} style={{ width: '80px' }}></Column>
             </DataTable>
           </div>
