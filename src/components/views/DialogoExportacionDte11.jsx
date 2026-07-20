@@ -3,6 +3,8 @@ import { Button } from 'primereact/button';
 import FormularioExportacionDte11 from './FormularioExportacionDte11';
 import './DialogoExportacionDte11.css';
 
+// Paso especial del DTE-11. Recibe los datos desde VistaPuntoVenta y avisa
+// cuando ya se puede continuar al diálogo de cobro.
 export default function DialogoExportacionDte11({
   visible,
   onHide,

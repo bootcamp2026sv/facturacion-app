@@ -1,5 +1,6 @@
 import { Dialog } from 'primereact/dialog';
 
+// Contenedores pequeños que mantienen las clases y el estilo común del POS.
 export function ContenedorPuntoVenta({ children, style }) {
   return <div className="punto-venta premium-fade-in" style={style}>{children}</div>;
 }
