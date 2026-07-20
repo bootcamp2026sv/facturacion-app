@@ -1,0 +1,124 @@
+.punto-venta__dialogo-exportacion .p-dialog-header {
+  padding: 1.35rem 1.5rem 1rem;
+  background: linear-gradient(135deg, #111827 0%, #312e81 100%);
+  color: #fff;
+  border-radius: 16px 16px 0 0;
+}
+
+.punto-venta__dialogo-exportacion .p-dialog-header-icons .p-dialog-header-icon {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.exportacion-dialogo__cabecera { width: 100%; }
+.exportacion-dialogo__marca { display: flex; align-items: center; gap: 0.85rem; }
+.exportacion-dialogo__icono {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px; border-radius: 14px;
+  background: linear-gradient(135deg, #a78bfa, #6366f1);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.35);
+  font-size: 1.25rem;
+}
+.exportacion-dialogo__eyebrow { display: block; color: #c4b5fd; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.exportacion-dialogo__marca h2 { margin: 0.2rem 0 0; font-size: 1.3rem; color: #fff; }
+.exportacion-dialogo__marca p { margin: 0.25rem 0 0; color: #cbd5e1; font-size: 0.75rem; font-weight: 500; }
+.exportacion-dialogo__pasos { display: flex; align-items: center; margin: 1rem 0 0 3.85rem; color: #94a3b8; font-size: 0.68rem; font-weight: 700; }
+.exportacion-dialogo__paso { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+.exportacion-dialogo__paso b { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.12); color: #cbd5e1; }
+.exportacion-dialogo__paso--activo { color: #e0e7ff; }
+.exportacion-dialogo__paso--activo b { background: #8b5cf6; color: #fff; }
+.exportacion-dialogo__conector { width: 42px; height: 1px; margin: 0 0.5rem; background: rgba(255,255,255,0.2); }
+.exportacion-dialogo__contenido { padding: 1.1rem 1.35rem 1.25rem; max-height: min(70vh, 720px); overflow: auto; background: linear-gradient(180deg, #f8fafc 0%, #fff 35%); }
+
+/* Scrollbars compactos y consistentes con el diálogo de exportación. */
+.punto-venta__dialogo-exportacion .p-dialog-content,
+.exportacion-dialogo__contenido,
+.exportacion-regimen-panel,
+.exportacion-regimen-panel .p-dropdown-items-wrapper,
+.punto-venta__dialogo-exportacion .p-dropdown-items-wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: #a78bfa transparent;
+  scrollbar-gutter: stable;
+}
+
+.punto-venta__dialogo-exportacion .p-dialog-content::-webkit-scrollbar,
+.exportacion-dialogo__contenido::-webkit-scrollbar,
+.exportacion-regimen-panel::-webkit-scrollbar,
+.exportacion-regimen-panel .p-dropdown-items-wrapper::-webkit-scrollbar,
+.punto-venta__dialogo-exportacion .p-dropdown-items-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.punto-venta__dialogo-exportacion .p-dialog-content::-webkit-scrollbar-track,
+.exportacion-dialogo__contenido::-webkit-scrollbar-track,
+.exportacion-regimen-panel::-webkit-scrollbar-track,
+.exportacion-regimen-panel .p-dropdown-items-wrapper::-webkit-scrollbar-track,
+.punto-venta__dialogo-exportacion .p-dropdown-items-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.punto-venta__dialogo-exportacion .p-dialog-content::-webkit-scrollbar-thumb,
+.exportacion-dialogo__contenido::-webkit-scrollbar-thumb,
+.exportacion-regimen-panel::-webkit-scrollbar-thumb,
+.exportacion-regimen-panel .p-dropdown-items-wrapper::-webkit-scrollbar-thumb,
+.punto-venta__dialogo-exportacion .p-dropdown-items-wrapper::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #a78bfa;
+  background-clip: padding-box;
+}
+
+.punto-venta__dialogo-exportacion .p-dialog-content::-webkit-scrollbar-thumb:hover,
+.exportacion-dialogo__contenido::-webkit-scrollbar-thumb:hover,
+.exportacion-regimen-panel::-webkit-scrollbar-thumb:hover,
+.punto-venta__dialogo-exportacion .p-dropdown-items-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+  background-clip: padding-box;
+}
+.exportacion-dialogo__resumen { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 0.8rem 1rem; border: 1px solid #e0e7ff; border-radius: 14px; background: linear-gradient(135deg, #eef2ff, #faf5ff); color: #334155; }
+.exportacion-dialogo__resumen > div:first-child { flex: 1; min-width: 0; }
+.exportacion-dialogo__kicker { display: block; margin-bottom: 0.2rem; color: #6366f1; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; }
+.exportacion-dialogo__resumen strong { display: block; overflow: hidden; color: #1e293b; font-size: 0.9rem; text-overflow: ellipsis; white-space: nowrap; }
+.exportacion-dialogo__resumen-dato { display: flex; align-items: center; gap: 0.35rem; color: #64748b; font-size: 0.7rem; white-space: nowrap; }
+.exportacion-dialogo__resumen-dato i { color: #6366f1; }
+.exportacion-dialogo__faltantes { display: flex; gap: 0.65rem; align-items: flex-start; margin-top: 1rem; padding: 0.75rem 0.9rem; border: 1px solid rgba(244, 63, 94, 0.2); border-radius: 12px; background: rgba(244, 63, 94, 0.06); color: #be123c; font-size: 0.72rem; }
+.exportacion-dialogo__faltantes i { margin-top: 0.12rem; }
+.exportacion-dialogo__faltantes strong, .exportacion-dialogo__faltantes span { display: block; }
+.exportacion-dialogo__faltantes span { margin-top: 0.2rem; line-height: 1.45; }
+.exportacion-dialogo__pie { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; }
+.exportacion-dialogo__estado { display: flex; align-items: center; gap: 0.45rem; color: #64748b; font-size: 0.72rem; font-weight: 600; }
+.exportacion-dialogo__estado i { color: #10b981; }
+.exportacion-dialogo__estado:has(.pi-info-circle) i { color: #f59e0b; }
+.exportacion-autocomplete { display: flex; flex-direction: column; gap: 0.35rem; width: 100%; }
+.exportacion-autocomplete .p-autocomplete { width: 100%; }
+.exportacion-autocomplete .p-autocomplete-input { width: 100%; border-radius: 10px; padding: 0.65rem 0.8rem; }
+.exportacion-autocomplete small { color: var(--text-muted); font-size: 0.65rem; line-height: 1.35; }
+.exportacion-autocomplete { position: relative; }
+.exportacion-autocomplete .p-autocomplete-panel { position: absolute !important; top: calc(100% + 0.35rem) !important; right: 0 !important; left: 0 !important; width: 100% !important; max-width: 100% !important; overflow: hidden; border: 1px solid #e0e7ff; border-radius: 12px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.16); }
+.exportacion-autocomplete .p-autocomplete-items,
+.exportacion-regimen-panel .p-autocomplete-items { max-height: 220px; padding: 0.25rem; }
+.exportacion-autocomplete .p-autocomplete-item,
+.exportacion-regimen-panel .p-autocomplete-item { padding: 0.58rem 0.7rem; border-radius: 8px; color: #475569; font-size: 0.72rem; line-height: 1.3; white-space: normal; }
+.exportacion-autocomplete .p-autocomplete-item:hover,
+.exportacion-regimen-panel .p-autocomplete-item:hover { background: #eef2ff; color: #3730a3; }
+.exportacion-regimen-dropdown { display: flex; flex-direction: column; gap: 0.35rem; width: 100%; }
+.exportacion-regimen-dropdown .p-dropdown { width: 100%; }
+.exportacion-regimen-panel { width: 100% !important; max-width: 430px !important; border: 1px solid #e0e7ff; border-radius: 12px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.16); }
+.exportacion-regimen-dropdown .p-dropdown-items { max-height: 260px; padding: 0.25rem; }
+.exportacion-regimen-dropdown .p-dropdown-item { padding: 0.58rem 0.7rem; border-radius: 8px; color: #475569; font-size: 0.72rem; line-height: 1.3; white-space: normal; }
+.exportacion-regimen-dropdown .p-dropdown-item:hover { background: #eef2ff; color: #3730a3; }
+.exportacion-costos { margin-top: 0.25rem; padding: 0.9rem; border: 1px solid #dbeafe; border-radius: 14px; background: linear-gradient(135deg, #eff6ff, #f8fafc); }
+.exportacion-costos__cabecera { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.45rem; }
+.exportacion-costos__cabecera strong { display: block; color: #334155; font-size: 0.78rem; }
+.exportacion-costos__moneda { padding: 0.3rem 0.55rem; border-radius: 8px; background: #dbeafe; color: #1d4ed8; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; }
+.exportacion-costos > small { display: block; margin-top: 0.4rem; color: #64748b; font-size: 0.65rem; }
+
+@media (max-width: 640px) {
+  .exportacion-dialogo__pasos { margin-left: 0; }
+  .exportacion-dialogo__paso { font-size: 0; }
+  .exportacion-dialogo__conector { width: 24px; }
+  .exportacion-dialogo__resumen { align-items: flex-start; flex-direction: column; gap: 0.45rem; }
+  .exportacion-dialogo__pie { align-items: stretch; flex-direction: column; }
+  .exportacion-dialogo__pie .flex { justify-content: flex-end; }
+}

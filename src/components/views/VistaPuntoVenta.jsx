@@ -15,6 +15,7 @@ import {
 import { obtenerCamposFaltantesCreditoFiscal } from '../../utils/validacionesVenta';
 import { obtenerErrorFormatoCliente, soloDigitos } from '../../utils/validacionesCliente';
 import './VistaPuntoVenta.css';
+import DialogoExportacionDte11 from './DialogoExportacionDte11';
 import {
   AvisoError,
   AvisoPagoExitoso,
@@ -177,6 +178,27 @@ const datosReceptorVentaInicial = {
   correo: '',
 };
 
+const datosExportacionDte11Iniciales = {
+  tipoItemExpor: null,
+  tipoItemExporDescripcion: '',
+  recintoFiscal: '',
+  recintoFiscalDescripcion: '',
+  tipoRegimen: '',
+  tipoRegimenDescripcion: '',
+  regimen: '',
+  regimenDescripcion: '',
+  codPais: '',
+  nombrePais: '',
+  complemento: '',
+  tipoPersona: null,
+  tipoPersonaDescripcion: '',
+  descActividad: '',
+  codIncoterms: '',
+  descIncoterms: '',
+  flete: 0,
+  seguro: 0,
+};
+
 const TRIBUTACION_A_IVA = {
   GRAVADO: 'gravado',
   EXENTO: 'exento',
@@ -242,9 +264,11 @@ export default function VistaPuntoVenta() {
   const [cliente, setCliente] = useState(null);
   const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false);
   const [datosReceptorVenta, setDatosReceptorVenta] = useState(datosReceptorVentaInicial);
+  const [datosExportacion, setDatosExportacion] = useState(datosExportacionDte11Iniciales);
   const [mostrarDatosReceptor, setMostrarDatosReceptor] = useState(false);
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [dialogoPago, setDialogoPago] = useState(false);
+  const [dialogoExportacion, setDialogoExportacion] = useState(false);
   const [pagoExitoso, setPagoExitoso] = useState(false);
   const [avisoCorreo, setAvisoCorreo] = useState(null);
   const [dialogoTicket, setDialogoTicket] = useState(false);
@@ -261,6 +285,7 @@ export default function VistaPuntoVenta() {
   const seleccionarTipoDte = (nuevoTipoDte) => {
     setTipoDte(nuevoTipoDte);
     if (nuevoTipoDte !== '14') setRetenerRenta(false);
+    if (nuevoTipoDte !== '11') setDatosExportacion(datosExportacionDte11Iniciales);
     if (nuevoTipoDte !== '01') {
       setDatosReceptorVenta(datosReceptorVentaInicial);
       setMostrarDatosReceptor(false);
@@ -345,6 +370,28 @@ export default function VistaPuntoVenta() {
   const mensajeClienteCreditoFiscal = camposFaltantesCreditoFiscal.length > 0
     ? `Crédito Fiscal: completa ${camposFaltantesCreditoFiscal.join(', ')} del cliente antes de cobrar.`
     : '';
+
+  const camposFaltantesExportacion = useMemo(() => {
+    if (tipoDte !== '11') return [];
+    const datosCliente = [
+      !clienteSeleccionado?.nombre && 'nombre del cliente',
+      !clienteSeleccionado?.correo && 'correo del cliente',
+      !clienteSeleccionado?.telefono && 'teléfono del cliente',
+      !clienteSeleccionado?.direccion?.complemento && 'dirección del cliente',
+      !clienteSeleccionado?.numDocumento && 'documento del cliente',
+    ];
+    const datosDte = [
+      !datosExportacion.codPais && 'país de destino',
+      !datosExportacion.tipoPersona && 'tipo de persona',
+      !datosExportacion.tipoItemExpor && 'tipo de exportación',
+      !datosExportacion.recintoFiscal && 'recinto fiscal',
+      !datosExportacion.tipoRegimen && 'tipo de régimen',
+      !datosExportacion.regimen && 'régimen aduanero',
+      !datosExportacion.codIncoterms && 'Incoterm',
+      !(datosExportacion.complemento || clienteSeleccionado?.direccion?.complemento) && 'dirección del receptor',
+    ];
+    return [...datosCliente, ...datosDte].filter(Boolean);
+  }, [tipoDte, clienteSeleccionado, datosExportacion]);
 
   const parsearMontoPago = useCallback((valor) => {
     const limpio = String(valor ?? '')
@@ -507,6 +554,13 @@ export default function VistaPuntoVenta() {
       setMostrarDatosReceptor(false);
     }
     setMostrarDatosCliente(false);
+    if (tipoDte === '11') {
+      setDatosExportacion((actual) => ({
+        ...actual,
+        complemento: actual.complemento || clienteSeleccionadoNuevo.direccion?.complemento || '',
+        descActividad: actual.descActividad || clienteSeleccionadoNuevo.actividadEconomica?.descActividad || '',
+      }));
+    }
     setDialogoCliente(false);
     setBusquedaCliente('');
   };
@@ -519,12 +573,39 @@ export default function VistaPuntoVenta() {
     setTipoDte('01');
     setMostrarDatosCliente(false);
     setDatosReceptorVenta(datosReceptorVentaInicial);
+    setDatosExportacion(datosExportacionDte11Iniciales);
     setMostrarDatosReceptor(false);
     setAvisoCorreo(null);
   };
 
   const cerrarDialogoPago = () => {
     setDialogoPago(false);
+  };
+
+  const abrirDialogoCobro = () => {
+    if (carrito.length === 0) return;
+    setErrorVenta('');
+    if (tipoDte === '11') {
+      setDialogoExportacion(true);
+      return;
+    }
+    setEfectivoRecibido(null);
+    setEfectivoRecibidoTexto('');
+    setPlazoValor(1);
+    setPlazoTipo('meses');
+    setReferenciaPago('');
+    setDialogoPago(true);
+  };
+
+  const continuarDesdeExportacion = () => {
+    if (camposFaltantesExportacion.length > 0) return;
+    setDialogoExportacion(false);
+    setEfectivoRecibido(null);
+    setEfectivoRecibidoTexto('');
+    setPlazoValor(1);
+    setPlazoTipo('meses');
+    setReferenciaPago('');
+    setDialogoPago(true);
   };
 
   const cerrarDialogoTicket = () => {
@@ -655,6 +736,16 @@ export default function VistaPuntoVenta() {
   const guardarClienteRapido = async () => {
     if (!clienteRapido.nombre.trim()) {
       setErrorClienteRapido('El nombre o razon social es obligatorio.');
+      return;
+    }
+
+    if (tipoDte === '11' && !clienteRapido.correo.trim()) {
+      setErrorClienteRapido('Para una exportación, el cliente debe tener correo.');
+      return;
+    }
+
+    if (tipoDte === '11' && !clienteRapido.complementoDireccion.trim()) {
+      setErrorClienteRapido('Para una exportación, el cliente debe tener dirección.');
       return;
     }
 
@@ -816,7 +907,8 @@ export default function VistaPuntoVenta() {
       descuentoTotal += c.descuento;
       ivaTotal += c.iva;
       total += c.total;
-      porTipo[item.tipoIva] += c.subtotalDesc;
+      const tipoResumen = tipoDte === '11' ? 'gravado' : item.tipoIva;
+      porTipo[tipoResumen] += c.subtotalDesc;
     });
 
     const aplicaRetencion = !documentoSinIva && esGranContribuyente && porTipo.gravado >= 100;
@@ -824,7 +916,9 @@ export default function VistaPuntoVenta() {
     const retencion = Number(retencionVal.toFixed(2));
     const aplicaReteRenta = tipoDte === '14' && retenerRenta && total > 0;
     const reteRenta = aplicaReteRenta ? redondear(total * 0.10) : 0;
-    const totalCobrar = Number((total - retencion - reteRenta).toFixed(2));
+    const flete = tipoDte === '11' ? Math.max(Number(datosExportacion.flete) || 0, 0) : 0;
+    const seguro = tipoDte === '11' ? Math.max(Number(datosExportacion.seguro) || 0, 0) : 0;
+    const totalCobrar = Number((total + flete + seguro - retencion - reteRenta).toFixed(2));
 
     return { 
       subtotal, 
@@ -836,9 +930,11 @@ export default function VistaPuntoVenta() {
       aplicaRetencion, 
       reteRenta,
       aplicaReteRenta,
+      flete,
+      seguro,
       totalCobrar 
     };
-  }, [carrito, documentoSinIva, esGranContribuyente, retenerRenta, tipoDte]);
+  }, [carrito, datosExportacion.flete, datosExportacion.seguro, documentoSinIva, esGranContribuyente, retenerRenta, tipoDte]);
 
   const crearTicketVenta = (ventaGuardada, cambio) => {
     const datosReceptor = obtenerDatosReceptorVenta();
@@ -962,6 +1058,8 @@ export default function VistaPuntoVenta() {
         <div className="ticket-line" />
 
         <div className="ticket-row"><span>Subtotal</span><span>{formatoDinero(subtotalTicket)}</span></div>
+        {ticket.tipoDte === '11' && ticket.resumen.flete > 0 && <div className="ticket-row"><span>Flete</span><span>{formatoDinero(ticket.resumen.flete)}</span></div>}
+        {ticket.tipoDte === '11' && ticket.resumen.seguro > 0 && <div className="ticket-row"><span>Seguro</span><span>{formatoDinero(ticket.resumen.seguro)}</span></div>}
         {muestraIvaSeparado && ticket.resumen.descuentoTotal > 0 && <div className="ticket-row"><span>Descuentos</span><span>-{formatoDinero(ticket.resumen.descuentoTotal)}</span></div>}
         {muestraIvaSeparado && ticket.resumen.ivaTotal > 0 && <div className="ticket-row"><span>IVA 13%</span><span>{formatoDinero(ticket.resumen.ivaTotal)}</span></div>}
         {ticket.resumen.retencion > 0 && <div className="ticket-row"><span>Retencion 1%</span><span>-{formatoDinero(ticket.resumen.retencion)}</span></div>}
@@ -992,6 +1090,10 @@ export default function VistaPuntoVenta() {
       cerrarDialogoPago();
       return;
     }
+    if (tipoDte === '11' && camposFaltantesExportacion.length > 0) {
+      setErrorVenta(`Exportación: completa ${camposFaltantesExportacion.join(', ')} antes de cobrar.`);
+      return;
+    }
 
     const datosReceptor = obtenerDatosReceptorVenta();
     if (datosReceptor.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosReceptor.correo)) {
@@ -1009,6 +1111,7 @@ export default function VistaPuntoVenta() {
     const detallesVenta = carrito.map((item, index) => {
       const calculo = calcularItemParaDte(item, tipoDte);
       const precioUnitario = obtenerPrecioParaDte(item, tipoDte);
+      const esExportacion = tipoDte === '11';
       return {
         numItem: index + 1,
         tipoItem: 'BIEN',
@@ -1019,9 +1122,9 @@ export default function VistaPuntoVenta() {
         montoDescu: monto4(calculo.descuento),
         ventaNoSuj: monto4(item.tipoIva === 'noSujeto' ? calculo.subtotalDesc : 0),
         ventaExenta: monto4(item.tipoIva === 'exento' ? calculo.subtotalDesc : 0),
-        ventaGravada: monto4(item.tipoIva === 'gravado' ? calculo.subtotalDesc : 0),
+        ventaGravada: monto4(esExportacion || item.tipoIva === 'gravado' ? calculo.subtotalDesc : 0),
         psv: monto4(precioUnitario),
-        noGravado: monto4(item.tipoIva === 'noGravado' ? calculo.subtotalDesc : 0),
+        noGravado: monto4(!esExportacion && item.tipoIva === 'noGravado' ? calculo.subtotalDesc : 0),
         ivaItem: monto4(calculo.iva),
         producto: { id: item.id },
       };
@@ -1053,6 +1156,11 @@ export default function VistaPuntoVenta() {
       condicionOperacion,
       nombreReceptor: datosReceptor.nombre || null,
       correoReceptor: datosReceptor.correo || null,
+      datosExportacion: tipoDte === '11' ? {
+        ...datosExportacion,
+        complemento: datosExportacion.complemento || clienteSeleccionado.direccion?.complemento || '',
+        descActividad: datosExportacion.descActividad || clienteSeleccionado.actividadEconomica?.descActividad || '',
+      } : null,
       cliente: { id: clienteSeleccionado.value },
       comercio: { id: comercio.id },
       detallesVenta,
@@ -1498,11 +1606,24 @@ export default function VistaPuntoVenta() {
             )}
 
             <Button label="Cobrar" icon="pi pi-credit-card" className="premium-btn w-full" style={{ fontSize: '1.05rem' }}
-              onClick={() => { if (carrito.length > 0) { setEfectivoRecibido(null); setEfectivoRecibidoTexto(''); setPlazoValor(1); setPlazoTipo('meses'); setReferenciaPago(''); setErrorVenta(''); setDialogoPago(true); }}}
+              onClick={abrirDialogoCobro}
               disabled={carrito.length === 0 || cargandoCatalogos || !clienteSeleccionado || !comercio || camposFaltantesCreditoFiscal.length > 0} />
           </div>
         </PanelCarrito>
       </div>
+
+      {tipoDte === '11' && (
+        <DialogoExportacionDte11
+          visible={dialogoExportacion}
+          onHide={() => setDialogoExportacion(false)}
+          cliente={clienteSeleccionado}
+          value={datosExportacion}
+          onChange={setDatosExportacion}
+          faltantes={camposFaltantesExportacion}
+          onContinuar={continuarDesdeExportacion}
+          guardando={guardandoVenta}
+        />
+      )}
 
       {/* ===== Product Customization Dialog ===== */}
       <DialogoPuntoVenta header="Personalizar producto" visible={dialogoItem} style={{ width: '580px' }}
@@ -1634,7 +1755,7 @@ export default function VistaPuntoVenta() {
         footer={
           <div className="flex gap-2 justify-content-end">
             <Button label="Cancelar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={cerrarDialogoPago} disabled={guardandoVenta} />
-            <Button label={guardandoVenta ? 'Guardando...' : 'Confirmar Pago'} icon={guardandoVenta ? 'pi pi-spin pi-spinner' : 'pi pi-check'} className="premium-btn" onClick={cobrar} disabled={guardandoVenta || (metodoPago === 'efectivo' && (!efectivoRecibido || efectivoRecibido < resumen.totalCobrar))} />
+            <Button label={guardandoVenta ? 'Guardando...' : 'Confirmar Pago'} icon={guardandoVenta ? 'pi pi-spin pi-spinner' : 'pi pi-check'} className="premium-btn" onClick={cobrar} disabled={guardandoVenta || camposFaltantesExportacion.length > 0 || (metodoPago === 'efectivo' && (!efectivoRecibido || efectivoRecibido < resumen.totalCobrar))} />
           </div>
         }>
         <div className="flex flex-column gap-3 py-2">
@@ -1823,6 +1944,8 @@ export default function VistaPuntoVenta() {
             {resumen.porTipo.noSujeto > 0 && <div className="flex justify-content-between text-sm"><span className="font-semibold" style={{ color: '#f59e0b' }}> No Sujeto</span><span style={{ color: 'var(--text-primary)' }}>${resumen.porTipo.noSujeto.toFixed(2)}</span></div>}
             {resumen.porTipo.noGravado > 0 && <div className="flex justify-content-between text-sm"><span className="font-semibold" style={{ color: 'var(--text-muted)' }}> No Gravado</span><span style={{ color: 'var(--text-primary)' }}>${resumen.porTipo.noGravado.toFixed(2)}</span></div>}
             {resumen.descuentoTotal > 0 && <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>Descuentos</span><span className="font-semibold" style={{ color: '#ef4444' }}>-${resumen.descuentoTotal.toFixed(2)}</span></div>}
+            {tipoDte === '11' && resumen.flete > 0 && <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>Flete</span><span style={{ color: 'var(--text-primary)' }}>${resumen.flete.toFixed(2)}</span></div>}
+            {tipoDte === '11' && resumen.seguro > 0 && <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>Seguro</span><span style={{ color: 'var(--text-primary)' }}>${resumen.seguro.toFixed(2)}</span></div>}
             {resumen.ivaTotal > 0 && <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>IVA (13%)</span><span style={{ color: 'var(--text-muted)' }}>${resumen.ivaTotal.toFixed(2)}</span></div>}
             {resumen.retencion > 0 && <div className="flex justify-content-between text-sm"><span className="font-semibold" style={{ color: '#f59e0b' }}>Retención 1%</span><span className="font-semibold" style={{ color: '#f59e0b' }}>-${resumen.retencion.toFixed(2)}</span></div>}
             {resumen.reteRenta > 0 && <div className="flex justify-content-between text-sm"><span className="font-semibold" style={{ color: '#d97706' }}>Retención renta 10%</span><span className="font-semibold" style={{ color: '#d97706' }}>-${resumen.reteRenta.toFixed(2)}</span></div>}
@@ -1971,7 +2094,7 @@ export default function VistaPuntoVenta() {
                 inputMode="numeric" placeholder="Mínimo 8 dígitos, sin guiones" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
             </div>
             <div className="col-12 md:col-6 flex flex-column gap-1">
-              <label className="premium-label">Correo</label>
+              <label className="premium-label">Correo {tipoDte === '11' && <span style={{ color: '#ef4444' }}>*</span>}</label>
               <InputText value={clienteRapido.correo} onChange={(e) => setClienteRapido({ ...clienteRapido, correo: e.target.value })}
                 placeholder="correo@ejemplo.com" className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
             </div>
@@ -1990,7 +2113,7 @@ export default function VistaPuntoVenta() {
                 placeholder="Seleccione una actividad económica" className="w-full" filter showClear />
             </div>
             <div className="col-12 flex flex-column gap-1">
-              <label className="premium-label">Direccion</label>
+              <label className="premium-label">Direccion {tipoDte === '11' && <span style={{ color: '#ef4444' }}>*</span>}</label>
               <InputText value={clienteRapido.complementoDireccion} onChange={(e) => setClienteRapido({ ...clienteRapido, complementoDireccion: e.target.value })}
                 placeholder="Calle, avenida, numero de casa, colonia..." className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
             </div>
