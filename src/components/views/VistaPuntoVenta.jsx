@@ -74,6 +74,30 @@ const ETIQUETA_IVA = {
   noGravado: { label: 'No Gravado', severity: 'secondary' },
 };
 
+const TIPOS_DTE_SIN_IVA = new Set(['11', '14']);
+
+const esTipoDteSinIva = (tipoDte) => TIPOS_DTE_SIN_IVA.has(tipoDte);
+
+const obtenerPrecioParaDte = (item, tipoDte) =>
+  obtenerPrecioUnitarioMostrado(item, tipoDte !== '03');
+
+const calcularItemParaDte = (item, tipoDte) => {
+  if (!esTipoDteSinIva(tipoDte)) return calcItem(item);
+
+  const precioLiteral = obtenerPrecioParaDte(item, tipoDte);
+  return calcItem({
+    ...item,
+    precio: precioLiteral,
+    precioConIVA: precioLiteral,
+    tipoIva: 'noGravado',
+  });
+};
+
+const obtenerEtiquetaIvaParaDte = (tipoIva, tipoDte) =>
+  esTipoDteSinIva(tipoDte) && tipoIva === 'gravado'
+    ? { label: 'Sin IVA', severity: 'secondary' }
+    : ETIQUETA_IVA[tipoIva];
+
 const COLOR_PAGO = { efectivo: '#10b981', tarjeta: '#6366f1', credito: '#f59e0b', transferencia: '#8b5cf6' };
 
 const ANCHOS_TICKET = [
@@ -181,12 +205,17 @@ export default function VistaPuntoVenta() {
   });
   const [esGranContribuyente, setEsGranContribuyente] = useState(false);
   const [tipoDte, setTipoDte] = useState('01');
+  const documentoSinIva = esTipoDteSinIva(tipoDte);
 
   const [dialogoItem, setDialogoItem] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
   const [precioIncluyeIva, setPrecioIncluyeIva] = useState(false);
 
   const cambiarModoIvaPrecio = (valor) => {
+    if (documentoSinIva) {
+      setPrecioIncluyeIva(false);
+      return;
+    }
     if (valor === precioIncluyeIva) return;
     setPrecioIncluyeIva(valor);
     if (itemEditando) {
@@ -564,6 +593,7 @@ export default function VistaPuntoVenta() {
       nombre: producto.nombre,
       precio: producto.precio,
       precioConIVA: producto.precioConIVA,
+      precioLiteralSinIva: obtenerPrecioParaDte(producto, tipoDte),
       cantidad: 1,
       descuentoTipo: 'porcentaje',
       descuentoValor: 0,
@@ -575,13 +605,34 @@ export default function VistaPuntoVenta() {
 
   const agregarAlCarrito = () => {
     if (!itemEditando) return;
-    const precioFinal = (precioIncluyeIva && itemEditando.tipoIva === 'gravado')
-      ? itemEditando.precio / (1 + TASA_IVA)
-      : itemEditando.precio;
-    const precioConIVA = itemEditando.tipoIva === 'gravado'
-      ? (precioIncluyeIva ? itemEditando.precio : redondear(itemEditando.precio * (1 + TASA_IVA)))
-      : itemEditando.precio;
-    const itemConPrecioBase = { ...itemEditando, precio: precioFinal, precioConIVA };
+    const { precioLiteralSinIva, ...itemSinPrecioTemporal } = itemEditando;
+    const precioLiteral = Math.max(Number(precioLiteralSinIva) || 0, 0);
+    const precioLiteralAnterior = obtenerPrecioUnitarioMostrado(itemEditando, true);
+    const cambioPrecioLiteral = Math.abs(precioLiteral - precioLiteralAnterior) > 0.000001;
+
+    let precioFinal;
+    let precioConIVA;
+
+    if (documentoSinIva) {
+      if (itemEditando.tipoIva === 'gravado') {
+        precioFinal = cambioPrecioLiteral
+          ? precioLiteral / (1 + TASA_IVA)
+          : itemEditando.precio;
+        precioConIVA = precioLiteral;
+      } else {
+        precioFinal = precioLiteral;
+        precioConIVA = precioLiteral;
+      }
+    } else {
+      precioFinal = (precioIncluyeIva && itemEditando.tipoIva === 'gravado')
+        ? itemEditando.precio / (1 + TASA_IVA)
+        : itemEditando.precio;
+      precioConIVA = itemEditando.tipoIva === 'gravado'
+        ? (precioIncluyeIva ? itemEditando.precio : redondear(itemEditando.precio * (1 + TASA_IVA)))
+        : itemEditando.precio;
+    }
+
+    const itemConPrecioBase = { ...itemSinPrecioTemporal, precio: precioFinal, precioConIVA };
     setCarrito(prev => {
       const idx = prev.findIndex(item => item._key === itemEditando._key);
       if (idx >= 0) {
@@ -596,7 +647,10 @@ export default function VistaPuntoVenta() {
   };
 
   const editarItem = (item) => {
-    setItemEditando({ ...item });
+    setItemEditando({
+      ...item,
+      precioLiteralSinIva: obtenerPrecioParaDte(item, tipoDte),
+    });
     setPrecioIncluyeIva(false);
     setDialogoItem(true);
   };
@@ -632,7 +686,7 @@ export default function VistaPuntoVenta() {
     let subtotal = 0, descuentoTotal = 0, ivaTotal = 0, total = 0;
     const porTipo = { gravado: 0, exento: 0, noSujeto: 0, noGravado: 0 };
     carrito.forEach(item => {
-      const c = calcItem(item);
+      const c = calcularItemParaDte(item, tipoDte);
       subtotal += c.subtotal;
       descuentoTotal += c.descuento;
       ivaTotal += c.iva;
@@ -640,7 +694,7 @@ export default function VistaPuntoVenta() {
       porTipo[item.tipoIva] += c.subtotalDesc;
     });
 
-    const aplicaRetencion = esGranContribuyente && porTipo.gravado >= 100;
+    const aplicaRetencion = !documentoSinIva && esGranContribuyente && porTipo.gravado >= 100;
     const retencionVal = aplicaRetencion ? Number((porTipo.gravado * 0.01).toFixed(4)) : 0;
     const retencion = Number(retencionVal.toFixed(2));
     const totalCobrar = Number((total - retencion).toFixed(2));
@@ -655,17 +709,17 @@ export default function VistaPuntoVenta() {
       aplicaRetencion, 
       totalCobrar 
     };
-  }, [carrito, esGranContribuyente]);
+  }, [carrito, documentoSinIva, esGranContribuyente, tipoDte]);
 
   const crearTicketVenta = (ventaGuardada, cambio) => {
     const items = carrito.map(item => {
-      const calculo = calcItem(item);
+      const calculo = calcularItemParaDte(item, tipoDte);
       return {
         key: item._key,
         codigo: item.codigo,
         nombre: item.nombre,
         cantidad: item.cantidad,
-        precio: item.precio,
+        precio: obtenerPrecioParaDte(item, tipoDte),
         descuento: calculo.descuento,
         iva: calculo.iva,
         total: calculo.total,
@@ -809,19 +863,22 @@ export default function VistaPuntoVenta() {
     const condicionOperacion = metodoPago === 'credito' ? 2 : 1;
 
     const detallesVenta = carrito.map((item, index) => {
-      const calculo = calcItem(item);
+      const calculo = calcularItemParaDte(item, tipoDte);
+      const precioUnitario = documentoSinIva
+        ? obtenerPrecioParaDte(item, tipoDte)
+        : item.precio;
       return {
         numItem: index + 1,
         tipoItem: 'BIEN',
         cantidad: monto4(item.cantidad),
         codigo: item.codigo,
         descripcion: item.nombre,
-        precioUni: monto4(item.precio),
+        precioUni: monto4(precioUnitario),
         montoDescu: monto4(calculo.descuento),
         ventaNoSuj: monto4(item.tipoIva === 'noSujeto' ? calculo.subtotalDesc : 0),
         ventaExenta: monto4(item.tipoIva === 'exento' ? calculo.subtotalDesc : 0),
         ventaGravada: monto4(item.tipoIva === 'gravado' ? calculo.subtotalDesc : 0),
-        psv: monto4(item.precio),
+        psv: monto4(precioUnitario),
         noGravado: monto4(item.tipoIva === 'noGravado' ? calculo.subtotalDesc : 0),
         ivaItem: monto4(calculo.iva),
         producto: { id: item.id },
@@ -971,10 +1028,10 @@ export default function VistaPuntoVenta() {
                       </div>
                       <span className="punto-venta__producto-nombre text-sm font-semibold text-center">{producto.nombre}</span>
                       <span className="punto-venta__producto-precio text-sm font-bold">
-                        ${obtenerPrecioUnitarioMostrado(producto, tipoDte !== '03').toFixed(2)}
-                        {tipoDte !== '03' && producto.tipoIva === 'gravado' && <span className="text-2xs font-normal" style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}> (IVA incl.)</span>}
+                        ${obtenerPrecioParaDte(producto, tipoDte).toFixed(2)}
+                        {tipoDte === '01' && producto.tipoIva === 'gravado' && <span className="text-2xs font-normal" style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}> (IVA incl.)</span>}
                       </span>
-                      <Tag value={ETIQUETA_IVA[producto.tipoIva].label} severity={ETIQUETA_IVA[producto.tipoIva].severity} className="punto-venta__producto-etiqueta premium-tag" />
+                      <Tag value={obtenerEtiquetaIvaParaDte(producto.tipoIva, tipoDte).label} severity={obtenerEtiquetaIvaParaDte(producto.tipoIva, tipoDte).severity} className="punto-venta__producto-etiqueta premium-tag" />
                     </button>
                   </div>
                 ))}
@@ -1016,19 +1073,21 @@ export default function VistaPuntoVenta() {
           {!!cliente && (
             <div className="px-3 py-2 flex align-items-center justify-content-between border-bottom-1 surface-border" style={{ background: 'var(--surface-muted)' }}>
               <div className="flex align-items-center gap-2">
-                <i className="pi pi-percentage text-xs" style={{ color: esGranContribuyente ? '#f59e0b' : 'var(--text-icon)' }}></i>
+                <i className="pi pi-percentage text-xs" style={{ color: !documentoSinIva && esGranContribuyente ? '#f59e0b' : 'var(--text-icon)' }}></i>
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Gran Contribuyente</span>
               </div>
               <button 
-                onClick={() => setEsGranContribuyente(!esGranContribuyente)}
-                className="border-none cursor-pointer p-1 px-2 border-round text-xs font-bold transition-all transition-duration-200"
+                onClick={() => { if (!documentoSinIva) setEsGranContribuyente(!esGranContribuyente); }}
+                disabled={documentoSinIva}
+                className={`border-none p-1 px-2 border-round text-xs font-bold transition-all transition-duration-200 ${documentoSinIva ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 style={{
-                  background: esGranContribuyente ? 'rgba(245,158,11,0.15)' : 'var(--surface-hover)',
-                  color: esGranContribuyente ? '#f59e0b' : 'var(--text-muted)',
-                  border: esGranContribuyente ? '1px solid rgba(245,158,11,0.3)' : '1px solid var(--surface-border-light)'
+                  background: !documentoSinIva && esGranContribuyente ? 'rgba(245,158,11,0.15)' : 'var(--surface-hover)',
+                  color: !documentoSinIva && esGranContribuyente ? '#f59e0b' : 'var(--text-muted)',
+                  border: !documentoSinIva && esGranContribuyente ? '1px solid rgba(245,158,11,0.3)' : '1px solid var(--surface-border-light)',
+                  opacity: documentoSinIva ? 0.75 : 1,
                 }}
               >
-                {esGranContribuyente ? 'Retención Activa' : 'Desactivada'}
+                {documentoSinIva ? 'Sin retención' : esGranContribuyente ? 'Retención Activa' : 'Desactivada'}
               </button>
             </div>
           )}
@@ -1068,7 +1127,8 @@ export default function VistaPuntoVenta() {
             ) : (
               <div className="flex flex-column gap-2">
                 {carrito.map(item => {
-                  const c = calcItem(item);
+                  const c = calcularItemParaDte(item, tipoDte);
+                  const etiquetaIva = obtenerEtiquetaIvaParaDte(item.tipoIva, tipoDte);
                   return (
                     <div key={item._key} className="p-2 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
                       <div className="flex align-items-center gap-2">
@@ -1076,7 +1136,7 @@ export default function VistaPuntoVenta() {
                           <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{item.nombre}</span>
                         </div>
                         <div className="flex align-items-center gap-1" style={{ flexShrink: 0 }}>
-                          <Tag value={ETIQUETA_IVA[item.tipoIva].label} severity={ETIQUETA_IVA[item.tipoIva].severity} style={{ fontSize: '0.55rem', padding: '0 0.4rem', height: '16px' }} />
+                          <Tag value={etiquetaIva.label} severity={etiquetaIva.severity} style={{ fontSize: '0.55rem', padding: '0 0.4rem', height: '16px' }} />
                           <span className="font-bold text-sm" style={{ color: c.iva > 0 ? '#6366f1' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>${c.total.toFixed(2)}</span>
                           <button onClick={() => quitarDelCarrito(item._key)} className="flex align-items-center justify-content-center border-circle border-none cursor-pointer p-0" style={{ width: '20px', height: '20px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontSize: '0.55rem', flexShrink: 0 }}
                             onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.25)'}
@@ -1096,8 +1156,8 @@ export default function VistaPuntoVenta() {
                             onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-border-light)'}>+</button>
                         </div>
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          × ${obtenerPrecioUnitarioMostrado(item, tipoDte !== '03').toFixed(2)}
-                          {tipoDte !== '03' && item.tipoIva === 'gravado' && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}> c/IVA</span>}
+                          × ${obtenerPrecioParaDte(item, tipoDte).toFixed(2)}
+                          {tipoDte === '01' && item.tipoIva === 'gravado' && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}> c/IVA</span>}
                         </span>
                         {item.descuentoValor > 0 && <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>−{item.descuentoTipo === 'porcentaje' ? `${item.descuentoValor}%` : `$${item.descuentoValor}`}</span>}
                         <button onClick={() => editarItem(item)} className="border-none bg-transparent cursor-pointer p-0 flex align-items-center text-xs" style={{ color: '#6366f1', marginLeft: 'auto' }}>
@@ -1203,13 +1263,20 @@ export default function VistaPuntoVenta() {
           </div>
         }>
         {itemEditando && (() => {
-          const basePrice = (precioIncluyeIva && itemEditando.tipoIva === 'gravado')
-            ? itemEditando.precio / (1 + TASA_IVA)
+          const precioUnitarioEditor = documentoSinIva
+            ? Math.max(Number(itemEditando.precioLiteralSinIva) || 0, 0)
             : itemEditando.precio;
+          const basePrice = (!documentoSinIva && precioIncluyeIva && itemEditando.tipoIva === 'gravado')
+            ? itemEditando.precio / (1 + TASA_IVA)
+            : precioUnitarioEditor;
           const sub = basePrice * itemEditando.cantidad;
-          const d = itemEditando.descuentoTipo === 'porcentaje' ? sub * (itemEditando.descuentoValor || 0) / 100 : (itemEditando.descuentoValor || 0);
+          const descuentoSolicitado = itemEditando.descuentoTipo === 'porcentaje'
+            ? sub * Math.max(Number(itemEditando.descuentoValor) || 0, 0) / 100
+            : Math.max(Number(itemEditando.descuentoValor) || 0, 0);
+          const d = Math.min(descuentoSolicitado, sub);
           const subtotalDesc = sub - d;
-          const iva = itemEditando.tipoIva === 'gravado' ? redondear(subtotalDesc * 0.13) : 0;
+          const iva = !documentoSinIva && itemEditando.tipoIva === 'gravado' ? redondear(subtotalDesc * TASA_IVA) : 0;
+          const totalItem = redondear(subtotalDesc + iva);
           return (
             <div className="flex flex-column gap-3" style={{ maxHeight: '420px', overflowY: 'auto', overflowX: 'hidden' }}>
               <div className="flex flex-column gap-1">
@@ -1222,16 +1289,26 @@ export default function VistaPuntoVenta() {
                 <div className="flex-1 flex flex-column gap-1">
                   <div className="flex justify-content-between align-items-center">
                     <label className="premium-label">Precio unitario</label>
-                    <div className="flex border-1 surface-border border-round-lg overflow-hidden" style={{ height: '22px' }}>
-                      <button type="button" onClick={() => cambiarModoIvaPrecio(false)}
-                        className="border-none cursor-pointer px-2 text-2xs font-bold transition-all transition-duration-150"
-                        style={{ background: !precioIncluyeIva ? '#6366f1' : 'var(--card-bg)', color: !precioIncluyeIva ? '#fff' : 'var(--text-muted)', fontSize: '0.62rem' }}>Sin IVA</button>
-                      <button type="button" onClick={() => cambiarModoIvaPrecio(true)}
-                        className="border-none cursor-pointer px-2 text-2xs font-bold transition-all transition-duration-150"
-                        style={{ background: precioIncluyeIva ? '#6366f1' : 'var(--card-bg)', color: precioIncluyeIva ? '#fff' : 'var(--text-muted)', fontSize: '0.62rem' }}>Con IVA</button>
-                    </div>
+                    {documentoSinIva ? (
+                      <div className="flex align-items-center gap-1 px-2 border-round-lg font-bold" style={{ height: '22px', background: 'rgba(100,116,139,0.14)', color: '#64748b', fontSize: '0.62rem' }}>
+                        <i className="pi pi-check-circle" style={{ fontSize: '0.62rem' }}></i>
+                        Sin IVA
+                      </div>
+                    ) : (
+                      <div className="flex border-1 surface-border border-round-lg overflow-hidden" style={{ height: '22px' }}>
+                        <button type="button" onClick={() => cambiarModoIvaPrecio(false)}
+                          className="border-none cursor-pointer px-2 text-2xs font-bold transition-all transition-duration-150"
+                          style={{ background: !precioIncluyeIva ? '#6366f1' : 'var(--card-bg)', color: !precioIncluyeIva ? '#fff' : 'var(--text-muted)', fontSize: '0.62rem' }}>Sin IVA</button>
+                        <button type="button" onClick={() => cambiarModoIvaPrecio(true)}
+                          className="border-none cursor-pointer px-2 text-2xs font-bold transition-all transition-duration-150"
+                          style={{ background: precioIncluyeIva ? '#6366f1' : 'var(--card-bg)', color: precioIncluyeIva ? '#fff' : 'var(--text-muted)', fontSize: '0.62rem' }}>Con IVA</button>
+                      </div>
+                    )}
                   </div>
-                  <InputNumber value={itemEditando.precio} locale="en-US" onValueChange={(e) => setItemEditando({ ...itemEditando, precio: e.value || 0 })}
+                  <InputNumber value={precioUnitarioEditor} locale="en-US" onValueChange={(e) => setItemEditando({
+                    ...itemEditando,
+                    ...(documentoSinIva ? { precioLiteralSinIva: e.value || 0 } : { precio: e.value || 0 }),
+                  })}
                     min={0} className="w-full" inputStyle={{ borderRadius: '10px', padding: '0.65rem 1rem' }} onFocus={(e) => e.target.select()} />
                 </div>
                 <div className="flex-1 flex flex-column gap-1">
@@ -1251,7 +1328,7 @@ export default function VistaPuntoVenta() {
                         background: itemEditando.tipoIva === t ? `${t === 'gravado' ? '#6366f1' : t === 'exento' ? '#10b981' : t === 'noSujeto' ? '#f59e0b' : '#64748b'}` : 'var(--surface-hover)',
                         color: itemEditando.tipoIva === t ? '#fff' : 'var(--text-secondary)'
                       }}>
-                      {ETIQUETA_IVA[t].label}
+                      {obtenerEtiquetaIvaParaDte(t, tipoDte).label}
                     </button>
                   ))}
                 </div>
@@ -1282,13 +1359,13 @@ export default function VistaPuntoVenta() {
                   <div className="flex justify-content-between text-sm">
                     <span style={{ color: 'var(--text-muted)' }}>
                       {itemEditando.cantidad} x ${basePrice.toFixed(2)}
-                      {precioIncluyeIva && itemEditando.tipoIva === 'gravado' && <span style={{ fontSize: '0.72rem', opacity: 0.75 }}> (${itemEditando.precio.toFixed(2)} c/IVA)</span>}
+                      {!documentoSinIva && precioIncluyeIva && itemEditando.tipoIva === 'gravado' && <span style={{ fontSize: '0.72rem', opacity: 0.75 }}> (${itemEditando.precio.toFixed(2)} c/IVA)</span>}
                     </span>
                     <span style={{ color: 'var(--text-primary)' }}>${sub.toFixed(2)}</span>
                   </div>
                   {d > 0 && <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>Descuento</span><span className="font-semibold" style={{ color: '#ef4444' }}>-${d.toFixed(2)}</span></div>}
-                  <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>IVA ({itemEditando.tipoIva === 'gravado' ? '13%' : '0%'})</span><span style={{ color: 'var(--text-muted)' }}>${iva.toFixed(2)}</span></div>
-                  <div className="flex justify-content-between font-bold pt-1 border-top-1 surface-border"><span style={{ color: 'var(--text-primary)' }}>Total item</span><span className="text-lg" style={{ color: '#6366f1' }}>${(subtotalDesc + iva).toFixed(2)}</span></div>
+                  <div className="flex justify-content-between text-sm"><span style={{ color: 'var(--text-muted)' }}>IVA ({!documentoSinIva && itemEditando.tipoIva === 'gravado' ? '13%' : '0%'})</span><span style={{ color: 'var(--text-muted)' }}>${iva.toFixed(2)}</span></div>
+                  <div className="flex justify-content-between font-bold pt-1 border-top-1 surface-border"><span style={{ color: 'var(--text-primary)' }}>Total item</span><span className="text-lg" style={{ color: '#6366f1' }}>${totalItem.toFixed(2)}</span></div>
                 </div>
               </div>
             </div>
