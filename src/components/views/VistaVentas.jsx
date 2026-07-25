@@ -7,6 +7,12 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import api from '../../services/api';
+import DialogoNotaVenta from './ventas/DialogoNotaVenta';
+import {
+  construirPayloadNota,
+  normalizarDetallesNota,
+  validarNota,
+} from './ventas/reglasNotasVenta';
 
 const etiquetaTipoDte = (tipoDte) => ({
   '01': '01 - Factura',
@@ -23,6 +29,19 @@ const nombreCliente = (cliente) => {
 
 const obtenerSelloRecepcion = (venta) => String(venta?.selloRecepcion || '').trim();
 const obtenerSelloAnulacion = (venta) => String(venta?.selloAnulacion || '').trim();
+
+const puedeEmitirNota = (venta) => (
+  venta?.tipoCodigo === '03'
+  && Boolean(obtenerSelloRecepcion(venta))
+  && !obtenerSelloAnulacion(venta)
+);
+
+const motivoNotaNoDisponible = (venta) => {
+  if (venta?.tipoCodigo !== '03') return 'Las notas solo pueden emitirse sobre un DTE 03.';
+  if (!obtenerSelloRecepcion(venta)) return 'El DTE debe tener sello de recepción.';
+  if (obtenerSelloAnulacion(venta)) return 'No se puede emitir una nota sobre un DTE anulado.';
+  return '';
+};
 
 const obtenerEstadoVenta = (venta) => {
   const selloRecepcion = obtenerSelloRecepcion(venta);
@@ -100,7 +119,9 @@ export default function VistaVentas() {
   const tiposDte = [
     { label: 'Todos', value: '' },
     { label: '01 - Factura', value: '01' },
-    { label: '03 - Crédito Fiscal', value: '03' }
+    { label: '03 - Crédito Fiscal', value: '03' },
+    { label: '05 - Nota de Crédito', value: '05' },
+    { label: '06 - Nota de Débito', value: '06' }
   ];
 
   const [filtroTipo, setFiltroTipo] = useState('');
@@ -119,6 +140,14 @@ export default function VistaVentas() {
   const [consultaCargando, setConsultaCargando] = useState(false);
   const [respuestaConsulta, setRespuestaConsulta] = useState(null);
   const [errorConsulta, setErrorConsulta] = useState('');
+  const [notaVisible, setNotaVisible] = useState(false);
+  const [tipoDteNota, setTipoDteNota] = useState('05');
+  const [ventaOrigenNota, setVentaOrigenNota] = useState(null);
+  const [lineasNota, setLineasNota] = useState([]);
+  const [notaCargando, setNotaCargando] = useState(false);
+  const [notaEmitiendo, setNotaEmitiendo] = useState(false);
+  const [errorCargaNota, setErrorCargaNota] = useState('');
+  const [errorEmisionNota, setErrorEmisionNota] = useState('');
 
   const ventasFiltradas = ventas.filter(v => {
     if (filtroTipo && v.tipoCodigo !== filtroTipo) return false;
@@ -139,10 +168,111 @@ export default function VistaVentas() {
   };
 
   const confirmarAccion = (accion) => {
+    if (accion === 'Nota Créd/Déb' && !puedeEmitirNota(ventaSeleccionada)) {
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'Nota no disponible',
+        detail: motivoNotaNoDisponible(ventaSeleccionada),
+        life: 5000
+      });
+      return;
+    }
     setAccionConfirmar(accion);
     setEmailDestino('');
     setTipoNota('Crédito');
     setConfirmacionVisible(true);
+  };
+
+  const limpiarNota = () => {
+    setVentaOrigenNota(null);
+    setLineasNota([]);
+    setErrorCargaNota('');
+    setErrorEmisionNota('');
+  };
+
+  const cerrarNota = () => {
+    if (notaEmitiendo) return;
+    setNotaVisible(false);
+    limpiarNota();
+  };
+
+  const obtenerMensajeErrorApi = (error, mensajePorDefecto) => {
+    const data = error.response?.data;
+    if (typeof data === 'string') return data;
+    return data?.message || data?.mensaje || data?.error || error.message || mensajePorDefecto;
+  };
+
+  const cargarVentaParaNota = async (venta = ventaSeleccionada, tipoDte = tipoDteNota) => {
+    if (!venta?.id) return;
+
+    setTipoDteNota(tipoDte);
+    setNotaVisible(true);
+    setNotaCargando(true);
+    setErrorCargaNota('');
+    setErrorEmisionNota('');
+    setVentaOrigenNota(null);
+    setLineasNota([]);
+
+    try {
+      const respuesta = await api.get(`/Ventas/${venta.id}`);
+      const ventaCompleta = respuesta.data;
+      if (!ventaCompleta || typeof ventaCompleta !== 'object') {
+        throw new Error('El servidor no devolvió la venta solicitada.');
+      }
+      if (!Array.isArray(ventaCompleta.detallesVenta) || ventaCompleta.detallesVenta.length === 0) {
+        throw new Error('La venta no contiene detalles disponibles para preparar la nota.');
+      }
+
+      setVentaOrigenNota(ventaCompleta);
+      setLineasNota(normalizarDetallesNota(ventaCompleta.detallesVenta));
+    } catch (error) {
+      console.error('Error al cargar la venta para la nota:', error);
+      setErrorCargaNota(obtenerMensajeErrorApi(error, 'No se pudo obtener la venta original.'));
+    } finally {
+      setNotaCargando(false);
+    }
+  };
+
+  const emitirNota = async () => {
+    if (!ventaOrigenNota || notaEmitiendo) return;
+
+    const validacion = validarNota(lineasNota, tipoDteNota);
+    if (!validacion.esValida) {
+      setErrorEmisionNota(validacion.mensajeGeneral || 'Revise las líneas seleccionadas antes de emitir.');
+      return;
+    }
+
+    setNotaEmitiendo(true);
+    setErrorEmisionNota('');
+    try {
+      const payload = construirPayloadNota({
+        ventaOrigen: ventaOrigenNota,
+        lineas: lineasNota,
+        tipoDte: tipoDteNota,
+      });
+      const respuesta = await api.post('/Ventas', payload);
+      const notaEmitida = respuesta.data || {};
+      const sello = obtenerSelloRecepcion(notaEmitida);
+      const detalle = [
+        notaEmitida.numeroControl && `Control: ${notaEmitida.numeroControl}`,
+        sello && `Sello: ${sello}`,
+      ].filter(Boolean).join(' · ') || 'La nota fue recibida correctamente.';
+
+      toast.current?.show({
+        severity: 'success',
+        summary: `DTE ${tipoDteNota} emitido`,
+        detail: detalle,
+        life: 7000
+      });
+      setNotaVisible(false);
+      limpiarNota();
+      await cargarVentas();
+    } catch (error) {
+      console.error('Error al emitir la nota:', error);
+      setErrorEmisionNota(obtenerMensajeErrorApi(error, 'No fue posible emitir la nota.'));
+    } finally {
+      setNotaEmitiendo(false);
+    }
   };
 
   const ejecutarAccion = async () => {
@@ -170,6 +300,11 @@ export default function VistaVentas() {
         enlace.click();
         enlace.remove();
         URL.revokeObjectURL(url);
+      } else if (accionConfirmar === 'Nota Créd/Déb') {
+        const tipoDte = tipoNota === 'Crédito' ? '05' : '06';
+        setDialogoVisible(false);
+        setConfirmacionVisible(false);
+        await cargarVentaParaNota(ventaSeleccionada, tipoDte);
       }
     } catch (error) {
       const mensaje = error.response?.data?.message || error.response?.data?.error || 'No fue posible completar la acción.';
@@ -245,7 +380,7 @@ export default function VistaVentas() {
     'Enviar Correo': { titulo: 'Enviar por Correo', cuerpo: '¿Desea enviar este DTE al correo electrónico del cliente?', icono: 'pi pi-envelope', color: '#8b5cf6', btn: 'Sí, Enviar' },
     'Ver PDF': { titulo: 'Ver PDF', cuerpo: '¿Desea abrir el documento PDF de este DTE?', icono: 'pi pi-file-pdf', color: '#3b82f6', btn: 'Sí, Abrir' },
     'Descargar JSON': { titulo: 'Descargar JSON', cuerpo: '¿Desea descargar el archivo JSON de este DTE?', icono: 'pi pi-download', color: '#f59e0b', btn: 'Sí, Descargar' },
-    'Nota Créd/Déb': { titulo: 'Generar Nota', cuerpo: '¿Desea generar una nota de crédito o débito para este DTE?', icono: 'pi pi-copy', color: '#10b981', btn: 'Sí, Generar' }
+    'Nota Créd/Déb': { titulo: 'Preparar Nota', cuerpo: 'Seleccione el tipo de nota que desea emitir para este DTE.', icono: 'pi pi-copy', color: '#10b981', btn: 'Continuar' }
   };
 
   const acciones = [
@@ -280,17 +415,36 @@ export default function VistaVentas() {
 
   const pieDialogo = ventaSeleccionada && (
     <div className="ventas-modal-actions flex flex-nowrap justify-content-between w-full">
-      {acciones.map((accion) => (
-        <button key={accion.id} className="flex flex-column align-items-center gap-1 p-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 min-w-0" style={{ background: 'transparent' }}
-          onClick={() => accion.id === 'Consultar Hacienda' ? consultarHacienda(ventaSeleccionada) : confirmarAccion(accion.id)}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-muted)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
-          <div className="flex align-items-center justify-content-center border-circle" style={{ width: '38px', height: '38px', background: `${accion.color}20` }}>
-            <i className={`${accion.icono}`} style={{ color: accion.color, fontSize: '1rem' }}></i>
-          </div>
-          <span className="text-xs font-semibold text-center" style={{ color: 'var(--text-secondary)', lineHeight: '1.1', fontSize: '0.65rem' }}>{accion.label}</span>
-        </button>
-      ))}
+      {acciones.map((accion) => {
+        const esAccionNota = accion.id === 'Nota Créd/Déb';
+        const deshabilitada = esAccionNota && !puedeEmitirNota(ventaSeleccionada);
+        return (
+          <button
+            key={accion.id}
+            className="flex flex-column align-items-center gap-1 p-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 min-w-0"
+            style={{ background: 'transparent', opacity: deshabilitada ? 0.42 : 1 }}
+            title={deshabilitada ? motivoNotaNoDisponible(ventaSeleccionada) : accion.label}
+            disabled={deshabilitada}
+            onClick={() => accion.id === 'Consultar Hacienda' ? consultarHacienda(ventaSeleccionada) : confirmarAccion(accion.id)}
+            onMouseEnter={(e) => {
+              if (deshabilitada) return;
+              e.currentTarget.style.background = 'var(--surface-muted)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div className="flex align-items-center justify-content-center border-circle" style={{ width: '38px', height: '38px', background: `${accion.color}20` }}>
+              <i className={`${accion.icono}`} style={{ color: accion.color, fontSize: '1rem' }}></i>
+            </div>
+            <span className="text-xs font-semibold text-center" style={{ color: 'var(--text-secondary)', lineHeight: '1.1', fontSize: '0.65rem' }}>{accion.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -304,12 +458,14 @@ export default function VistaVentas() {
   const pieConfirmacion = accionConfirmar && (
     <div className="flex flex-column sm:flex-row gap-2 justify-content-end">
       <Button label="No" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setConfirmacionVisible(false)} />
-      {(accionConfirmar === 'Enviar Correo' || accionConfirmar === 'Nota Créd/Déb')
-        ? <Button label={mensajesConfirmacion[accionConfirmar].btn} icon={mensajesConfirmacion[accionConfirmar].icono} className="p-button-sm" style={{ background: mensajesConfirmacion[accionConfirmar].color, borderColor: mensajesConfirmacion[accionConfirmar].color }}
-            disabled={accionCargando || (accionConfirmar === 'Enviar Correo' && !emailDestino)}
-            onClick={ejecutarAccion} />
-        : <Button label={accionCargando ? 'Procesando...' : mensajesConfirmacion[accionConfirmar].btn} icon={accionCargando ? 'pi pi-spin pi-spinner' : mensajesConfirmacion[accionConfirmar].icono} className="p-button-sm" style={{ background: mensajesConfirmacion[accionConfirmar].color, borderColor: mensajesConfirmacion[accionConfirmar].color }} onClick={ejecutarAccion} disabled={accionCargando} />
-      }
+      <Button
+        label={accionCargando ? 'Procesando...' : mensajesConfirmacion[accionConfirmar].btn}
+        icon={accionCargando ? 'pi pi-spin pi-spinner' : mensajesConfirmacion[accionConfirmar].icono}
+        className="p-button-sm"
+        style={{ background: mensajesConfirmacion[accionConfirmar].color, borderColor: mensajesConfirmacion[accionConfirmar].color }}
+        disabled={accionCargando || (accionConfirmar === 'Enviar Correo' && !emailDestino)}
+        onClick={ejecutarAccion}
+      />
     </div>
   );
 
@@ -454,6 +610,12 @@ export default function VistaVentas() {
             </div>
 
             <p className="text-sm m-0" style={{ color: 'var(--text-muted)' }}>Seleccione una acción para este documento:</p>
+            {!puedeEmitirNota(ventaSeleccionada) && (
+              <div className="flex align-items-start gap-2 p-2 border-round-lg" style={{ color: '#b45309', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.22)' }}>
+                <i className="pi pi-info-circle mt-1 text-xs"></i>
+                <span className="text-xs">{motivoNotaNoDisponible(ventaSeleccionada)}</span>
+              </div>
+            )}
           </div>
         )}
       </Dialog>
@@ -461,6 +623,21 @@ export default function VistaVentas() {
       <Dialog header={accionConfirmar ? mensajesConfirmacion[accionConfirmar].titulo : ''} visible={confirmacionVisible} style={{ width: '440px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '640px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConfirmacionVisible(false)} footer={pieConfirmacion} draggable={false} resizable={false}>
         {cuerpoConfirmacion()}
       </Dialog>
+
+      <DialogoNotaVenta
+        visible={notaVisible}
+        tipoDte={tipoDteNota}
+        ventaOrigen={ventaOrigenNota}
+        lineas={lineasNota}
+        setLineas={setLineasNota}
+        cargando={notaCargando}
+        errorCarga={errorCargaNota}
+        errorEmision={errorEmisionNota}
+        emitiendo={notaEmitiendo}
+        onReintentar={() => cargarVentaParaNota(ventaSeleccionada, tipoDteNota)}
+        onEmitir={emitirNota}
+        onHide={cerrarNota}
+      />
 
       <Dialog header="Consulta Hacienda" visible={consultaVisible} style={{ width: '560px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '760px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConsultaVisible(false)} footer={pieConsulta} draggable={false} resizable={false}>
         <div className="flex flex-column gap-3" style={{ maxWidth: '100%', overflow: 'hidden' }}>

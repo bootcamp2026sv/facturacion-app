@@ -1,0 +1,651 @@
+.nota-venta-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.nota-venta-dialog .p-dialog-content {
+  padding: 1.25rem 1.5rem 1.5rem;
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+}
+
+.nota-venta-dialog .p-dialog-footer {
+  padding: 0.9rem 1.5rem;
+}
+
+.nota-venta {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.nota-venta__estado {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+.nota-venta__spinner,
+.nota-venta__estado-icono {
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 54px;
+  border-radius: 16px;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  font-size: 1.4rem;
+}
+
+.nota-venta__estado p,
+.nota-venta__estado-contenido p {
+  margin: 0 0 0.25rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.nota-venta__estado span,
+.nota-venta__estado-contenido span {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.nota-venta__estado--error .nota-venta__estado-icono {
+  color: #e11d48;
+  background: rgba(225, 29, 72, 0.1);
+}
+
+.nota-venta__origen {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.6fr) minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-light);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at right top, rgba(99, 102, 241, 0.09), transparent 36%),
+    var(--surface-muted);
+}
+
+.nota-venta__origen-icono {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 10px 24px -12px rgba(99, 102, 241, 0.8);
+}
+
+.nota-venta-dialog--05 .nota-venta__origen-icono {
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.nota-venta-dialog--06 .nota-venta__origen-icono {
+  background: linear-gradient(135deg, #e11d48, #f97316);
+}
+
+.nota-venta__eyebrow {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nota-venta__origen-principal {
+  min-width: 0;
+}
+
+.nota-venta__origen-principal h3 {
+  margin: 0.25rem 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.nota-venta__origen-principal p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.nota-venta__origen-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.nota-venta__origen-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.nota-venta__origen-meta span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.nota-venta__origen-meta strong {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.nota-venta__tipo {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+}
+
+.nota-venta__tipo span {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.nota-venta__tipo strong {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.nota-venta__tipo--05 {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.13);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.nota-venta__tipo--06 {
+  color: #be123c;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.28);
+}
+
+.nota-venta__instruccion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.nota-venta__instruccion > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nota-venta__instruccion > div i {
+  color: #6366f1;
+}
+
+.nota-venta__contribuyente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.nota-venta__contribuyente--activo {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.nota-venta__error-emision {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(244, 63, 94, 0.26);
+  border-radius: 12px;
+  color: #be123c;
+  background: rgba(244, 63, 94, 0.08);
+}
+
+.nota-venta__error-emision div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.nota-venta__error-emision span {
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+
+.nota-venta__tabla-contenedor {
+  overflow-x: auto;
+  border: 1px solid var(--surface-border-light);
+  border-radius: 14px;
+}
+
+.nota-venta__tabla {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.nota-venta__tabla thead th {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--surface-border-light);
+  color: var(--text-muted);
+  background: var(--table-header-bg);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.nota-venta__tabla tbody td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--surface-border-light);
+  background: var(--card-bg-solid);
+  vertical-align: middle;
+  transition: background-color 0.2s ease;
+}
+
+.nota-venta__tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.nota-venta__tabla tbody tr:hover td {
+  background: var(--table-row-hover);
+}
+
+.nota-venta__tabla tbody .nota-venta__fila--seleccionada td {
+  background: rgba(99, 102, 241, 0.055);
+}
+
+.nota-venta__seleccion {
+  width: 42px;
+  text-align: center;
+}
+
+.nota-venta__descripcion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 190px;
+  cursor: pointer;
+}
+
+.nota-venta__descripcion strong {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+}
+
+.nota-venta__descripcion span {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+}
+
+.nota-venta__tributacion {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--nota-tributacion-color) 30%, transparent);
+  border-radius: 999px;
+  color: var(--nota-tributacion-color);
+  background: color-mix(in srgb, var(--nota-tributacion-color) 10%, transparent);
+  font-size: 0.65rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.nota-venta__input {
+  width: 132px;
+  padding: 0.55rem 0.6rem !important;
+  border-radius: 9px !important;
+  font-size: 0.78rem !important;
+  text-align: right;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.nota-venta__input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.13) !important;
+}
+
+.nota-venta__linea-invalida {
+  display: block;
+  max-width: 230px;
+  margin-top: 0.25rem;
+  color: #e11d48;
+  font-size: 0.65rem;
+  line-height: 1.25;
+}
+
+.nota-venta__tarjetas {
+  display: none;
+}
+
+.nota-venta__resumen {
+  padding: 1rem;
+  border: 1px solid var(--surface-border-light);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(99, 102, 241, 0.055), transparent 60%),
+    var(--surface-muted);
+}
+
+.nota-venta__resumen-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.nota-venta__resumen-titulo h4 {
+  margin: 0.2rem 0 0;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.nota-venta__pendiente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #b45309;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.nota-venta__resumen-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.7fr);
+  gap: 1.25rem;
+}
+
+.nota-venta__desglose {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 1.5rem;
+}
+
+.nota-venta__desglose > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.nota-venta__desglose strong {
+  color: var(--text-primary);
+}
+
+.nota-venta__desglose .nota-venta__retencion,
+.nota-venta__desglose .nota-venta__retencion strong {
+  color: #b45309;
+}
+
+.nota-venta__total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--surface-border-light);
+}
+
+.nota-venta__total span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.nota-venta__total strong {
+  margin-top: 0.15rem;
+  color: #6366f1;
+  font-size: 1.75rem;
+}
+
+.nota-venta-dialog--05 .nota-venta__total strong {
+  color: #059669;
+}
+
+.nota-venta-dialog--06 .nota-venta__total strong {
+  color: #e11d48;
+}
+
+.nota-venta__total small {
+  margin-top: 0.25rem;
+  color: #b45309;
+  font-size: 0.65rem;
+}
+
+.nota-venta__footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.nota-venta__footer-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.nota-venta__footer-hint i {
+  color: #10b981;
+}
+
+.nota-venta__footer-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+@media (max-width: 860px) {
+  .nota-venta-dialog .p-dialog-content {
+    padding: 1rem;
+  }
+
+  .nota-venta__origen {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .nota-venta__origen-meta {
+    grid-column: 2 / -1;
+  }
+
+  .nota-venta__tabla-contenedor {
+    display: none;
+  }
+
+  .nota-venta__tarjetas {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .nota-venta__tarjeta {
+    padding: 0.9rem;
+    border: 1px solid var(--surface-border-light);
+    border-radius: 14px;
+    background: var(--card-bg-solid);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .nota-venta__tarjeta--seleccionada {
+    border-color: rgba(99, 102, 241, 0.38);
+    box-shadow: 0 8px 24px -18px rgba(99, 102, 241, 0.75);
+  }
+
+  .nota-venta__tarjeta-cabecera {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .nota-venta__tarjeta-cabecera label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    cursor: pointer;
+  }
+
+  .nota-venta__tarjeta-cabecera label strong {
+    color: var(--text-primary);
+    font-size: 0.82rem;
+  }
+
+  .nota-venta__tarjeta-cabecera label span {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+  }
+
+  .nota-venta__tarjeta-original {
+    margin: 0.65rem 0;
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    font-size: 0.7rem;
+  }
+
+  .nota-venta__tarjeta-campos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .nota-venta__tarjeta-campos > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .nota-venta__tarjeta-campos label {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .nota-venta__input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .nota-venta-dialog .p-dialog-header {
+    padding: 1rem;
+  }
+
+  .nota-venta-dialog .p-dialog-footer {
+    padding: 0.8rem 1rem;
+  }
+
+  .nota-venta__origen {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    padding: 0.8rem;
+  }
+
+  .nota-venta__origen-icono {
+    width: 42px;
+    height: 42px;
+  }
+
+  .nota-venta__origen-meta {
+    grid-column: 1 / -1;
+  }
+
+  .nota-venta__tipo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .nota-venta__tipo strong {
+    font-size: 1.2rem;
+  }
+
+  .nota-venta__instruccion {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nota-venta__tarjeta-cabecera {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .nota-venta__tarjeta-cabecera .nota-venta__tributacion {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .nota-venta__tarjeta-campos,
+  .nota-venta__resumen-grid,
+  .nota-venta__desglose {
+    grid-template-columns: 1fr;
+  }
+
+  .nota-venta__total {
+    align-items: flex-start;
+    padding: 0.9rem 0 0;
+    border-top: 1px solid var(--surface-border-light);
+    border-left: 0;
+  }
+
+  .nota-venta__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .nota-venta__footer-hint {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .nota-venta__footer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .nota-venta__footer-actions .p-button {
+    justify-content: center;
+  }
+}
+
+[data-theme='dark'] .nota-venta__tipo--05 {
+  color: #6ee7b7;
+}
+
+[data-theme='dark'] .nota-venta__tipo--06 {
+  color: #fda4af;
+}
+
+[data-theme='dark'] .nota-venta__contribuyente--activo,
+[data-theme='dark'] .nota-venta__retencion,
+[data-theme='dark'] .nota-venta__pendiente {
+  color: #fbbf24;
+}
