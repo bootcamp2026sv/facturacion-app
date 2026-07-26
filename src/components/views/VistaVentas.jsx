@@ -15,11 +15,27 @@ import {
 } from './ventas/reglasNotasVenta';
 
 const etiquetaTipoDte = (tipoDte) => ({
-  '01': '01 - Factura',
-  '03': '03 - Credito Fiscal',
-  '05': '05 - Nota de Credito',
-  '06': '06 - Nota de Debito'
+  '01': '01 CF',
+  '03': '03 CCF',
+  '05': '05 NC',
+  '06': '06 ND',
+  '14': '14 SE',
+  '11': '11 EXP'
 }[tipoDte] || tipoDte || 'DTE');
+
+const nombreTipoDte = (tipoDte) => ({
+  '01': 'Factura de Consumidor Final',
+  '03': 'Comprobante de Crédito Fiscal',
+  '05': 'Nota de Crédito',
+  '06': 'Nota de Débito',
+  '14': 'Factura de Sujeto Excluido',
+  '11': 'Factura de Exportación'
+}[tipoDte] || 'Documento Tributario Electrónico');
+
+const obtenerCorrelativoNumeroControl = (numeroControl) => {
+  const correlativo = String(numeroControl || '').split('-').pop() || '';
+  return correlativo.replace(/^0+(?=\d)/, '') || '—';
+};
 
 const nombreCliente = (cliente) => {
   if (!cliente) return 'Consumidor final';
@@ -118,10 +134,12 @@ export default function VistaVentas() {
 
   const tiposDte = [
     { label: 'Todos', value: '' },
-    { label: '01 - Factura', value: '01' },
-    { label: '03 - Crédito Fiscal', value: '03' },
-    { label: '05 - Nota de Crédito', value: '05' },
-    { label: '06 - Nota de Débito', value: '06' }
+    { label: '01 CF', value: '01' },
+    { label: '03 CCF', value: '03' },
+    { label: '05 NC', value: '05' },
+    { label: '06 ND', value: '06' },
+    { label: '14 SE', value: '14' },
+    { label: '11 EXP', value: '11' }
   ];
 
   const [filtroTipo, setFiltroTipo] = useState('');
@@ -396,6 +414,16 @@ export default function VistaVentas() {
     <Button icon="pi pi-ellipsis-h" className="p-button-rounded p-button-text premium-btn-secondary" onClick={() => abrirAcciones(fila)} />
   );
 
+  const tipoDteTemplate = (fila) => (
+    <span
+      title={nombreTipoDte(fila.tipoCodigo)}
+      aria-label={`${fila.tipo}: ${nombreTipoDte(fila.tipoCodigo)}`}
+      style={{ cursor: 'help', textDecoration: 'underline dotted', textUnderlineOffset: '3px' }}
+    >
+      {fila.tipo}
+    </span>
+  );
+
   const estadoVentaTemplate = (fila) => {
     const estado = obtenerEstadoVenta(fila);
     return (
@@ -559,9 +587,9 @@ export default function VistaVentas() {
 
           <div className="premium-table ventas-table">
             <DataTable value={ventasFiltradas} paginator rows={5} size="small" loading={cargando} emptyMessage={errorCarga ? "No se pudieron cargar las ventas" : "No hay ventas registradas"} responsiveLayout="stack" breakpoint="1024px" sortField="fechaOrden" sortOrder={-1}>
-              <Column field="fecha" sortField="fechaOrden" header="Fecha de Emisión" body={(f) => new Date(f.fecha).toLocaleString()} sortable></Column>
-              <Column field="tipo" header="Tipo DTE" sortable></Column>
-              <Column field="numeroControl" header="Número de Control" sortable body={(f) => f.numeroControl.split('-').pop()}></Column>
+              <Column field="fecha" sortField="fechaOrden" header="Fecha de Emisión" body={(f) => new Date(f.fecha).toLocaleDateString()} sortable></Column>
+              <Column field="tipo" header="Tipo DTE" body={tipoDteTemplate} sortable></Column>
+              <Column field="numeroControl" header="Número de Control" sortable body={(f) => obtenerCorrelativoNumeroControl(f.numeroControl)}></Column>
               <Column field="cliente" header="Cliente" sortable></Column>
               <Column field="total" header="Total" body={(f) => `$${f.total.toFixed(2)}`} sortable></Column>
               <Column header="Estado" body={estadoVentaTemplate}></Column>
