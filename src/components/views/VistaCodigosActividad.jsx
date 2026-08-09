@@ -7,8 +7,10 @@ import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
 import { InputSwitch } from 'primereact/inputswitch';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function VistaCodigosActividad() {
+  const { puede } = useAuth();
   const [codigosActividad, setCodigosActividad] = useState([]);
 
   // Estado del formulario
@@ -115,6 +117,7 @@ export default function VistaCodigosActividad() {
   };
 
   const plantillaAcciones = (rowData) => {
+    if (!puede('CATALOGOS_ADMINISTRAR')) return null;
     return (
       <div className="flex gap-2">
         <Button
@@ -218,7 +221,7 @@ export default function VistaCodigosActividad() {
                   </div>
 
                   <div className="flex gap-2 mt-1">
-                    <Button type="submit" label={editando ? "Guardar" : "Registrar Actividad"} icon={editando ? "pi pi-check" : "pi pi-briefcase"} className="premium-btn flex-grow-1" disabled={cargando} />
+                    {puede('CATALOGOS_ADMINISTRAR') && <Button type="submit" label={editando ? "Guardar" : "Registrar Actividad"} icon={editando ? "pi pi-check" : "pi pi-briefcase"} className="premium-btn flex-grow-1" disabled={cargando} />}
                     {editando && (
                       <Button type="button" label="Cancelar" icon="pi pi-times" className="p-button-secondary p-button-outlined" onClick={cancelarEdicion} disabled={cargando} />
                     )}

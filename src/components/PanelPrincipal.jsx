@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "primereact/button";
+import { Toast } from "primereact/toast";
 import { useTema } from "../context/ThemeContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import VistaInicio from "./views/VistaInicio";
@@ -15,6 +16,8 @@ import VistaComercios from "./views/VistaComercios";
 import VistaGeografia from "./views/VistaGeografia";
 import VistaControlSistema from "./views/VistaControlSistema";
 import VistaCatalogosExportacion from "./views/VistaCatalogosExportacion";
+import { filtrarMenuPorPermisos, primeraVistaAutorizada, puedeVerVista } from "../utils/permisos.js";
+import { onForbidden } from "../services/api.js";
 
 const VISTA_ACTIVA_STORAGE_KEY = "panel.vistaActiva";
 const VISTAS_VALIDAS = [
@@ -39,14 +42,18 @@ const obtenerVistaInicial = () => {
 };
 
 export default function PanelPrincipal() {
+  const toast = useRef(null);
   const [estaColapsado, setEstaColapsado] = useState(false);
   const [vistaActiva, setVistaActiva] = useState(obtenerVistaInicial);
   const { tema, alternarTema } = useTema();
   const { usuario, logout } = useAuth();
 
   useEffect(() => {
-    localStorage.setItem(VISTA_ACTIVA_STORAGE_KEY, vistaActiva);
-  }, [vistaActiva]);
+    onForbidden((mensaje) => toast.current?.show({
+      severity: "warn", summary: "Acceso restringido", detail: mensaje || "No tiene permiso", life: 4000,
+    }));
+    return () => onForbidden(null);
+  }, []);
 
   const ELEMENTOS_MENU = [
     {
@@ -129,11 +136,21 @@ export default function PanelPrincipal() {
     },
   ];
 
+  const elementosMenuAutorizados = filtrarMenuPorPermisos(ELEMENTOS_MENU, usuario);
+  const vistaAutorizada = puedeVerVista(usuario, vistaActiva)
+    ? vistaActiva
+    : primeraVistaAutorizada(ELEMENTOS_MENU, usuario);
+
+  useEffect(() => {
+    localStorage.setItem(VISTA_ACTIVA_STORAGE_KEY, vistaAutorizada);
+  }, [vistaAutorizada]);
+
   const elementoVistaActual =
-    ELEMENTOS_MENU.find((item) => item.id === vistaActiva) || ELEMENTOS_MENU[0];
+    elementosMenuAutorizados.find((item) => item.id === vistaAutorizada) || elementosMenuAutorizados[0];
 
   return (
     <div className="flex h-screen overflow-hidden surface-ground">
+      <Toast ref={toast} position="top-right" />
       {/* 1. SIDEBAR */}
       <aside
         className="flex flex-column h-screen sticky top-0 border-right-1 premium-sidebar transition-all transition-duration-200"
@@ -163,8 +180,8 @@ export default function PanelPrincipal() {
 
         {/* Sidebar Navigation */}
         <nav className="flex-1 py-3 px-2 flex flex-column gap-1 overflow-y-auto">
-          {ELEMENTOS_MENU.map((item) => {
-            const esActivo = vistaActiva === item.id;
+          {elementosMenuAutorizados.map((item) => {
+            const esActivo = vistaAutorizada === item.id;
             return (
               <button
                 key={item.id}
@@ -199,7 +216,7 @@ export default function PanelPrincipal() {
                 Sesión de:
               </p>
               <p className="margin-0 text-sm font-bold text-0 text-ellipsis overflow-hidden white-space-nowrap">
-                {usuario?.username || "Administrador"}
+                {usuario?.nombreUsuario || "Usuario"}
               </p>
             </div>
           )}
@@ -253,7 +270,7 @@ export default function PanelPrincipal() {
             <div className="flex align-items-center gap-2 surface-ground p-2 border-round-xl">
               <i className="pi pi-user text-primary"></i>
               <span className="text-sm font-medium text-secondary">
-                {usuario?.username || "admin"}
+                {usuario?.nombreUsuario || "Usuario"}
               </span>
             </div>
           </div>
@@ -261,7 +278,7 @@ export default function PanelPrincipal() {
 
         {/* Active View Container */}
         <main
-          className={`p-4 flex-1 min-h-0 ${vistaActiva === "pos-clasico" ? "overflow-hidden" : "overflow-auto"}`}
+          className={`p-4 flex-1 min-h-0 ${vistaAutorizada === "pos-clasico" ? "overflow-hidden" : "overflow-auto"}`}
         >
           {elementoVistaActual.componente}
         </main>

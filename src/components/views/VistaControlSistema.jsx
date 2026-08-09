@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
+import { Password } from 'primereact/password';
 import { Dropdown } from 'primereact/dropdown';
+import { Checkbox } from 'primereact/checkbox';
 import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -10,11 +12,13 @@ import { Tag } from 'primereact/tag';
 import { Message } from 'primereact/message';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
+import { useAuth } from '../../context/AuthContext';
+import { auditoriaService, rolesService, usuariosService } from '../../services/rbac';
 import {
   actualizarUltimoCorrelativo,
   listarCorrelativos,
   obtenerCorrelativo,
-  registrarCorrelativo
+  registrarCorrelativo,
 } from '../../services/correlativos';
 import {
   AMBIENTES_CORRELATIVO,
@@ -25,83 +29,121 @@ import {
   MAXIMO_CORRELATIVO_DTE,
   obtenerEtiquetaAmbiente,
   obtenerEtiquetaTipoDte,
-  obtenerMensajeErrorApi,
   TIPOS_DTE_CORRELATIVO,
-  validarFormularioCorrelativo
+  validarFormularioCorrelativo,
 } from '../../utils/correlativos';
+
+const usuarioVacio = { id: null, nombreUsuario: '', correo: '', contrasena: '', rolId: null };
+const rolVacio = { id: null, nombre: '', descripcion: '', permisos: new Set(), editable: true };
+
+const mensajeApi = (error, respaldo) =>
+  error?.response?.data?.message || error?.response?.data?.error || respaldo;
 
 export default function VistaControlSistema() {
   const toast = useRef(null);
-
-  // Datos de prueba de la pestaña de usuarios
-  const [usuarios, setUsuarios] = useState([
-    { id: 1, nombreUsuario: 'admin', correo: 'admin@facturacion.com', habilitado: true, rol: 'Administrador' },
-    { id: 2, nombreUsuario: 'facturador1', correo: 'facturas@facturacion.com', habilitado: true, rol: 'Facturador' }
-  ]);
+  const cargaInicialRealizada = useRef(false);
+  const { usuario: sesion, puede } = useAuth();
 
   const [correlativos, setCorrelativos] = useState([]);
-  const [cargandoCorrelativos, setCargandoCorrelativos] = useState(true);
+  const [cargandoCorrelativos, setCargandoCorrelativos] = useState(false);
   const [detalleCorrelativoId, setDetalleCorrelativoId] = useState(null);
   const [dialogoCorrelativoVisible, setDialogoCorrelativoVisible] = useState(false);
   const [guardandoCorrelativo, setGuardandoCorrelativo] = useState(false);
   const [formularioCorrelativo, setFormularioCorrelativo] = useState(crearFormularioCorrelativoInicial);
   const [erroresCorrelativo, setErroresCorrelativo] = useState({});
 
-  // Estado del formulario
-  const [nuevoUsuario, setNuevoUsuario] = useState({ nombreUsuario: '', correo: '', contrasena: '', rol: 'Facturador' });
-  const [successUsuario, setSuccessUsuario] = useState(false);
+  const [usuarios, setUsuarios] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
+  const [dialogoUsuario, setDialogoUsuario] = useState(false);
+  const [formUsuario, setFormUsuario] = useState(usuarioVacio);
+  const [guardandoUsuario, setGuardandoUsuario] = useState(false);
+  const [usuarioPassword, setUsuarioPassword] = useState(null);
+  const [nuevaPassword, setNuevaPassword] = useState('');
 
-  const rolesOpciones = [
-    { label: 'Administrador', value: 'Administrador' },
-    { label: 'Facturador', value: 'Facturador' },
-    { label: 'Auditor', value: 'Auditor' }
-  ];
+  const [gruposPermisos, setGruposPermisos] = useState([]);
+  const [dialogoRol, setDialogoRol] = useState(false);
+  const [formRol, setFormRol] = useState(rolVacio);
+  const [guardandoRol, setGuardandoRol] = useState(false);
 
-  const cargarCorrelativos = async (mostrarError = true) => {
+  const [auditoria, setAuditoria] = useState([]);
+  const [totalAuditoria, setTotalAuditoria] = useState(0);
+  const [paginaAuditoria, setPaginaAuditoria] = useState(0);
+  const [filtroAuditoria, setFiltroAuditoria] = useState({ tipo: '', actor: '' });
+  const [cargandoAuditoria, setCargandoAuditoria] = useState(false);
+
+  const notificarError = useCallback((error, respaldo) => {
+    toast.current?.show({ severity: 'error', summary: 'No se pudo completar', detail: mensajeApi(error, respaldo), life: 5000 });
+  }, []);
+
+  const cargarCorrelativos = useCallback(async (mostrarError = true) => {
+    if (!puede('CORRELATIVOS_VER')) return;
     setCargandoCorrelativos(true);
     try {
       setCorrelativos(await listarCorrelativos());
     } catch (error) {
-      console.error('Error al cargar correlativos:', error);
-      if (mostrarError) {
-        toast.current?.show({
-          severity: 'error',
-          summary: 'No se pudieron cargar',
-          detail: obtenerMensajeErrorApi(error, 'No fue posible obtener los correlativos configurados.'),
-          life: 4500
-        });
-      }
+      if (mostrarError) notificarError(error, 'No fue posible obtener los correlativos configurados.');
     } finally {
       setCargandoCorrelativos(false);
     }
-  };
+  }, [notificarError, puede]);
+
+  const cargarRoles = useCallback(async () => {
+    if (!puede('ROLES_VER') && !puede('USUARIOS_VER')) return;
+    try {
+      setRoles(await rolesService.listar());
+    } catch (error) {
+      notificarError(error, 'No fue posible cargar los roles.');
+    }
+  }, [notificarError, puede]);
+
+  const cargarUsuarios = useCallback(async () => {
+    if (!puede('USUARIOS_VER')) return;
+    setCargandoUsuarios(true);
+    try {
+      setUsuarios(await usuariosService.listar());
+    } catch (error) {
+      notificarError(error, 'No fue posible cargar los usuarios.');
+    } finally {
+      setCargandoUsuarios(false);
+    }
+  }, [notificarError, puede]);
+
+  const cargarPermisos = useCallback(async () => {
+    if (!puede('ROLES_VER')) return;
+    try {
+      setGruposPermisos(await rolesService.permisos());
+    } catch (error) {
+      notificarError(error, 'No fue posible cargar la matriz de permisos.');
+    }
+  }, [notificarError, puede]);
+
+  const cargarAuditoria = useCallback(async (pagina = 0) => {
+    if (!puede('AUDITORIA_VER')) return;
+    setCargandoAuditoria(true);
+    try {
+      const datos = await auditoriaService.listar({ page: pagina, size: 20, ...filtroAuditoria });
+      setAuditoria(datos.content || []);
+      setTotalAuditoria(datos.totalElements || 0);
+      setPaginaAuditoria(pagina);
+    } catch (error) {
+      notificarError(error, 'No fue posible cargar la auditoría.');
+    } finally {
+      setCargandoAuditoria(false);
+    }
+  }, [filtroAuditoria, notificarError, puede]);
 
   useEffect(() => {
-    let vistaActiva = true;
-
-    listarCorrelativos()
-      .then((lista) => {
-        if (vistaActiva) setCorrelativos(lista);
-      })
-      .catch((error) => {
-        console.error('Error al cargar correlativos:', error);
-        if (vistaActiva) {
-          toast.current?.show({
-            severity: 'error',
-            summary: 'No se pudieron cargar',
-            detail: obtenerMensajeErrorApi(error, 'No fue posible obtener los correlativos configurados.'),
-            life: 4500
-          });
-        }
-      })
-      .finally(() => {
-        if (vistaActiva) setCargandoCorrelativos(false);
-      });
-
-    return () => {
-      vistaActiva = false;
-    };
-  }, []);
+    if (cargaInicialRealizada.current) return;
+    cargaInicialRealizada.current = true;
+    queueMicrotask(() => {
+      cargarCorrelativos();
+      cargarRoles();
+      cargarUsuarios();
+      cargarPermisos();
+      cargarAuditoria(0);
+    });
+  }, [cargarCorrelativos, cargarRoles, cargarUsuarios, cargarPermisos, cargarAuditoria]);
 
   const abrirNuevoCorrelativo = () => {
     setFormularioCorrelativo(crearFormularioCorrelativoInicial());
@@ -112,18 +154,11 @@ export default function VistaControlSistema() {
   const abrirEdicionCorrelativo = async (fila) => {
     setDetalleCorrelativoId(fila.id);
     try {
-      const correlativoActual = await obtenerCorrelativo(fila.id);
-      setFormularioCorrelativo(convertirCorrelativoAFormulario(correlativoActual));
+      setFormularioCorrelativo(convertirCorrelativoAFormulario(await obtenerCorrelativo(fila.id)));
       setErroresCorrelativo({});
       setDialogoCorrelativoVisible(true);
     } catch (error) {
-      console.error('Error al obtener el correlativo:', error);
-      toast.current?.show({
-        severity: 'error',
-        summary: 'No se pudo abrir',
-        detail: obtenerMensajeErrorApi(error, 'No fue posible obtener el detalle del correlativo.'),
-        life: 4500
-      });
+      notificarError(error, 'No fue posible obtener el correlativo.');
     } finally {
       setDetalleCorrelativoId(null);
     }
@@ -134,27 +169,11 @@ export default function VistaControlSistema() {
     setErroresCorrelativo((actual) => ({ ...actual, [campo]: undefined }));
   };
 
-  const cambiarCodigoCorrelativo = (campo, valor) => {
-    const codigo = valor.replace(/[^a-z0-9]/gi, '').slice(0, 4).toUpperCase();
-    cambiarCampoCorrelativo(campo, codigo);
-  };
-
-  const cerrarDialogoCorrelativo = () => {
-    if (guardandoCorrelativo) return;
-    setDialogoCorrelativoVisible(false);
-    setErroresCorrelativo({});
-  };
-
   const guardarCorrelativo = async (evento) => {
     evento.preventDefault();
     const esEdicion = formularioCorrelativo.id !== null;
     const errores = validarFormularioCorrelativo(formularioCorrelativo, esEdicion);
-
-    if (Object.keys(errores).length > 0) {
-      setErroresCorrelativo(errores);
-      return;
-    }
-
+    if (Object.keys(errores).length) return setErroresCorrelativo(errores);
     setGuardandoCorrelativo(true);
     try {
       if (esEdicion) {
@@ -162,432 +181,290 @@ export default function VistaControlSistema() {
       } else {
         await registrarCorrelativo(construirSolicitudCorrelativo(formularioCorrelativo));
       }
-
       await cargarCorrelativos(false);
       setDialogoCorrelativoVisible(false);
-      toast.current?.show({
-        severity: 'success',
-        summary: esEdicion ? 'Correlativo actualizado' : 'Correlativo registrado',
-        detail: esEdicion
-          ? 'El último valor utilizado se actualizó correctamente.'
-          : 'La nueva serie DTE quedó disponible para emitir documentos.',
-        life: 3500
-      });
+      toast.current?.show({ severity: 'success', summary: esEdicion ? 'Correlativo actualizado' : 'Correlativo registrado', life: 3000 });
     } catch (error) {
-      console.error('Error al guardar el correlativo:', error);
-      toast.current?.show({
-        severity: 'error',
-        summary: 'No se pudo guardar',
-        detail: obtenerMensajeErrorApi(error, esEdicion
-          ? 'No fue posible actualizar el correlativo.'
-          : 'No fue posible registrar la serie. Verifique que no esté duplicada.'),
-        life: 5000
-      });
+      notificarError(error, 'No fue posible guardar el correlativo.');
     } finally {
       setGuardandoCorrelativo(false);
     }
   };
 
-  // Descomentar para conectar con la API
-  /*
-  useEffect(() => {
-    const cargarUsuarios = async () => {
-      try {
-        const respuesta = await api.get('/usuarios');
-        const listaUsuarios = (respuesta.data || []).map(u => ({
-          id: u.id,
-          nombreUsuario: u.nombreUsuario || u.username,
-          correo: u.correo,
-          habilitado: u.habilitado !== undefined ? u.habilitado : true,
-          rol: u.roles && u.roles[0] ? u.roles[0].nombre : 'Facturador'
-        }));
-        setUsuarios(listaUsuarios);
-      } catch (error) {
-        console.error("Error al cargar usuarios de la API:", error);
-      }
-    };
-    cargarUsuarios();
-  }, []);
-  */
-
-  const guardarUsuario = async (e) => {
-    e.preventDefault();
-    if (!nuevoUsuario.nombreUsuario || !nuevoUsuario.correo || !nuevoUsuario.contrasena) return;
-
-    // Descomentar para guardar en la API
-    /*
-    try {
-      const payload = {
-        nombreUsuario: nuevoUsuario.nombreUsuario,
-        correo: nuevoUsuario.correo,
-        contrasena: nuevoUsuario.contrasena,
-        habilitado: true
-      };
-      const respuesta = await api.post('/usuarios', payload);
-      const usuarioCreado = respuesta.data;
-      
-      setUsuarios(prev => [...prev, {
-        id: usuarioCreado.id,
-        nombreUsuario: usuarioCreado.nombreUsuario,
-        correo: usuarioCreado.correo,
-        habilitado: usuarioCreado.habilitado !== undefined ? usuarioCreado.habilitado : true,
-        rol: nuevoUsuario.rol
-      }]);
-      setNuevoUsuario({ nombreUsuario: '', correo: '', contrasena: '', rol: 'Facturador' });
-      setSuccessUsuario(true);
-      setTimeout(() => setSuccessUsuario(false), 2000);
-      return;
-    } catch (error) {
-      console.error("Error al guardar usuario en la API:", error);
-      return;
-    }
-    */
-
-    // Simulación local (comentar al conectar API)
-    const nuevo = {
-      id: Date.now(),
-      nombreUsuario: nuevoUsuario.nombreUsuario,
-      correo: nuevoUsuario.correo,
-      habilitado: true,
-      rol: nuevoUsuario.rol
-    };
-    setUsuarios([...usuarios, nuevo]);
-    setNuevoUsuario({ nombreUsuario: '', correo: '', contrasena: '', rol: 'Facturador' });
-    setSuccessUsuario(true);
-    setTimeout(() => setSuccessUsuario(false), 2000);
+  const abrirUsuario = (fila = null) => {
+    setFormUsuario(fila ? {
+      id: fila.id, nombreUsuario: fila.nombreUsuario, correo: fila.correo,
+      contrasena: '', rolId: fila.rol?.id,
+    } : { ...usuarioVacio, rolId: roles.find((rol) => rol.nombre === 'VENDEDOR')?.id || roles[0]?.id });
+    setDialogoUsuario(true);
   };
 
-  const tipoDteTemplate = (fila) => (
-    <div className="correlativo-tipo-cell">
-      <span className="correlativo-tipo-codigo">{fila.tipoDte}</span>
-      <span>{obtenerEtiquetaTipoDte(fila.tipoDte).replace(/^\d{2} · /, '')}</span>
+  const guardarUsuario = async (evento) => {
+    evento.preventDefault();
+    setGuardandoUsuario(true);
+    try {
+      const datos = { nombreUsuario: formUsuario.nombreUsuario.trim(), correo: formUsuario.correo.trim(), rolId: formUsuario.rolId };
+      if (formUsuario.id) await usuariosService.editar(formUsuario.id, datos);
+      else await usuariosService.crear({ ...datos, contrasena: formUsuario.contrasena });
+      await cargarUsuarios();
+      await cargarRoles();
+      setDialogoUsuario(false);
+      toast.current?.show({ severity: 'success', summary: formUsuario.id ? 'Usuario actualizado' : 'Usuario creado', life: 3000 });
+    } catch (error) {
+      notificarError(error, 'No fue posible guardar el usuario.');
+    } finally {
+      setGuardandoUsuario(false);
+    }
+  };
+
+  const cambiarEstadoUsuario = async (fila) => {
+    try {
+      await usuariosService.cambiarEstado(fila.id, !fila.habilitado);
+      await cargarUsuarios();
+      toast.current?.show({ severity: 'success', summary: fila.habilitado ? 'Usuario deshabilitado' : 'Usuario habilitado', life: 3000 });
+    } catch (error) {
+      notificarError(error, 'No fue posible cambiar el estado.');
+    }
+  };
+
+  const restablecerPassword = async (evento) => {
+    evento.preventDefault();
+    try {
+      await usuariosService.restablecerContrasena(usuarioPassword.id, nuevaPassword);
+      setUsuarioPassword(null);
+      setNuevaPassword('');
+      toast.current?.show({ severity: 'success', summary: 'Contraseña restablecida', detail: 'Las sesiones anteriores quedaron revocadas.', life: 3500 });
+    } catch (error) {
+      notificarError(error, 'No fue posible restablecer la contraseña.');
+    }
+  };
+
+  const abrirRol = (rol = null) => {
+    setFormRol(rol ? { ...rol, permisos: new Set(rol.permisos || []) } : { ...rolVacio, permisos: new Set() });
+    setDialogoRol(true);
+  };
+
+  const alternarPermiso = (codigo, modulo, seleccionado) => {
+    if (!formRol.editable) return;
+    setFormRol((actual) => {
+      const permisos = new Set(actual.permisos);
+      if (seleccionado) {
+        permisos.add(codigo);
+        if (!codigo.endsWith('_VER')) permisos.add(`${modulo}_VER`);
+      } else {
+        permisos.delete(codigo);
+        if (codigo.endsWith('_VER')) {
+          [...permisos].filter((item) => item.startsWith(`${modulo}_`)).forEach((item) => permisos.delete(item));
+        }
+      }
+      return { ...actual, permisos };
+    });
+  };
+
+  const guardarRol = async (evento) => {
+    evento.preventDefault();
+    setGuardandoRol(true);
+    try {
+      const datos = { nombre: formRol.nombre, descripcion: formRol.descripcion, permisos: [...formRol.permisos] };
+      if (formRol.id) await rolesService.editar(formRol.id, datos);
+      else await rolesService.crear(datos);
+      await cargarRoles();
+      setDialogoRol(false);
+      toast.current?.show({ severity: 'success', summary: 'Rol guardado', detail: 'Las sesiones afectadas fueron revocadas.', life: 3500 });
+    } catch (error) {
+      notificarError(error, 'No fue posible guardar el rol.');
+    } finally {
+      setGuardandoRol(false);
+    }
+  };
+
+  const eliminarRol = async (rol) => {
+    try {
+      await rolesService.eliminar(rol.id);
+      await cargarRoles();
+      toast.current?.show({ severity: 'success', summary: 'Rol eliminado', life: 3000 });
+    } catch (error) {
+      notificarError(error, 'Solo pueden eliminarse roles personalizados sin usuarios.');
+    }
+  };
+
+  const opcionesRoles = useMemo(() => roles.map((rol) => ({ label: rol.nombre, value: rol.id })), [roles]);
+  const permisosReservados = (codigo) => codigo.startsWith('USUARIOS_') || codigo.startsWith('ROLES_') || codigo === 'AUDITORIA_VER';
+
+  const accionesUsuario = (fila) => puede('USUARIOS_EDITAR') ? (
+    <div className="flex gap-1 flex-wrap">
+      <Button icon="pi pi-pencil" text rounded tooltip="Editar" onClick={() => abrirUsuario(fila)} />
+      <Button icon="pi pi-key" text rounded severity="secondary" tooltip="Restablecer contraseña" onClick={() => { setUsuarioPassword(fila); setNuevaPassword(''); }} />
+      <Button icon={fila.habilitado ? 'pi pi-ban' : 'pi pi-check'} text rounded severity={fila.habilitado ? 'danger' : 'success'}
+        tooltip={fila.habilitado ? 'Deshabilitar' : 'Habilitar'} disabled={fila.id === sesion?.id} onClick={() => cambiarEstadoUsuario(fila)} />
     </div>
-  );
+  ) : null;
 
-  const ambienteTemplate = (fila) => (
-    <Tag
-      value={obtenerEtiquetaAmbiente(fila.ambiente)}
-      severity={fila.ambiente === '01' ? 'warning' : 'info'}
-      className="premium-tag correlativo-ambiente-tag"
-    />
-  );
-
-  const ultimoValorTemplate = (fila) => (
-    <span className="correlativo-numero">{formatearCorrelativoDte(fila.ultimoValor)}</span>
-  );
-
-  const accionesCorrelativoTemplate = (fila) => (
-    <Button
-      label="Editar"
-      icon="pi pi-pencil"
-      className="p-button-sm p-button-outlined premium-btn-secondary"
-      onClick={() => abrirEdicionCorrelativo(fila)}
-      loading={detalleCorrelativoId === fila.id}
-      disabled={detalleCorrelativoId !== null}
-      aria-label={`Editar correlativo DTE ${fila.tipoDte}`}
-    />
-  );
-
-  const pieDialogoCorrelativo = (
-    <div className="flex justify-content-end gap-2">
-      <Button
-        type="button"
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text premium-btn-secondary"
-        onClick={cerrarDialogoCorrelativo}
-        disabled={guardandoCorrelativo}
-      />
-      <Button
-        type="submit"
-        form="formulario-correlativo"
-        label={formularioCorrelativo.id !== null ? 'Guardar cambio' : 'Registrar correlativo'}
-        icon={formularioCorrelativo.id !== null ? 'pi pi-check' : 'pi pi-plus'}
-        className="premium-btn"
-        loading={guardandoCorrelativo}
-      />
+  const accionesRol = (rol) => (
+    <div className="flex gap-1">
+      <Button icon={rol.editable ? 'pi pi-pencil' : 'pi pi-eye'} text rounded tooltip={rol.editable ? 'Editar' : 'Ver'} onClick={() => abrirRol(rol)} />
+      {puede('ROLES_ELIMINAR') && !rol.sistema && rol.usuarios === 0 && (
+        <Button icon="pi pi-trash" text rounded severity="danger" tooltip="Eliminar" onClick={() => eliminarRol(rol)} />
+      )}
     </div>
   );
 
   return (
-    <div className="p-4 premium-fade-in control-sistema">
+    <div className="p-3 md:p-4 premium-fade-in control-sistema">
       <Toast ref={toast} position="top-right" />
       <div className="mb-4">
-        <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Control y Parámetros del Sistema</h2>
-        <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Gestión de correlativos DTE autorizados y control de accesos.</p>
+        <h2 className="text-3xl font-bold m-0 premium-page-header">Control y parámetros del sistema</h2>
+        <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Configure series DTE y administre accesos con permisos claros por módulo.</p>
       </div>
 
       <div className="premium-surface-card">
         <TabView className="premium-tabs">
-          
-          <TabPanel header="Correlativos DTE" leftIcon="pi pi-hashtag" headerClassName="mr-2">
-            <div className="pt-2">
-              <div className="correlativos-toolbar mb-3">
-                <div>
-                  <div className="flex align-items-center gap-2 flex-wrap">
-                    <h3 className="text-xl font-bold m-0" style={{ color: 'var(--text-primary)' }}>Series configuradas</h3>
-                    {!cargandoCorrelativos && (
-                      <span className="correlativos-total">{correlativos.length}</span>
-                    )}
+          {puede('CORRELATIVOS_VER') && (
+            <TabPanel header="Correlativos DTE" leftIcon="pi pi-hashtag">
+              <div className="pt-3">
+                <div className="correlativos-toolbar mb-3">
+                  <div>
+                    <h3 className="text-xl font-bold m-0">Series configuradas</h3>
+                    <p className="text-sm mt-1 mb-0" style={{ color: 'var(--text-muted)' }}>El incremento ocurre únicamente al emitir un DTE.</p>
                   </div>
-                  <p className="text-sm mt-1 mb-0" style={{ color: 'var(--text-muted)' }}>
-                    Registre las series autorizadas y ajuste el último valor utilizado cuando sea necesario.
-                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button icon="pi pi-refresh" label="Actualizar" outlined onClick={() => cargarCorrelativos()} loading={cargandoCorrelativos} />
+                    {puede('CORRELATIVOS_CREAR') && <Button icon="pi pi-plus" label="Nuevo correlativo" className="premium-btn" onClick={abrirNuevoCorrelativo} />}
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-wrap correlativos-toolbar-actions">
-                  <Button
-                    icon="pi pi-refresh"
-                    label="Actualizar"
-                    className="p-button-outlined premium-btn-secondary"
-                    onClick={() => cargarCorrelativos()}
-                    loading={cargandoCorrelativos}
-                    aria-label="Actualizar lista de correlativos"
-                  />
-                  <Button
-                    icon="pi pi-plus"
-                    label="Nuevo correlativo"
-                    className="premium-btn"
-                    onClick={abrirNuevoCorrelativo}
-                  />
-                </div>
-              </div>
-
-              <div className="premium-table correlativos-table">
-                <DataTable
-                  value={correlativos}
-                  size="small"
-                  loading={cargandoCorrelativos}
-                  emptyMessage="No hay correlativos configurados. Registre la primera serie para comenzar."
-                  scrollable
-                  sortField="tipoDte"
-                  sortOrder={1}
-                >
-                  <Column field="tipoDte" header="Tipo DTE" body={tipoDteTemplate} sortable></Column>
-                  <Column field="ambiente" header="Ambiente" body={ambienteTemplate} sortable></Column>
-                  <Column field="anio" header="Año" sortable></Column>
-                  <Column field="codEstable" header="Establecimiento" className="font-monospace font-semibold"></Column>
-                  <Column field="codPuntoVenta" header="Punto de Venta" className="font-monospace font-semibold"></Column>
-                  <Column field="ultimoValor" header="Último Valor Usado" body={ultimoValorTemplate} sortable></Column>
-                  <Column header="Acciones" body={accionesCorrelativoTemplate} frozen alignFrozen="right"></Column>
+                <DataTable value={correlativos} loading={cargandoCorrelativos} size="small" paginator rows={10}
+                  emptyMessage="No hay correlativos configurados" className="premium-table" scrollable>
+                  <Column field="tipoDte" header="Tipo DTE" body={(fila) => <strong>{obtenerEtiquetaTipoDte(fila.tipoDte)}</strong>} />
+                  <Column field="ambiente" header="Ambiente" body={(fila) => <Tag value={obtenerEtiquetaAmbiente(fila.ambiente)} severity={fila.ambiente === '01' ? 'warning' : 'info'} />} />
+                  <Column field="anio" header="Año" />
+                  <Column field="codEstable" header="Establecimiento" />
+                  <Column field="codPuntoVenta" header="Punto de venta" />
+                  <Column field="ultimoValor" header="Último utilizado" body={(fila) => <span className="correlativo-numero">{formatearCorrelativoDte(fila.ultimoValor)}</span>} />
+                  {puede('CORRELATIVOS_EDITAR') && <Column header="Acciones" body={(fila) => <Button icon="pi pi-pencil" label="Editar" size="small" outlined loading={detalleCorrelativoId === fila.id} onClick={() => abrirEdicionCorrelativo(fila)} />} />}
                 </DataTable>
               </div>
-            </div>
-          </TabPanel>
+            </TabPanel>
+          )}
 
-          <TabPanel header="Gestión de Usuarios" leftIcon="pi pi-users">
-            <div className="grid pt-3">
-              
-              <div className="col-12 md:col-4">
-                <div className="premium-card-static">
-                  <div className="p-card p-component">
-                    <div className="p-card-title" style={{ padding: '1.25rem 1.25rem 0' }}>Nuevo Usuario</div>
-                    <div className="p-card-content" style={{ padding: '1.25rem' }}>
-                      <div className="p-fluid">
-                        {successUsuario && (
-                          <Message severity="success" text="Usuario registrado exitosamente." className="mb-3 w-full" />
-                        )}
-                        <form onSubmit={guardarUsuario} className="flex flex-column gap-3">
-                          <div className="flex flex-column gap-1">
-                            <label className="premium-label">Nombre de Usuario</label>
-                            <div className="premium-input-group">
-                              <i className="pi pi-user premium-input-icon"></i>
-                              <InputText value={nuevoUsuario.nombreUsuario} onChange={(e) => setNuevoUsuario({...nuevoUsuario, nombreUsuario: e.target.value})} placeholder="Ej. jperez" required />
-                            </div>
-                          </div>
-                          <div className="flex flex-column gap-1">
-                            <label className="premium-label">Correo Electrónico</label>
-                            <div className="premium-input-group">
-                              <i className="pi pi-envelope premium-input-icon"></i>
-                              <InputText type="email" value={nuevoUsuario.correo} onChange={(e) => setNuevoUsuario({...nuevoUsuario, correo: e.target.value})} placeholder="jperez@correo.com" required />
-                            </div>
-                          </div>
-                          <div className="flex flex-column gap-1">
-                            <label className="premium-label">Contraseña</label>
-                            <div className="premium-input-group">
-                              <i className="pi pi-lock premium-input-icon"></i>
-                              <InputText type="password" value={nuevoUsuario.contrasena} onChange={(e) => setNuevoUsuario({...nuevoUsuario, contrasena: e.target.value})} placeholder="Ingrese contraseña..." required />
-                            </div>
-                          </div>
-                          <div className="flex flex-column gap-1">
-                            <label className="premium-label">Rol asignado</label>
-                            <div className="premium-input-group">
-                              <i className="pi pi-shield premium-input-icon"></i>
-                              <Dropdown value={nuevoUsuario.rol} options={rolesOpciones} onChange={(e) => setNuevoUsuario({...nuevoUsuario, rol: e.value})} />
-                            </div>
-                          </div>
-                          <Button type="submit" label="Registrar Cuenta" icon="pi pi-user-plus" className="premium-btn mt-1" />
-                        </form>
-                      </div>
-                    </div>
-                  </div>
+          {puede('USUARIOS_VER') && (
+            <TabPanel header="Usuarios" leftIcon="pi pi-users">
+              <div className="pt-3">
+                <div className="flex justify-content-between align-items-start gap-3 mb-3 flex-wrap">
+                  <div><h3 className="text-xl font-bold m-0">Cuentas del sistema</h3><p className="text-sm mt-1 mb-0" style={{ color: 'var(--text-muted)' }}>Cada persona tiene un único rol. Las cuentas se deshabilitan; no se eliminan.</p></div>
+                  {puede('USUARIOS_CREAR') && <Button icon="pi pi-user-plus" label="Nuevo usuario" className="premium-btn" onClick={() => abrirUsuario()} />}
                 </div>
+                <DataTable value={usuarios} loading={cargandoUsuarios} paginator rows={10} size="small" className="premium-table" emptyMessage="No hay usuarios">
+                  <Column field="nombreUsuario" header="Usuario" body={(fila) => <div><strong>{fila.nombreUsuario}</strong>{fila.id === sesion?.id && <small className="block text-primary">Sesión actual</small>}</div>} />
+                  <Column field="correo" header="Correo" />
+                  <Column header="Rol" body={(fila) => <Tag value={fila.rol?.nombre || 'Sin rol'} severity="info" />} />
+                  <Column header="Estado" body={(fila) => <Tag value={fila.bloqueado ? 'Bloqueado' : fila.habilitado ? 'Activo' : 'Inactivo'} severity={fila.bloqueado ? 'warning' : fila.habilitado ? 'success' : 'danger'} />} />
+                  {puede('USUARIOS_EDITAR') && <Column header="Acciones" body={accionesUsuario} />}
+                </DataTable>
               </div>
+            </TabPanel>
+          )}
 
-              <div className="col-12 md:col-8">
-                <div className="premium-table">
-                  <DataTable value={usuarios} size="small" emptyMessage="No hay usuarios registrados">
-                    <Column field="nombreUsuario" header="Usuario" className="font-bold"></Column>
-                    <Column field="correo" header="Correo Electrónico"></Column>
-                    <Column field="rol" header="Rol"></Column>
-                    <Column field="habilitado" header="Estado" body={(f) => <Tag severity={f.habilitado ? "success" : "danger"} value={f.habilitado ? 'Activo' : 'Inactivo'} className="premium-tag"></Tag>}></Column>
-                  </DataTable>
+          {puede('ROLES_VER') && (
+            <TabPanel header="Roles y permisos" leftIcon="pi pi-shield">
+              <div className="pt-3">
+                <div className="flex justify-content-between align-items-start gap-3 mb-3 flex-wrap">
+                  <div><h3 className="text-xl font-bold m-0">Roles del sistema</h3><p className="text-sm mt-1 mb-0" style={{ color: 'var(--text-muted)' }}>Editar, crear o eliminar activa automáticamente el permiso para ver.</p></div>
+                  {puede('ROLES_CREAR') && <Button icon="pi pi-plus" label="Nuevo rol" className="premium-btn" onClick={() => abrirRol()} />}
                 </div>
+                <DataTable value={roles} size="small" className="premium-table" emptyMessage="No hay roles">
+                  <Column field="nombre" header="Rol" body={(rol) => <div><strong>{rol.nombre}</strong>{rol.nombre === 'ADMIN' && <small className="block text-primary">Protegido</small>}</div>} />
+                  <Column field="descripcion" header="Descripción" />
+                  <Column field="usuarios" header="Usuarios" />
+                  <Column header="Permisos" body={(rol) => <Tag value={`${rol.permisos?.length || 0} asignados`} severity="info" />} />
+                  <Column header="Acciones" body={accionesRol} />
+                </DataTable>
               </div>
+            </TabPanel>
+          )}
 
-            </div>
-          </TabPanel>
-
+          {puede('AUDITORIA_VER') && (
+            <TabPanel header="Auditoría" leftIcon="pi pi-history">
+              <div className="pt-3">
+                <div className="flex gap-2 align-items-end flex-wrap mb-3">
+                  <div><label className="premium-label block mb-1">Evento</label><InputText value={filtroAuditoria.tipo} onChange={(e) => setFiltroAuditoria((f) => ({ ...f, tipo: e.target.value }))} placeholder="Ej. LOGIN" /></div>
+                  <div><label className="premium-label block mb-1">Actor</label><InputText value={filtroAuditoria.actor} onChange={(e) => setFiltroAuditoria((f) => ({ ...f, actor: e.target.value }))} placeholder="Usuario" /></div>
+                  <Button icon="pi pi-search" label="Filtrar" onClick={() => cargarAuditoria(0)} />
+                </div>
+                <DataTable value={auditoria} loading={cargandoAuditoria} lazy paginator rows={20} totalRecords={totalAuditoria}
+                  first={paginaAuditoria * 20} onPage={(e) => cargarAuditoria(e.page)} size="small" className="premium-table" emptyMessage="No hay eventos">
+                  <Column field="creadoEn" header="Fecha" body={(fila) => new Date(fila.creadoEn).toLocaleString('es-SV')} />
+                  <Column field="tipo" header="Evento" body={(fila) => <strong>{fila.tipo}</strong>} />
+                  <Column field="resultado" header="Resultado" body={(fila) => <Tag value={fila.resultado} severity={fila.resultado === 'EXITO' ? 'success' : 'warning'} />} />
+                  <Column field="actor" header="Actor" />
+                  <Column field="objetivo" header="Objetivo" />
+                  <Column field="ip" header="IP" />
+                  <Column field="detalle" header="Detalle" />
+                </DataTable>
+              </div>
+            </TabPanel>
+          )}
         </TabView>
       </div>
 
-      <Dialog
-        visible={dialogoCorrelativoVisible}
-        header={formularioCorrelativo.id !== null ? 'Editar correlativo DTE' : 'Registrar correlativo DTE'}
-        footer={pieDialogoCorrelativo}
-        onHide={cerrarDialogoCorrelativo}
-        style={{ width: '620px', maxWidth: 'calc(100vw - 1.5rem)' }}
-        breakpoints={{ '700px': 'calc(100vw - 1rem)' }}
-        className="correlativo-dialog"
-        draggable={false}
-        resizable={false}
-      >
-        <form id="formulario-correlativo" onSubmit={guardarCorrelativo} className="correlativo-form" noValidate>
-          {formularioCorrelativo.id !== null ? (
-            <div className="correlativo-edit-summary">
-              <div className="correlativo-edit-icon">
-                <i className="pi pi-hashtag" aria-hidden="true"></i>
-              </div>
-              <div className="correlativo-edit-content">
-                <span className="correlativo-edit-eyebrow">Serie seleccionada</span>
-                <strong>{obtenerEtiquetaTipoDte(formularioCorrelativo.tipoDte)}</strong>
-                <div className="correlativo-edit-meta">
-                  <span><i className="pi pi-server"></i>{obtenerEtiquetaAmbiente(formularioCorrelativo.ambiente)}</span>
-                  <span><i className="pi pi-calendar"></i>{formularioCorrelativo.anio}</span>
-                  <span><i className="pi pi-building"></i>{formularioCorrelativo.codEstable} / {formularioCorrelativo.codPuntoVenta}</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid correlativo-form-grid">
-              <div className="col-12 md:col-7">
-                <label className="premium-label block mb-2" htmlFor="correlativo-tipo">Tipo DTE</label>
-                <div className="premium-input-group">
-                  <i className="pi pi-file premium-input-icon" aria-hidden="true"></i>
-                  <Dropdown
-                    inputId="correlativo-tipo"
-                    value={formularioCorrelativo.tipoDte}
-                    options={TIPOS_DTE_CORRELATIVO}
-                    onChange={(e) => cambiarCampoCorrelativo('tipoDte', e.value)}
-                    editable
-                    className={`w-full ${erroresCorrelativo.tipoDte ? 'p-invalid' : ''}`}
-                  />
-                </div>
-                {erroresCorrelativo.tipoDte && <small className="p-error block mt-1">{erroresCorrelativo.tipoDte}</small>}
-              </div>
+      <Dialog visible={dialogoCorrelativoVisible} onHide={() => !guardandoCorrelativo && setDialogoCorrelativoVisible(false)}
+        header={formularioCorrelativo.id ? 'Editar correlativo DTE' : 'Registrar correlativo DTE'} style={{ width: '620px', maxWidth: 'calc(100vw - 1rem)' }} draggable={false}>
+        <form onSubmit={guardarCorrelativo} className="grid pt-2">
+          {!formularioCorrelativo.id && <>
+            <div className="col-12 md:col-7"><label className="premium-label block mb-2">Tipo DTE</label><Dropdown value={formularioCorrelativo.tipoDte} options={TIPOS_DTE_CORRELATIVO} onChange={(e) => cambiarCampoCorrelativo('tipoDte', e.value)} editable className="w-full" />{erroresCorrelativo.tipoDte && <small className="p-error">{erroresCorrelativo.tipoDte}</small>}</div>
+            <div className="col-12 md:col-5"><label className="premium-label block mb-2">Ambiente</label><Dropdown value={formularioCorrelativo.ambiente} options={AMBIENTES_CORRELATIVO} onChange={(e) => cambiarCampoCorrelativo('ambiente', e.value)} className="w-full" /></div>
+            <div className="col-12 md:col-4"><label className="premium-label block mb-2">Año</label><InputNumber value={formularioCorrelativo.anio} onValueChange={(e) => cambiarCampoCorrelativo('anio', e.value)} useGrouping={false} min={2000} max={2100} className="w-full" /></div>
+            <div className="col-12 md:col-4"><label className="premium-label block mb-2">Establecimiento</label><InputText value={formularioCorrelativo.codEstable} onChange={(e) => cambiarCampoCorrelativo('codEstable', e.target.value.replace(/[^a-z0-9]/gi, '').slice(0, 4).toUpperCase())} maxLength={4} className="w-full" /></div>
+            <div className="col-12 md:col-4"><label className="premium-label block mb-2">Punto de venta</label><InputText value={formularioCorrelativo.codPuntoVenta} onChange={(e) => cambiarCampoCorrelativo('codPuntoVenta', e.target.value.replace(/[^a-z0-9]/gi, '').slice(0, 4).toUpperCase())} maxLength={4} className="w-full" /></div>
+          </>}
+          <div className="col-12"><label className="premium-label block mb-2">Último valor utilizado</label><InputNumber value={formularioCorrelativo.ultimoValor} onValueChange={(e) => cambiarCampoCorrelativo('ultimoValor', e.value)} useGrouping={false} min={0} max={MAXIMO_CORRELATIVO_DTE} className="w-full" />{erroresCorrelativo.ultimoValor && <small className="p-error">{erroresCorrelativo.ultimoValor}</small>}</div>
+          <div className="col-12"><Message severity="info" text="Esta pantalla solo registra o edita la serie. El siguiente número se consume al emitir el DTE." className="w-full" /></div>
+          <div className="col-12 flex justify-content-end gap-2"><Button type="button" label="Cancelar" text onClick={() => setDialogoCorrelativoVisible(false)} /><Button type="submit" label="Guardar" icon="pi pi-check" loading={guardandoCorrelativo} /></div>
+        </form>
+      </Dialog>
 
-              <div className="col-12 md:col-5">
-                <label className="premium-label block mb-2" htmlFor="correlativo-ambiente">Ambiente</label>
-                <div className="premium-input-group">
-                  <i className="pi pi-cloud premium-input-icon" aria-hidden="true"></i>
-                  <Dropdown
-                    inputId="correlativo-ambiente"
-                    value={formularioCorrelativo.ambiente}
-                    options={AMBIENTES_CORRELATIVO}
-                    onChange={(e) => cambiarCampoCorrelativo('ambiente', e.value)}
-                    className={`w-full ${erroresCorrelativo.ambiente ? 'p-invalid' : ''}`}
-                  />
-                </div>
-                {erroresCorrelativo.ambiente && <small className="p-error block mt-1">{erroresCorrelativo.ambiente}</small>}
-              </div>
+      <Dialog visible={dialogoUsuario} onHide={() => !guardandoUsuario && setDialogoUsuario(false)} header={formUsuario.id ? 'Editar usuario' : 'Nuevo usuario'} style={{ width: '520px', maxWidth: 'calc(100vw - 1rem)' }} draggable={false}>
+        <form onSubmit={guardarUsuario} className="p-fluid flex flex-column gap-3 pt-2">
+          <div><label className="premium-label block mb-2">Nombre de usuario</label><InputText value={formUsuario.nombreUsuario} onChange={(e) => setFormUsuario((f) => ({ ...f, nombreUsuario: e.target.value }))} required minLength={3} /></div>
+          <div><label className="premium-label block mb-2">Correo</label><InputText type="email" value={formUsuario.correo} onChange={(e) => setFormUsuario((f) => ({ ...f, correo: e.target.value }))} required /></div>
+          {!formUsuario.id && <div><label className="premium-label block mb-2">Contraseña inicial</label><Password value={formUsuario.contrasena} onChange={(e) => setFormUsuario((f) => ({ ...f, contrasena: e.target.value }))} toggleMask feedback required minLength={10} /></div>}
+          <div><label className="premium-label block mb-2">Rol único</label><Dropdown value={formUsuario.rolId} options={opcionesRoles} onChange={(e) => setFormUsuario((f) => ({ ...f, rolId: e.value }))} placeholder="Seleccione un rol" required /></div>
+          <small style={{ color: 'var(--text-muted)' }}>La contraseña requiere al menos 10 caracteres, una letra y un número.</small>
+          <div className="flex justify-content-end gap-2"><Button type="button" label="Cancelar" text onClick={() => setDialogoUsuario(false)} /><Button type="submit" label="Guardar usuario" icon="pi pi-check" loading={guardandoUsuario} /></div>
+        </form>
+      </Dialog>
 
-              <div className="col-12 md:col-4">
-                <label className="premium-label block mb-2" htmlFor="correlativo-anio">Año</label>
-                <div className="premium-input-group">
-                  <i className="pi pi-calendar premium-input-icon" aria-hidden="true"></i>
-                  <InputNumber
-                    inputId="correlativo-anio"
-                    value={formularioCorrelativo.anio}
-                    onValueChange={(e) => cambiarCampoCorrelativo('anio', e.value)}
-                    useGrouping={false}
-                    min={2000}
-                    max={2100}
-                    minFractionDigits={0}
-                    maxFractionDigits={0}
-                    className="w-full"
-                    inputClassName={`w-full ${erroresCorrelativo.anio ? 'p-invalid' : ''}`}
-                  />
-                </div>
-                {erroresCorrelativo.anio && <small className="p-error block mt-1">{erroresCorrelativo.anio}</small>}
-              </div>
+      <Dialog visible={Boolean(usuarioPassword)} onHide={() => setUsuarioPassword(null)} header={`Restablecer contraseña · ${usuarioPassword?.nombreUsuario || ''}`} style={{ width: '460px', maxWidth: 'calc(100vw - 1rem)' }} draggable={false}>
+        <form onSubmit={restablecerPassword} className="p-fluid flex flex-column gap-3 pt-2">
+          <Message severity="warn" text="La cuenta deberá iniciar sesión nuevamente en todos sus dispositivos." />
+          <Password value={nuevaPassword} onChange={(e) => setNuevaPassword(e.target.value)} placeholder="Nueva contraseña" toggleMask feedback required minLength={10} />
+          <div className="flex justify-content-end gap-2"><Button type="button" label="Cancelar" text onClick={() => setUsuarioPassword(null)} /><Button type="submit" label="Restablecer" icon="pi pi-key" /></div>
+        </form>
+      </Dialog>
 
-              <div className="col-12 md:col-4">
-                <label className="premium-label block mb-2" htmlFor="correlativo-establecimiento">Establecimiento</label>
-                <div className="premium-input-group">
-                  <i className="pi pi-building premium-input-icon" aria-hidden="true"></i>
-                  <InputText
-                    id="correlativo-establecimiento"
-                    value={formularioCorrelativo.codEstable}
-                    onChange={(e) => cambiarCodigoCorrelativo('codEstable', e.target.value)}
-                    maxLength={4}
-                    placeholder="M001"
-                    className={`w-full font-monospace ${erroresCorrelativo.codEstable ? 'p-invalid' : ''}`}
-                  />
-                </div>
-                {erroresCorrelativo.codEstable && <small className="p-error block mt-1">{erroresCorrelativo.codEstable}</small>}
-              </div>
-
-              <div className="col-12 md:col-4">
-                <label className="premium-label block mb-2" htmlFor="correlativo-punto-venta">Punto de venta</label>
-                <div className="premium-input-group">
-                  <i className="pi pi-map-marker premium-input-icon" aria-hidden="true"></i>
-                  <InputText
-                    id="correlativo-punto-venta"
-                    value={formularioCorrelativo.codPuntoVenta}
-                    onChange={(e) => cambiarCodigoCorrelativo('codPuntoVenta', e.target.value)}
-                    maxLength={4}
-                    placeholder="P001"
-                    className={`w-full font-monospace ${erroresCorrelativo.codPuntoVenta ? 'p-invalid' : ''}`}
-                  />
-                </div>
-                {erroresCorrelativo.codPuntoVenta && <small className="p-error block mt-1">{erroresCorrelativo.codPuntoVenta}</small>}
-              </div>
-            </div>
-          )}
-
-          <div className={formularioCorrelativo.id !== null ? 'mt-4' : 'mt-2'}>
-            <label className="premium-label block mb-2" htmlFor="correlativo-ultimo-valor">Último valor utilizado</label>
-            <div className="premium-input-group">
-              <i className="pi pi-sort-numeric-up premium-input-icon" aria-hidden="true"></i>
-              <InputNumber
-                inputId="correlativo-ultimo-valor"
-                value={formularioCorrelativo.ultimoValor}
-                onValueChange={(e) => cambiarCampoCorrelativo('ultimoValor', e.value)}
-                useGrouping={false}
-                min={0}
-                max={MAXIMO_CORRELATIVO_DTE}
-                minFractionDigits={0}
-                maxFractionDigits={0}
-                className="w-full"
-                inputClassName={`w-full font-monospace ${erroresCorrelativo.ultimoValor ? 'p-invalid' : ''}`}
-                placeholder="0"
-              />
-            </div>
-            {erroresCorrelativo.ultimoValor ? (
-              <small className="p-error block mt-1">{erroresCorrelativo.ultimoValor}</small>
-            ) : (
-              <small className="correlativo-field-help block mt-2">
-                El próximo DTE utilizará {formatearCorrelativoDte(Number(formularioCorrelativo.ultimoValor || 0) + 1)}.
-              </small>
-            )}
+      <Dialog visible={dialogoRol} onHide={() => !guardandoRol && setDialogoRol(false)} header={formRol.id ? `Rol · ${formRol.nombre}` : 'Nuevo rol'} style={{ width: '780px', maxWidth: 'calc(100vw - 1rem)' }} draggable={false}>
+        <form onSubmit={guardarRol} className="pt-2">
+          <div className="grid">
+            <div className="col-12 md:col-5"><label className="premium-label block mb-2">Código del rol</label><InputText value={formRol.nombre} onChange={(e) => setFormRol((f) => ({ ...f, nombre: e.target.value }))} disabled={formRol.sistema} required className="w-full" /></div>
+            <div className="col-12 md:col-7"><label className="premium-label block mb-2">Descripción</label><InputText value={formRol.descripcion || ''} onChange={(e) => setFormRol((f) => ({ ...f, descripcion: e.target.value }))} disabled={!formRol.editable} className="w-full" /></div>
           </div>
-
-          <Message
-            severity="info"
-            text={formularioCorrelativo.id !== null
-              ? 'La API permite editar únicamente el último valor utilizado; los datos que identifican la serie no cambiarán.'
-              : 'Use 0 si todavía no se ha emitido ningún documento con esta serie.'}
-            className="w-full mt-4 correlativo-form-message"
-          />
+          {!formRol.editable && <Message severity="info" text="Administrador siempre tiene todos los permisos y no puede modificarse." className="w-full my-3" />}
+          <div className="permission-matrix mt-3">
+            {gruposPermisos.map((grupo) => (
+              <section className="permission-module" key={grupo.modulo}>
+                <h4>{grupo.etiqueta}</h4>
+                <div className="permission-actions">
+                  {grupo.permisos.map((permiso) => {
+                    const reservado = permisosReservados(permiso.codigo) && formRol.nombre !== 'ADMIN';
+                    return <label key={permiso.codigo} className={`permission-option ${reservado ? 'is-reserved' : ''}`}>
+                      <Checkbox checked={formRol.permisos.has(permiso.codigo)} onChange={(e) => alternarPermiso(permiso.codigo, grupo.modulo, e.checked)} disabled={!formRol.editable || reservado} />
+                      <span><strong>{permiso.accion.replaceAll('_', ' ')}</strong><small>{permiso.etiqueta}</small></span>
+                    </label>;
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+          <div className="flex justify-content-end gap-2 mt-4"><Button type="button" label="Cerrar" text onClick={() => setDialogoRol(false)} />{formRol.editable && puede(formRol.id ? 'ROLES_EDITAR' : 'ROLES_CREAR') && <Button type="submit" label="Guardar rol" icon="pi pi-check" loading={guardandoRol} />}</div>
         </form>
       </Dialog>
     </div>

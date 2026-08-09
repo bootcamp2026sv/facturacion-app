@@ -1,0 +1,307 @@
+CHECKLIST DE PRODUCCIÓN - SISTEMA DE FACTURACIÓN
+===================================================
+
+Proyectos incluidos
+-------------------
+
+Backend Spring Boot:
+C:\Users\BOOTCAMP\IdeaProjects\Facturacion
+
+Frontend React:
+C:\Users\BOOTCAMP\Desktop\principios\facturacion
+
+Nota importante: la configuración local del backend ya está guardada en
+C:\Users\BOOTCAMP\IdeaProjects\Facturacion\.env y ese archivo está ignorado
+por Git. Esta lista de variables es solamente para el servidor de producción;
+no es necesario volver a configurarlas para trabajar localmente en esta PC.
+
+
+1. RESPALDO Y PREPARACIÓN
+-------------------------
+
+[ ] Hacer un respaldo completo de PostgreSQL antes de iniciar el despliegue.
+
+[ ] Comprobar que el respaldo puede restaurarse. No basta con verificar que el
+    archivo fue creado.
+
+[ ] Guardar una copia de la versión actual del backend y del contenido actual
+    de la carpeta dist del frontend para poder regresar rápidamente.
+
+[ ] Revisar los cambios pendientes de ambos repositorios con "git status" y
+    confirmar que no se está dejando fuera ningún archivo necesario.
+
+[ ] Confirmar que el servidor tiene Java 21. La versión se define en:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\pom.xml
+
+
+2. CONFIGURACIÓN DEL BACKEND EN PRODUCCIÓN
+--------------------------------------------
+
+[ ] Activar el perfil de producción con:
+    SPRING_PROFILES_ACTIVE=prod
+
+    Este perfil usa el archivo real:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\src\main\resources\application-prod.properties
+
+[ ] Configurar DB_URL, DB_USERNAME y DB_PASSWORD en el servicio, contenedor o
+    panel del servidor. Deben apuntar a la base PostgreSQL de producción.
+
+[ ] Configurar JWT_SECRET con un valor aleatorio y suficientemente largo.
+    Cambiar este valor cerrará todas las sesiones existentes, lo cual es
+    esperado durante la rotación inicial.
+
+[ ] No copiar al servidor ni subir a Git el archivo local:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\.env
+
+    La exclusión está declarada en:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\.gitignore
+
+[ ] No definir BOOTSTRAP_ADMIN_PASSWORD si la base de producción ya contiene
+    un Administrador activo. Solo se utiliza al instalar una base vacía.
+
+[ ] Si se instala una base vacía, definir temporalmente:
+    BOOTSTRAP_ADMIN_PASSWORD
+    BOOTSTRAP_ADMIN_USERNAME, si no se desea usar "admin"
+    BOOTSTRAP_ADMIN_EMAIL, si se desea otro correo
+
+    Después del primer arranque, retirar BOOTSTRAP_ADMIN_PASSWORD del servidor.
+
+[ ] Si ya existen contraseñas SMTP cifradas, conservar exactamente el valor
+    actual de SMTP_CONFIG_ENCRYPTION_KEY. Cambiarlo impediría descifrar esas
+    credenciales. Si nunca se ha configurado SMTP, generar una clave nueva antes
+    de guardar la primera contraseña SMTP.
+
+[ ] Confirmar que Scalar no sea público. El archivo
+    application-prod.properties ya contiene "app.api-docs.public=false".
+
+[ ] Revisar la configuración general y los nombres de todas las variables en:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\src\main\resources\application.properties
+
+
+3. BASE DE DATOS, ROLES Y PERMISOS
+---------------------------------
+
+[ ] Recordar que el proyecto actualmente usa "spring.jpa.hibernate.ddl-auto=update".
+    El primer arranque puede crear columnas y tablas de seguridad. Por eso el
+    respaldo de PostgreSQL debe realizarse antes de iniciar el nuevo backend.
+
+[ ] Revisar la inicialización y migración idempotente en:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\src\main\java\com\bootcamp\facturacion\config\DataInitializer.java
+
+[ ] Revisar la matriz oficial de permisos en:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\src\main\java\com\bootcamp\facturacion\security\PermisosSistema.java
+
+[ ] Después del primer arranque, confirmar en la base que existen los roles
+    ADMIN, SUPERVISOR, VENDEDOR y CONTADOR.
+
+[ ] Confirmar que los usuarios anteriores fueron preservados, que USER fue
+    migrado a VENDEDOR y que cada usuario tiene un solo rol.
+
+[ ] Confirmar que ADMIN tiene todos los permisos y que existe por lo menos un
+    Administrador activo antes de permitir el acceso de usuarios finales.
+
+
+4. CONSTRUCCIÓN Y PRUEBAS DEL BACKEND
+-------------------------------------
+
+[ ] Abrir una terminal en:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion
+
+[ ] Ejecutar las pruebas aisladas:
+    .\mvnw.cmd clean test
+
+    El resultado esperado actualmente es: 68 pruebas aprobadas. Estas pruebas
+    usan H2 desde src\test\resources\application-test.properties y no deben
+    conectarse a PostgreSQL.
+
+[ ] Crear el artefacto de despliegue:
+    .\mvnw.cmd clean package
+
+[ ] Confirmar que se generó:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\target\Facturacion-0.0.1-SNAPSHOT.jar
+
+[ ] Iniciar primero el backend y revisar los mensajes de Hibernate, del
+    DataInitializer y del seeder. No continuar si aparece un error de esquema,
+    conexión, cifrado o inicialización de roles.
+
+
+5. VALIDACIÓN DE SEGURIDAD DEL BACKEND
+---------------------------------------
+
+[ ] Revisar las rutas públicas y la seguridad stateless en:
+    C:\Users\BOOTCAMP\IdeaProjects\Facturacion\src\main\java\com\bootcamp\facturacion\config\SecurityConfig.java
+
+[ ] Confirmar que solamente login, refresh y logout funcionan sin access token:
+    POST /api/v1/auth/login
+    POST /api/v1/auth/refresh
+    POST /api/v1/auth/logout
+
+[ ] Confirmar que GET /api/v1/auth/me devuelve 401 sin token.
+
+[ ] Confirmar que un usuario autenticado sin el permiso necesario recibe 403
+    y conserva su sesión.
+
+[ ] Confirmar que ya no existe el endpoint HTTP:
+    GET /api/v1/auth/correlativos/siguiente
+
+[ ] Confirmar que POST /api/v1/Ventas exige VENTAS_EMITIR para documentos
+    normales y VENTAS_EMITIR_AJUSTES para los tipos DTE 05 y 06.
+
+[ ] Probar cinco intentos de acceso fallidos con una cuenta de prueba y confirmar
+    el bloqueo temporal de 15 minutos. No realizar esta prueba con la única
+    cuenta Administrador disponible.
+
+[ ] Cambiar el rol o la contraseña de una cuenta de prueba y confirmar que sus
+    access tokens y refresh tokens anteriores dejan de funcionar.
+
+[ ] Revisar que la auditoría registre login, fallos, bloqueos, logout y cambios
+    administrativos sin guardar contraseñas ni tokens.
+
+
+6. CONFIGURACIÓN DEL FRONTEND EN PRODUCCIÓN
+---------------------------------------------
+
+[ ] Revisar el archivo actual:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion\.env
+
+[ ] Definir VITE_API_URL antes de construir el frontend.
+
+    Si frontend y backend se sirven bajo el mismo dominio mediante un proxy
+    inverso, puede permanecer vacío y el frontend llamará a /api/v1.
+
+    Si el backend utiliza otro dominio, asignar una URL HTTPS, por ejemplo:
+    VITE_API_URL=https://api.su-dominio.com
+
+    Vite incorpora este valor durante el build; cambiarlo después exige volver
+    a ejecutar "npm run build".
+
+[ ] Si frontend y backend estarán en dominios diferentes, configurar CORS de
+    forma explícita antes del despliegue en SecurityConfig.java. Si se usa un
+    solo dominio con proxy inverso, no es necesario abrir CORS.
+
+[ ] Confirmar que el proxy local de vite.config.js se use solamente durante
+    desarrollo y no se confunda con la configuración del servidor web.
+
+
+7. CONSTRUCCIÓN Y PRUEBAS DEL FRONTEND
+--------------------------------------
+
+[ ] Abrir una terminal en:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion
+
+[ ] Instalar exactamente las dependencias bloqueadas:
+    npm ci
+
+[ ] Ejecutar las pruebas:
+    npm test
+
+    El resultado esperado actualmente es: 44 pruebas aprobadas.
+
+[ ] Ejecutar ESLint:
+    npm run lint
+
+[ ] Crear el build de producción:
+    npm run build
+
+[ ] Publicar el contenido generado en:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion\dist
+
+[ ] Configurar el servidor web para que las rutas de React regresen index.html
+    cuando no correspondan a un archivo estático.
+
+[ ] Si VITE_API_URL quedó vacío, configurar el proxy inverso para enviar
+    /api al backend Spring Boot del puerto correspondiente.
+
+
+8. ARCHIVOS IMPORTANTES DEL FRONTEND
+-----------------------------------
+
+[ ] Verificar la carga de sesión y el helper "puede" en:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion\src\context\AuthContext.jsx
+
+[ ] Verificar el tratamiento distinto de 401 y 403 en:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion\src\services\api.js
+
+[ ] Verificar las llamadas de usuarios, roles, permisos y auditoría en:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion\src\services\rbac.js
+
+[ ] Verificar el filtrado de vistas y permisos en:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion\src\utils\permisos.js
+
+[ ] Verificar usuarios, roles, auditoría y correlativos en:
+    C:\Users\BOOTCAMP\Desktop\principios\facturacion\src\components\views\VistaControlSistema.jsx
+
+[ ] Verificar que no aparezca el botón "Generar siguiente". En esta pantalla
+    los correlativos solamente deben poder registrarse y editarse.
+
+
+9. PRUEBA MANUAL CON CADA ROL
+----------------------------
+
+[ ] ADMIN: puede administrar usuarios, roles, permisos, auditoría y todos los
+    módulos. No puede editarse ni eliminarse el rol ADMIN.
+
+[ ] SUPERVISOR: puede operar ventas y administrar catálogos y correlativos,
+    pero no puede entrar a usuarios, roles ni auditoría.
+
+[ ] VENDEDOR: puede emitir ventas y ajustes, consultar, descargar y enviar;
+    no puede anular, usar contingencia ni editar ventas directamente.
+
+[ ] CONTADOR: puede emitir, consultar, enviar, anular y usar contingencia;
+    no puede editar ventas directamente.
+
+[ ] Confirmar en escritorio y móvil que cada cuenta ve solamente sus módulos,
+    pestañas y botones permitidos.
+
+[ ] Intentar manualmente una operación no autorizada contra la API y confirmar
+    que el backend devuelve 403 aunque se intente evitar la interfaz React.
+
+[ ] Confirmar que no se puede deshabilitar al usuario de la sesión actual ni al
+    último Administrador activo.
+
+
+10. PUBLICACIÓN Y REVISIÓN FINAL
+----------------------------------
+
+[ ] Publicar primero el backend y después el frontend.
+
+[ ] Usar HTTPS para frontend y backend. No publicar credenciales, JWT ni refresh
+    tokens mediante HTTP sin cifrado.
+
+[ ] Iniciar sesión con una cuenta de prueba y comprobar:
+    carga de /api/v1/auth/me,
+    renovación del token,
+    apertura del menú permitido,
+    consulta de correlativos,
+    creación de una venta de prueba,
+    cierre de sesión.
+
+[ ] Revisar los logs del backend y la consola del navegador. No deben aparecer
+    contraseñas, secretos JWT, access tokens ni refresh tokens.
+
+[ ] Verificar que Scalar no sea visible para usuarios no administradores.
+
+[ ] Mantener disponible el respaldo de PostgreSQL y la versión anterior hasta
+    completar todas las pruebas de aceptación.
+
+[ ] Documentar la fecha del despliegue, versión publicada, persona responsable
+    y cualquier incidencia encontrada.
+
+
+APROBACIÓN
+----------
+
+Fecha del despliegue: ______________________________________________
+
+Versión del backend: ______________________________________________
+
+Versión del frontend: _____________________________________________
+
+Responsable: _______________________________________________________
+
+Resultado final:  [ ] APROBADO    [ ] REQUIERE CORRECCIONES
+
+Observaciones:
+____________________________________________________________________
+____________________________________________________________________
+____________________________________________________________________

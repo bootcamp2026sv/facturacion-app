@@ -8,6 +8,7 @@ import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import api from '../../services/api';
 import DialogoNotaVenta from './ventas/DialogoNotaVenta';
+import { useAuth } from '../../context/AuthContext';
 import {
   construirPayloadNota,
   normalizarDetallesNota,
@@ -93,6 +94,7 @@ const obtenerEstadoVenta = (venta) => {
 };
 
 export default function VistaVentas() {
+  const { puede } = useAuth();
   const toast = useRef(null);
   const ventasSimuladas = [
     { id: 1, numeroControl: 'DTE-01-M001P001-000000000001000', codigoGeneracion: '288e60c6-aeb4-414b-9227-9b4c16d35c1e', fecha: '2026-06-07T14:30:00', cliente: 'Distribuidora Alimentos S.A.', total: 678.00, tipo: '01 - Factura' },
@@ -402,17 +404,17 @@ export default function VistaVentas() {
   };
 
   const acciones = [
-    { id: 'Anular', icono: 'pi pi-ban', label: 'Anular', color: '#ef4444' },
-    { id: 'Enviar Correo', icono: 'pi pi-envelope', label: 'Enviar Correo', color: '#8b5cf6' },
-    { id: 'Ver PDF', icono: 'pi pi-file-pdf', label: 'Ver PDF', color: '#3b82f6' },
-    { id: 'Consultar Hacienda', icono: 'pi pi-search', label: 'Consultar MH', color: '#06b6d4' },
-    { id: 'Descargar JSON', icono: 'pi pi-download', label: 'Descargar JSON', color: '#f59e0b' },
-    { id: 'Nota Créd/Déb', icono: 'pi pi-copy', label: 'Nota Créd/Déb', color: '#10b981' }
-  ];
+    { id: 'Anular', permiso: 'VENTAS_ANULAR', icono: 'pi pi-ban', label: 'Anular', color: '#ef4444' },
+    { id: 'Enviar Correo', permiso: 'VENTAS_ENVIAR', icono: 'pi pi-envelope', label: 'Enviar Correo', color: '#8b5cf6' },
+    { id: 'Ver PDF', permiso: 'VENTAS_DOCUMENTOS', icono: 'pi pi-file-pdf', label: 'Ver PDF', color: '#3b82f6' },
+    { id: 'Consultar Hacienda', permiso: 'VENTAS_CONSULTAR', icono: 'pi pi-search', label: 'Consultar MH', color: '#06b6d4' },
+    { id: 'Descargar JSON', permiso: 'VENTAS_DOCUMENTOS', icono: 'pi pi-download', label: 'Descargar JSON', color: '#f59e0b' },
+    { id: 'Nota Créd/Déb', permiso: 'VENTAS_EMITIR_AJUSTES', icono: 'pi pi-copy', label: 'Nota Créd/Déb', color: '#10b981' }
+  ].filter((accion) => puede(accion.permiso));
 
-  const accionesTemplate = (fila) => (
+  const accionesTemplate = (fila) => acciones.length ? (
     <Button icon="pi pi-ellipsis-h" className="p-button-rounded p-button-text premium-btn-secondary" onClick={() => abrirAcciones(fila)} />
-  );
+  ) : null;
 
   const tipoDteTemplate = (fila) => (
     <span

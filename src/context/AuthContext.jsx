@@ -1,22 +1,28 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authService, onAutoLogout } from '../services/api';
+import { normalizarSesion, tienePermiso } from '../utils/permisos';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(() => {
-    const usuarioGuardado = localStorage.getItem('usuario');
     try {
-      return usuarioGuardado ? JSON.parse(usuarioGuardado) : null;
-    } catch (e) {
-      console.error('Error al recuperar sesión del localStorage:', e);
+      const guardado = localStorage.getItem('usuario');
+      return guardado ? normalizarSesion(JSON.parse(guardado)) : null;
+    } catch {
       return null;
     }
   });
-
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState(Boolean(localStorage.getItem('accessToken')));
   const [motivoCierreSesion, setMotivoCierreSesion] = useState(null);
+
+  const guardarUsuario = useCallback((datos) => {
+    const sesion = normalizarSesion(datos);
+    localStorage.setItem('usuario', JSON.stringify(sesion));
+    setUsuario(sesion);
+    return sesion;
+  }, []);
 
   const logoutLocal = useCallback(() => {
     localStorage.removeItem('accessToken');
@@ -25,69 +31,50 @@ export const AuthProvider = ({ children }) => {
     setUsuario(null);
   }, []);
 
-  const logoutPorInactividad = useCallback(() => {
-    logoutLocal();
-    setMotivoCierreSesion('inactividad');
-  }, [logoutLocal]);
-
-  // Escuchar eventos de cierre de sesión automático desde el cliente API (Axios)
   useEffect(() => {
     onAutoLogout(logoutLocal);
     return () => onAutoLogout(null);
   }, [logoutLocal]);
 
-  // Configuración del detector de inactividad (Idle Timer)
   useEffect(() => {
-    if (!usuario) return;
+    if (!localStorage.getItem('accessToken')) {
+      return;
+    }
+    let activo = true;
+    authService.me()
+      .then((datos) => activo && guardarUsuario(datos))
+      .catch(() => activo && logoutLocal())
+      .finally(() => activo && setCargando(false));
+    return () => { activo = false; };
+  }, [guardarUsuario, logoutLocal]);
 
+  useEffect(() => {
+    if (!usuario) return undefined;
     let timeoutId;
-    
-    // TIEMPO DE PRUEBA: 15 segundos para validar rápidamente.
-    // Para producción: 10 * 60 * 1000 (10 minutos)
-    const TIEMPO_INACTIVIDAD = 600000; 
-
-    const reiniciarTemporizador = () => {
-      if (timeoutId) clearTimeout(timeoutId);
+    const reiniciar = () => {
+      clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        logoutPorInactividad();
-      }, TIEMPO_INACTIVIDAD);
+        logoutLocal();
+        setMotivoCierreSesion('inactividad');
+      }, 10 * 60 * 1000);
     };
-
     const eventos = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
-
-    eventos.forEach((evento) => {
-      window.addEventListener(evento, reiniciarTemporizador);
-    });
-
-    // Iniciar temporizador inmediatamente al loguearse o montar
-    reiniciarTemporizador();
-
+    eventos.forEach((evento) => window.addEventListener(evento, reiniciar));
+    reiniciar();
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      eventos.forEach((evento) => {
-        window.removeEventListener(evento, reiniciarTemporizador);
-      });
+      clearTimeout(timeoutId);
+      eventos.forEach((evento) => window.removeEventListener(evento, reiniciar));
     };
-  }, [usuario, logoutPorInactividad]);
+  }, [usuario, logoutLocal]);
 
   const login = async (username, password) => {
     setCargando(true);
-    setMotivoCierreSesion(null); // Limpiar cualquier alerta previa de cierre de sesión
+    setMotivoCierreSesion(null);
     try {
-      const datosAutenticacion = await authService.login(username, password);
-      const datosUsuario = {
-        username: datosAutenticacion.username,
-        email: datosAutenticacion.email,
-        roles: datosAutenticacion.roles,
-      };
-
-      // Guardar en localStorage
-      localStorage.setItem('accessToken', datosAutenticacion.accessToken);
-      localStorage.setItem('refreshToken', datosAutenticacion.refreshToken);
-      localStorage.setItem('usuario', JSON.stringify(datosUsuario));
-
-      setUsuario(datosUsuario);
-      return datosUsuario;
+      const respuesta = await authService.login(username, password);
+      localStorage.setItem('accessToken', respuesta.accessToken);
+      localStorage.setItem('refreshToken', respuesta.refreshToken);
+      return guardarUsuario(respuesta.usuario);
     } finally {
       setCargando(false);
     }
@@ -97,40 +84,28 @@ export const AuthProvider = ({ children }) => {
     setCargando(true);
     try {
       await authService.logout();
-    } catch (e) {
-      console.error('Error al notificar cierre de sesión al servidor:', e);
     } finally {
       logoutLocal();
-      setMotivoCierreSesion(null); // Cerrado manualmente, sin motivo de alerta
+      setMotivoCierreSesion(null);
       setCargando(false);
     }
   };
 
-  const limpiarMotivoCierre = () => {
-    setMotivoCierreSesion(null);
-  };
-
-  // Helper para verificar roles fácilmente
-  const tieneRol = (rol) => usuario?.roles?.includes(rol) || false;
+  const recargarUsuario = useCallback(async () => guardarUsuario(await authService.me()), [guardarUsuario]);
+  const puede = useCallback((codigo) => tienePermiso(usuario, codigo), [usuario]);
+  const tieneRol = useCallback((rol) => usuario?.rol?.nombre === rol, [usuario]);
+  const limpiarMotivoCierre = useCallback(() => setMotivoCierreSesion(null), []);
 
   const value = {
-    usuario,
-    cargando,
-    login,
-    logout,
-    tieneRol,
-    motivoCierreSesion,
-    limpiarMotivoCierre
+    usuario, cargando, login, logout, recargarUsuario, puede, tieneRol,
+    motivoCierreSesion, limpiarMotivoCierre,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Hook personalizado para consumir el contexto de forma sencilla
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
-  }
+  if (!context) throw new Error('useAuth debe usarse dentro de un AuthProvider');
   return context;
 };

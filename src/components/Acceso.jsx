@@ -7,8 +7,8 @@ import { Message } from 'primereact/message';
 import { useAuth } from '../context/AuthContext';
 
 export default function Acceso() {
-  const [usuario, setUsuario] = useState('admin');
-  const [clave, setClave] = useState('admin123');
+  const [usuario, setUsuario] = useState('');
+  const [clave, setClave] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const { login, motivoCierreSesion, limpiarMotivoCierre } = useAuth();
@@ -130,12 +130,6 @@ export default function Acceso() {
             />
           </form>
 
-            <div className="mt-4 p-3 border-round-xl flex align-items-start gap-2 text-sm border-left-3" style={{ background: 'rgba(99, 102, 241, 0.08)', color: 'var(--text-secondary)', borderColor: 'var(--card-hover-border)' }}>
-              <i className="pi pi-info-circle mt-1 flex-shrink-0" style={{ color: '#6366f1' }}></i>
-              <div>
-                <strong style={{ color: 'var(--text-primary)' }}>Credenciales por Defecto:</strong> Utilice <code style={{color: '#6366f1'}}>admin</code> y contraseña <code style={{color: '#6366f1'}}>admin123</code> para conectarse al servicio local.
-              </div>
-            </div>
         </Card>
       </div>
     </div>

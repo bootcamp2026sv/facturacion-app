@@ -12,8 +12,10 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { InputSwitch } from 'primereact/inputswitch';
 import { InputTextarea } from 'primereact/inputtextarea';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function VistaProductos() {
+  const { puede } = useAuth();
   const [productos, setProductos] = useState([]);
   const [unidadesMedida, setUnidadesMedida] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -256,16 +258,16 @@ export default function VistaProductos() {
   const plantillaAcciones = (rowData) => {
     return (
       <div className="flex gap-2">
-        <Button
+        {puede('PRODUCTOS_EDITAR') && <Button
           icon="pi pi-pencil"
           className="p-button-rounded p-button-success p-button-sm"
           onClick={() => editarProducto(rowData)}
-        />
-        <Button
+        />}
+        {puede('PRODUCTOS_ELIMINAR') && <Button
           icon="pi pi-trash"
           className="p-button-rounded p-button-danger p-button-sm"
           onClick={() => confirmarEliminarProducto(rowData)}
-        />
+        />}
       </div>
     );
   };
@@ -274,12 +276,12 @@ export default function VistaProductos() {
     return (
       <>
         <div className="flex flex-wrap gap-2">
-          <Button
+          {puede('PRODUCTOS_CREAR') && <Button
             label="Nuevo Producto"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={abrirNuevo}
-          />
+          />}
         </div>
       </>
     );
@@ -294,13 +296,13 @@ export default function VistaProductos() {
         onClick={ocultarDialogo}
         disabled={guardando}
       />
-      <Button
+      {(producto.id ? puede('PRODUCTOS_EDITAR') : puede('PRODUCTOS_CREAR')) && <Button
         label="Guardar"
         icon="pi pi-check"
         className="p-button-primary"
         onClick={guardarProducto}
         loading={guardando}
-      />
+      />}
     </div>
   );
 

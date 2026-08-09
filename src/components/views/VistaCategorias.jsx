@@ -11,8 +11,10 @@ import { Toolbar } from 'primereact/toolbar';
 import { IconField } from 'primereact/iconfield';
 import { InputIcon } from 'primereact/inputicon';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function VistaCategorias() {
+  const { puede } = useAuth();
   const [categorias, setCategorias] = useState([]);
   const [dialogoVisible, setDialogoVisible] = useState(false);
   const [dialogoEliminarVisible, setDialogoEliminarVisible] = useState(false);
@@ -167,16 +169,16 @@ export default function VistaCategorias() {
   const plantillaAcciones = (rowData) => {
     return (
       <div className="flex gap-2">
-        <Button
+        {puede('CATEGORIAS_EDITAR') && <Button
           icon="pi pi-pencil"
           className="p-button-rounded p-button-success p-button-sm"
           onClick={() => editarCategoria(rowData)}
-        />
-        <Button
+        />}
+        {puede('CATEGORIAS_ELIMINAR') && <Button
           icon="pi pi-trash"
           className="p-button-rounded p-button-danger p-button-sm"
           onClick={() => confirmarEliminarCategoria(rowData)}
-        />
+        />}
       </div>
     );
   };
@@ -185,12 +187,12 @@ export default function VistaCategorias() {
     return (
       <React.Fragment>
         <div className="flex flex-wrap gap-2">
-          <Button
+          {puede('CATEGORIAS_CREAR') && <Button
             label="Nueva Categoría"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={abrirNuevo}
-          />
+          />}
         </div>
       </React.Fragment>
     );
@@ -205,13 +207,13 @@ export default function VistaCategorias() {
         onClick={ocultarDialogo}
         disabled={guardando}
       />
-      <Button
+      {(categoria.id ? puede('CATEGORIAS_EDITAR') : puede('CATEGORIAS_CREAR')) && <Button
         label="Guardar"
         icon="pi pi-check"
         className="p-button-primary"
         onClick={guardarCategoria}
         loading={guardando}
-      />
+      />}
     </div>
   );
 

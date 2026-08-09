@@ -13,6 +13,7 @@ import { Dialog } from 'primereact/dialog';
 // Importar cliente Axios para la API real
 import api from '../../services/api';
 import { obtenerErrorFormatoCliente, soloDigitos } from '../../utils/validacionesCliente';
+import { useAuth } from '../../context/AuthContext';
 
 // Tipos de documento
 const TIPO_DOC_OPCIONES = [
@@ -35,6 +36,7 @@ const MAPA_DOCUMENTOS = {
 
 
 export default function VistaClientes() {
+  const { puede } = useAuth();
   const toast = useRef(null);
   const [indiceTabActivo, setIndiceTabActivo] = useState(0);
   const [cargando, setCargando] = useState(false);
@@ -130,22 +132,22 @@ export default function VistaClientes() {
   const plantillaAcciones = (rowData) => {
     return (
       <div className="flex gap-2 justify-content-center">
-        <Button
+        {puede('CLIENTES_EDITAR') && <Button
           type="button"
           icon="pi pi-pencil"
           className="p-button-rounded p-button-success p-button-sm"
           onClick={() => iniciarEdicion(rowData)}
           tooltip="Editar"
           tooltipOptions={{ position: 'top' }}
-        />
-        <Button
+        />}
+        {puede('CLIENTES_ELIMINAR') && <Button
           type="button"
           icon="pi pi-trash"
           className="p-button-rounded p-button-danger p-button-sm"
           onClick={() => confirmarEliminarCliente(rowData)}
           tooltip="Eliminar"
           tooltipOptions={{ position: 'top' }}
-        />
+        />}
       </div>
     );
   };
@@ -472,7 +474,7 @@ export default function VistaClientes() {
       <div className="premium-surface-card">
         <TabView className="premium-tabs" activeIndex={indiceTabActivo} onTabChange={(e) => setIndiceTabActivo(e.index)}>
           
-          <TabPanel header={editando ? "Editar Cliente" : "Registrar Cliente"} leftIcon={editando ? "pi pi-user-edit" : "pi pi-user-plus"} headerClassName="mr-2">
+          <TabPanel visible={puede('CLIENTES_CREAR') || puede('CLIENTES_EDITAR')} header={editando ? "Editar Cliente" : "Registrar Cliente"} leftIcon={editando ? "pi pi-user-edit" : "pi pi-user-plus"} headerClassName="mr-2">
             <div className="pt-3" style={{ maxWidth: '850px', margin: '0 auto' }}>
               <form onSubmit={manejarEnvio} className="p-fluid flex flex-column gap-4">
                 
@@ -681,14 +683,14 @@ export default function VistaClientes() {
                       disabled={cargando}
                     />
                   )}
-                  <Button 
+                  {(editando ? puede('CLIENTES_EDITAR') : puede('CLIENTES_CREAR')) && <Button
                     type="submit" 
                     label={cargando ? "Guardando..." : (editando ? "Guardar Cambios" : "Guardar Cliente")} 
                     icon={cargando ? "pi pi-spin pi-spinner" : (editando ? "pi pi-check" : "pi pi-save")} 
                     className="premium-btn" 
                     style={{ width: '220px' }}
                     disabled={cargando}
-                  />
+                  />}
                 </div>
 
               </form>

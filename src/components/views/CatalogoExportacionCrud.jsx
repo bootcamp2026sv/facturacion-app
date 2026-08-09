@@ -10,6 +10,7 @@ import { Toast } from "primereact/toast";
 import { IconField } from "primereact/iconfield";
 import { InputIcon } from "primereact/inputicon";
 import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 const obtenerMensajeApi = (error, mensajePorDefecto) => {
   const datos = error?.response?.data;
@@ -28,6 +29,7 @@ const crearRegistroVacio = () => ({
 });
 
 export default function CatalogoExportacionCrud({ catalogo }) {
+  const { puede } = useAuth();
   const [registros, setRegistros] = useState([]);
   const [registro, setRegistro] = useState(crearRegistroVacio);
   const [filtroGlobal, setFiltroGlobal] = useState("");
@@ -236,7 +238,7 @@ export default function CatalogoExportacionCrud({ catalogo }) {
     </span>
   );
 
-  const plantillaAcciones = (fila) => (
+  const plantillaAcciones = (fila) => puede('CATALOGOS_ADMINISTRAR') ? (
     <div className="flex gap-2">
       <Button
         type="button"
@@ -257,7 +259,7 @@ export default function CatalogoExportacionCrud({ catalogo }) {
         aria-label={`Eliminar ${catalogo.nombre}`}
       />
     </div>
-  );
+  ) : null;
 
   const encabezadoTabla = (
     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
@@ -292,14 +294,14 @@ export default function CatalogoExportacionCrud({ catalogo }) {
         onClick={() => setDialogoVisible(false)}
         disabled={guardando}
       />
-      <Button
+      {puede('CATALOGOS_ADMINISTRAR') && <Button
         type="button"
         label={registro.id !== null ? "Actualizar" : "Guardar"}
         icon="pi pi-check"
         className="premium-btn"
         onClick={guardarRegistro}
         loading={guardando}
-      />
+      />}
     </div>
   );
 
@@ -341,13 +343,13 @@ export default function CatalogoExportacionCrud({ catalogo }) {
               </h2>
             </div>
           </div>
-          <Button
+          {puede('CATALOGOS_ADMINISTRAR') && <Button
             type="button"
             label={`Nuevo ${catalogo.nombreSingular}`}
             icon="pi pi-plus"
             className="premium-btn w-full sm:w-auto"
             onClick={abrirNuevo}
-          />
+          />}
         </div>
       </div>
 

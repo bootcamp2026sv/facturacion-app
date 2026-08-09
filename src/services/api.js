@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clasificarErrorAutorizacion } from '../utils/permisos';
 
 // Obtener la URL base desde las variables de entorno o usar una ruta relativa (para proxy en desarrollo)
 const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : '';
@@ -21,10 +22,15 @@ const apiAuth = axios.create({
 });
 
 let logoutCallback = null;
+let forbiddenCallback = null;
 
 // Permite a la aplicación React suscribirse a los eventos de cierre de sesión automático
 export const onAutoLogout = (callback) => {
   logoutCallback = callback;
+};
+
+export const onForbidden = (callback) => {
+  forbiddenCallback = callback;
 };
 
 // Limpia el almacenamiento de sesión local
@@ -73,8 +79,13 @@ api.interceptors.response.use(
     const { config, response } = error;
     const originalRequest = config;
 
+    if (clasificarErrorAutorizacion(response?.status) === 'MOSTRAR_SIN_PERMISO') {
+      forbiddenCallback?.(response.data?.message || 'No tiene permiso');
+      return Promise.reject(error);
+    }
+
     // Si el error es 401 (No autorizado) y no es una petición de refresco/login en sí misma
-    if (response && response.status === 401 && !originalRequest._retry) {
+    if (clasificarErrorAutorizacion(response?.status) === 'RENOVAR_SESION' && !originalRequest._retry) {
       if (isRefreshing) {
         // Encolar la petición hasta que termine el refresco
         return new Promise((resolve) => {
@@ -145,7 +156,10 @@ export const authService = {
     } finally {
       limpiarSesion();
     }
-  }
+  },
+  me: async () => (await api.get('/auth/me')).data,
+  cambiarContrasena: async (contrasenaActual, nuevaContrasena) =>
+    (await api.patch('/auth/me/password', { contrasenaActual, nuevaContrasena })).data,
 };
 
 export default api;

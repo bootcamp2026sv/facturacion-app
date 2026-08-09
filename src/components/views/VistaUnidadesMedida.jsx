@@ -10,8 +10,10 @@ import { Toolbar } from 'primereact/toolbar';
 import { IconField } from 'primereact/iconfield';
 import { InputIcon } from 'primereact/inputicon';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function VistaUnidadesMedida() {
+  const { puede } = useAuth();
   const [unidades, setUnidades] = useState([]);
   const [dialogoVisible, setDialogoVisible] = useState(false);
   const [dialogoEliminarVisible, setDialogoEliminarVisible] = useState(false);
@@ -158,6 +160,7 @@ export default function VistaUnidadesMedida() {
   };
 
   const plantillaAcciones = (rowData) => {
+    if (!puede('CATALOGOS_ADMINISTRAR')) return null;
     return (
       <div className="flex gap-2">
         <Button
@@ -178,12 +181,12 @@ export default function VistaUnidadesMedida() {
     return (
       <React.Fragment>
         <div className="flex flex-wrap gap-2">
-          <Button
+          {puede('CATALOGOS_ADMINISTRAR') && <Button
             label="Nueva Unidad"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={abrirNuevo}
-          />
+          />}
         </div>
       </React.Fragment>
     );
@@ -198,13 +201,13 @@ export default function VistaUnidadesMedida() {
         onClick={ocultarDialogo}
         disabled={guardando}
       />
-      <Button
+      {puede('CATALOGOS_ADMINISTRAR') && <Button
         label="Guardar"
         icon="pi pi-check"
         className="p-button-primary"
         onClick={guardarUnidad}
         loading={guardando}
-      />
+      />}
     </div>
   );
 

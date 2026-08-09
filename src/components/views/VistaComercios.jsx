@@ -7,6 +7,7 @@ import { InputSwitch } from 'primereact/inputswitch';
 
 import api from '../../services/api';
 import { obtenerValoresCorreoPorDefecto } from '../../utils/configuracionCorreo';
+import { useAuth } from '../../context/AuthContext';
 
 // Catálogos de prueba locales
 const MUNICIPIOS_SIMULADOS = [
@@ -62,6 +63,7 @@ const crearConfiguracionCorreoInicial = () => ({
 });
 
 export default function VistaComercios() {
+  const { puede } = useAuth();
   const toast = useRef(null);
   const [cargando, setCargando] = useState(false);
   const [cargandoInicial, setCargandoInicial] = useState(true);
@@ -135,6 +137,7 @@ export default function VistaComercios() {
             distrito_id: comercio.distrito_id || comercio.Distrito_id || comercio.distrito?.id || comercio.Distrito?.id || 1,
             actividadEconomica_id: comercio.actividadEconomica_id || comercio.ActividadEconomica_id || comercio.actividadEconomica?.id || comercio.ActividadEconomica?.id || 1
           });
+          if (puede('COMERCIO_CONFIGURAR')) {
           const resConfiguracion = await api.get(`/Comercios/${comercio.id}/configuracion-facturacion`);
           setConfiguraciones((actual) => {
             const configuracionesAPI = { ...actual };
@@ -168,6 +171,7 @@ export default function VistaComercios() {
             contrasenaSmtp: '',
             contrasenaConfigurada: Boolean(resCorreo.data?.contrasenaConfigurada)
           }));
+          }
         }
       } catch (error) {
         console.error("Error al cargar datos de la API:", error);
@@ -183,7 +187,7 @@ export default function VistaComercios() {
       }
     };
     cargarDatosAPI();
-  }, []);
+  }, [puede]);
 
   // Guardar cambios a la API
   const guardarComercio = async (e) => {
@@ -538,6 +542,7 @@ export default function VistaComercios() {
             </div>
 
             {/* 4. Credenciales de facturación electrónica */}
+            {puede('COMERCIO_CONFIGURAR') && <>
             <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04))', border: '1px solid rgba(99,102,241,0.2)' }}>
               <div className="flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
                 <div>
@@ -702,7 +707,9 @@ export default function VistaComercios() {
               </div>
             </div>
 
-            <div className="flex justify-content-end mt-2">
+            </>}
+
+            {puede('COMERCIO_EDITAR') && <div className="flex justify-content-end mt-2">
               <Button 
                 type="submit" 
                 label={cargando ? "Guardando..." : "Guardar Configuración"} 
@@ -711,7 +718,7 @@ export default function VistaComercios() {
                 style={{ width: '240px' }}
                 disabled={cargando}
               />
-            </div>
+            </div>}
 
           </form>
         </div>

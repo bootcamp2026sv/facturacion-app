@@ -9,6 +9,7 @@ import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
 
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 // Corrige inversión de código y nombre en BD
 const corregirCasingYInversion = (rowData) => {
@@ -27,6 +28,7 @@ const corregirCasingYInversion = (rowData) => {
 };
 
 export default function VistaGeografia() {
+  const { puede } = useAuth();
   const toast = useRef(null);
   const [indiceTabActivo, setIndiceTabActivo] = useState(0);
   const [cargando, setCargando] = useState(false);
@@ -216,6 +218,7 @@ export default function VistaGeografia() {
   };
 
   const accionesDeptoTemplate = (rowData) => {
+    if (!puede('CATALOGOS_ADMINISTRAR')) return null;
     return (
       <div className="flex gap-2">
         <Button
@@ -239,6 +242,7 @@ export default function VistaGeografia() {
   };
 
   const accionesMuniTemplate = (rowData) => {
+    if (!puede('CATALOGOS_ADMINISTRAR')) return null;
     return (
       <div className="flex gap-2">
         <Button
@@ -262,6 +266,7 @@ export default function VistaGeografia() {
   };
 
   const accionesDistTemplate = (rowData) => {
+    if (!puede('CATALOGOS_ADMINISTRAR')) return null;
     return (
       <div className="flex gap-2">
         <Button
@@ -507,7 +512,7 @@ export default function VistaGeografia() {
                           </div>
                         </div>
                         <div className="flex gap-2 mt-1">
-                          <Button type="submit" label={editandoDepto ? "Guardar" : "Registrar"} icon={editandoDepto ? "pi pi-check" : "pi pi-plus"} className="premium-btn flex-grow-1" disabled={cargando} />
+                          {puede('CATALOGOS_ADMINISTRAR') && <Button type="submit" label={editandoDepto ? "Guardar" : "Registrar"} icon={editandoDepto ? "pi pi-check" : "pi pi-plus"} className="premium-btn flex-grow-1" disabled={cargando} />}
                           {editandoDepto && (
                             <Button type="button" label="Cancelar" icon="pi pi-times" className="p-button-secondary p-button-outlined" onClick={cancelarEdicionDepto} disabled={cargando} />
                           )}
@@ -569,7 +574,7 @@ export default function VistaGeografia() {
                           </div>
                         </div>
                         <div className="flex gap-2 mt-1">
-                          <Button type="submit" label={editandoMuni ? "Guardar" : "Registrar"} icon={editandoMuni ? "pi pi-check" : "pi pi-plus"} className="premium-btn flex-grow-1" disabled={cargando} />
+                          {puede('CATALOGOS_ADMINISTRAR') && <Button type="submit" label={editandoMuni ? "Guardar" : "Registrar"} icon={editandoMuni ? "pi pi-check" : "pi pi-plus"} className="premium-btn flex-grow-1" disabled={cargando} />}
                           {editandoMuni && (
                             <Button type="button" label="Cancelar" icon="pi pi-times" className="p-button-secondary p-button-outlined" onClick={cancelarEdicionMuni} disabled={cargando} />
                           )}
@@ -628,7 +633,7 @@ export default function VistaGeografia() {
                           </div>
                         </div>
                         <div className="flex gap-2 mt-1">
-                          <Button type="submit" label={editandoDist ? "Guardar" : "Registrar"} icon={editandoDist ? "pi pi-check" : "pi pi-plus"} className="premium-btn flex-grow-1" disabled={cargando} />
+                          {puede('CATALOGOS_ADMINISTRAR') && <Button type="submit" label={editandoDist ? "Guardar" : "Registrar"} icon={editandoDist ? "pi pi-check" : "pi pi-plus"} className="premium-btn flex-grow-1" disabled={cargando} />}
                           {editandoDist && (
                             <Button type="button" label="Cancelar" icon="pi pi-times" className="p-button-secondary p-button-outlined" onClick={cancelarEdicionDist} disabled={cargando} />
                           )}
