@@ -49,6 +49,11 @@ export default function VistaProductos() {
   const [filtroCategoria, setFiltroCategoria] = useState(null);
   const [filtroTributacion, setFiltroTributacion] = useState(null);
   const [filtroStock, setFiltroStock] = useState('TODOS');
+  const [pagina, setPagina] = useState(0);
+  const [filas, setFilas] = useState(20);
+  const [totalRegistros, setTotalRegistros] = useState(0);
+  const [orden, setOrden] = useState({ campo: 'nombre', direccion: 1 });
+  const [recarga, setRecarga] = useState(0);
   const toast = useRef(null);
 
   const cargadoRef = useRef(false);
@@ -57,45 +62,52 @@ export default function VistaProductos() {
   useEffect(() => {
     if (cargadoRef.current) return;
     cargadoRef.current = true;
-    cargarProductos();
-    cargarUnidadesMedida();
-    cargarCategorias();
+    Promise.all([api.get('/UnidadDeMedidas'), api.get('/Categorias')])
+      .then(([unidades, categoriasRespuesta]) => {
+        setUnidadesMedida(unidades.data || []);
+        setCategorias(categoriasRespuesta.data || []);
+      })
+      .catch((error) => console.error('Error al cargar catálogos de productos:', error));
   }, []);
 
-  async function cargarProductos() {
-    setCargando(true);
-    try {
-      const response = await api.get('/Productos');
-      setProductos(response.data);
-    } catch (error) {
-      console.error('Error al cargar productos:', error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los productos.',
-        life: 3000
-      });
-    } finally {
-      setCargando(false);
-    }
-  }
+  useEffect(() => {
+    const controlador = new AbortController();
+    const espera = setTimeout(async () => {
+      setCargando(true);
+      try {
+        const response = await api.get('/Productos', {
+          signal: controlador.signal,
+          params: {
+            page: pagina,
+            size: filas,
+            q: filtroGlobal.trim(),
+            categoriaId: filtroCategoria || undefined,
+            tipoTributacion: filtroTributacion || undefined,
+            stock: filtroStock,
+            sortBy: orden.campo,
+            sortDir: orden.direccion === 1 ? 'asc' : 'desc'
+          }
+        });
+        setProductos(Array.isArray(response.data?.content) ? response.data.content : []);
+        setTotalRegistros(Number(response.data?.totalElements || 0));
+      } catch (error) {
+        if (error.code === 'ERR_CANCELED') return;
+        console.error('Error al cargar productos:', error);
+        setProductos([]);
+        setTotalRegistros(0);
+        toast.current?.show({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los productos.', life: 3000 });
+      } finally {
+        if (!controlador.signal.aborted) setCargando(false);
+      }
+    }, filtroGlobal ? 300 : 0);
+    return () => {
+      clearTimeout(espera);
+      controlador.abort();
+    };
+  }, [pagina, filas, filtroGlobal, filtroCategoria, filtroTributacion, filtroStock, orden, recarga]);
 
-  async function cargarCategorias() {
-    try {
-      const response = await api.get('/Categorias');
-      setCategorias(response.data);
-    } catch (error) {
-      console.error('Error al cargar categorías:', error);
-    }
-  }
-
-  async function cargarUnidadesMedida() {
-    try {
-      const response = await api.get('/UnidadDeMedidas');
-      setUnidadesMedida(response.data);
-    } catch (error) {
-      console.error('Error al cargar unidades de medida:', error);
-    }
+  function cargarProductos() {
+    setRecarga((actual) => actual + 1);
   }
 
   const abrirNuevo = () => {
@@ -248,7 +260,7 @@ export default function VistaProductos() {
   };
 
   const plantillaUnidadMedida = (rowData) => {
-    return rowData.uniMedida?.descUnidad || '';
+    return rowData.uniMedida?.nombre || rowData.uniMedida?.descUnidad || '';
   };
 
   const plantillaConsignacion = (rowData) => {
@@ -325,31 +337,6 @@ export default function VistaProductos() {
     </div>
   );
 
-  // Lógica de búsqueda y filtrado de productos
-  const productosFiltrados = productos.filter(p => {
-    const query = filtroGlobal.toLowerCase().trim();
-    const matchGlobal = !query ||
-      (p.codigo || '').toLowerCase().includes(query) ||
-      (p.nombre || '').toLowerCase().includes(query) ||
-      (p.marca || '').toLowerCase().includes(query) ||
-      (p.descripcion || '').toLowerCase().includes(query) ||
-      (p.categoria?.nombre || '').toLowerCase().includes(query);
-
-    const catId = p.categoria?.id || p.categoriaId;
-    const matchCat = !filtroCategoria || catId === filtroCategoria;
-
-    const matchTrib = !filtroTributacion || p.tipoTributacion === filtroTributacion;
-
-    let matchStock = true;
-    if (filtroStock === 'CON_STOCK') {
-      matchStock = (p.existencia || 0) > 0;
-    } else if (filtroStock === 'SIN_STOCK') {
-      matchStock = (p.existencia || 0) <= 0;
-    }
-
-    return matchGlobal && matchCat && matchTrib && matchStock;
-  });
-
   const opcionesTributacion = [
     { label: 'Todas las Tributaciones', value: null },
     { label: 'Gravado', value: 'GRAVADO' },
@@ -368,7 +355,7 @@ export default function VistaProductos() {
       <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-2">
         <h3 className="m-0 text-base font-bold" style={{ color: 'var(--text-primary)' }}>Productos Registrados</h3>
         <span className="text-xs text-500" style={{ color: 'var(--text-muted)' }}>
-          Mostrando {productosFiltrados.length} de {productos.length} productos
+          Mostrando {productos.length} de {totalRegistros} productos
         </span>
       </div>
       <div className="grid">
@@ -378,7 +365,7 @@ export default function VistaProductos() {
             <InputText
               type="search"
               value={filtroGlobal}
-              onChange={(e) => setFiltroGlobal(e.target.value)}
+              onChange={(e) => { setFiltroGlobal(e.target.value); setPagina(0); }}
               placeholder="Buscar por código, nombre, marca..."
               className="w-full"
             />
@@ -388,7 +375,7 @@ export default function VistaProductos() {
           <Dropdown
             value={filtroCategoria}
             options={[{ label: 'Todas las Categorías', value: null }, ...categorias.map(c => ({ label: c.nombre, value: c.id }))]}
-            onChange={(e) => setFiltroCategoria(e.value)}
+            onChange={(e) => { setFiltroCategoria(e.value); setPagina(0); }}
             placeholder="Filtrar por Categoría"
             className="w-full"
             filter
@@ -399,7 +386,7 @@ export default function VistaProductos() {
           <Dropdown
             value={filtroTributacion}
             options={opcionesTributacion}
-            onChange={(e) => setFiltroTributacion(e.value)}
+            onChange={(e) => { setFiltroTributacion(e.value); setPagina(0); }}
             placeholder="Filtrar por Tributación"
             className="w-full"
             showClear
@@ -409,7 +396,7 @@ export default function VistaProductos() {
           <Dropdown
             value={filtroStock}
             options={opcionesStock}
-            onChange={(e) => setFiltroStock(e.value)}
+            onChange={(e) => { setFiltroStock(e.value); setPagina(0); }}
             placeholder="Disponibilidad de Stock"
             className="w-full"
           />
@@ -431,10 +418,17 @@ export default function VistaProductos() {
         <Toolbar left={headerToolbar} />
 
         <DataTable
-          value={productosFiltrados}
+          value={productos}
+          lazy
           paginator
-          rows={10}
-          rowsPerPageOptions={[5, 10, 25]}
+          first={pagina * filas}
+          rows={filas}
+          totalRecords={totalRegistros}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          onPage={(e) => { setPagina(e.page); setFilas(e.rows); }}
+          onSort={(e) => { setOrden({ campo: e.sortField, direccion: e.sortOrder }); setPagina(0); }}
+          sortField={orden.campo}
+          sortOrder={orden.direccion}
           loading={cargando}
           header={headerTabla}
           emptyMessage="No se encontraron productos con los filtros aplicados."
@@ -442,9 +436,9 @@ export default function VistaProductos() {
         >
           <Column field="codigo" header="Código" sortable bodyClassName="font-bold"></Column>
           <Column field="nombre" header="Nombre" sortable></Column>
-          <Column field="categoria.nombre" header="Categoría" sortable></Column>
-          <Column field="marca" header="Marca" sortable></Column>
-          <Column field="precioSinIVA" header="Precio sin IVA" body={plantillaPrecioSinIVA} sortable></Column>
+          <Column field="categoria.nombre" header="Categoría"></Column>
+          <Column field="marca" header="Marca"></Column>
+          <Column field="precioSinIVA" header="Precio sin IVA" body={plantillaPrecioSinIVA}></Column>
           <Column field="precioConIVA" header="Precio con IVA" body={plantillaPrecioConIVA} sortable></Column>
           <Column field="tipoTributacion" header="Tributación" sortable></Column>
           <Column field="existencia" header="Existencia" sortable></Column>

@@ -96,43 +96,63 @@ const obtenerEstadoVenta = (venta) => {
 export default function VistaVentas() {
   const { puede } = useAuth();
   const toast = useRef(null);
-  const ventasSimuladas = [
-    { id: 1, numeroControl: 'DTE-01-M001P001-000000000001000', codigoGeneracion: '288e60c6-aeb4-414b-9227-9b4c16d35c1e', fecha: '2026-06-07T14:30:00', cliente: 'Distribuidora Alimentos S.A.', total: 678.00, tipo: '01 - Factura' },
-    { id: 2, numeroControl: 'DTE-03-M001P001-000000000000254', codigoGeneracion: '7a8b60d2-cf14-49c7-8142-2b4c16d35f4a', fecha: '2026-06-07T11:15:00', cliente: 'Juan Carlos Pérez', total: 25.50, tipo: '03 - Crédito Fiscal' }
-  ];
-
-  void ventasSimuladas;
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState('');
-
-  const cargarVentas = async () => {
-    setCargando(true);
-    setErrorCarga('');
-    try {
-      const respuesta = await api.get('/Ventas');
-      const ventasAPI = Array.isArray(respuesta.data) ? respuesta.data : [];
-      setVentas(ventasAPI.map((venta) => ({
-        ...venta,
-        cliente: venta.nombreReceptor || nombreCliente(venta.cliente),
-        tipo: etiquetaTipoDte(venta.tipoDte),
-        tipoCodigo: venta.tipoDte,
-        total: Number(venta.totalGeneral || 0),
-        fecha: venta.fecha || venta.createdAt,
-        fechaOrden: Date.parse(venta.fecha || venta.createdAt) || 0
-      })));
-    } catch (error) {
-      console.error('Error al cargar ventas:', error);
-      setErrorCarga(error.response?.data?.message || 'No se pudieron cargar las ventas reales del servidor.');
-      setVentas([]);
-    } finally {
-      setCargando(false);
-    }
-  };
+  const [filtroTipo, setFiltroTipo] = useState('');
+  const [filtroCliente, setFiltroCliente] = useState('');
+  const [filtroControl, setFiltroControl] = useState('');
+  const [pagina, setPagina] = useState(0);
+  const [filas, setFilas] = useState(20);
+  const [totalRegistros, setTotalRegistros] = useState(0);
+  const [orden, setOrden] = useState({ campo: 'fecha', direccion: -1 });
+  const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
-    queueMicrotask(() => cargarVentas());
-  }, []);
+    const controlador = new AbortController();
+    const espera = setTimeout(async () => {
+      setCargando(true);
+      setErrorCarga('');
+      try {
+        const respuesta = await api.get('/Ventas', {
+          signal: controlador.signal,
+          params: {
+            page: pagina,
+            size: filas,
+            tipoDte: filtroTipo,
+            cliente: filtroCliente.trim(),
+            numeroControl: filtroControl.trim(),
+            sortBy: orden.campo,
+            sortDir: orden.direccion === 1 ? 'asc' : 'desc'
+          }
+        });
+        const contenido = Array.isArray(respuesta.data?.content) ? respuesta.data.content : [];
+        setVentas(contenido.map((venta) => ({
+          ...venta,
+          cliente: venta.cliente || venta.nombreReceptor || nombreCliente(venta.cliente),
+          tipo: etiquetaTipoDte(venta.tipoDte),
+          tipoCodigo: venta.tipoDte,
+          total: Number(venta.totalGeneral || 0),
+          fecha: venta.fecha || venta.createdAt
+        })));
+        setTotalRegistros(Number(respuesta.data?.totalElements || 0));
+      } catch (error) {
+        if (error.code === 'ERR_CANCELED') return;
+        console.error('Error al cargar ventas:', error);
+        setErrorCarga(error.response?.data?.message || 'No se pudieron cargar las ventas reales del servidor.');
+        setVentas([]);
+        setTotalRegistros(0);
+      } finally {
+        if (!controlador.signal.aborted) setCargando(false);
+      }
+    }, filtroCliente || filtroControl ? 300 : 0);
+    return () => {
+      clearTimeout(espera);
+      controlador.abort();
+    };
+  }, [pagina, filas, filtroTipo, filtroCliente, filtroControl, orden, recarga]);
+
+  const cargarVentas = () => setRecarga((actual) => actual + 1);
 
   const tiposDte = [
     { label: 'Todos', value: '' },
@@ -143,10 +163,6 @@ export default function VistaVentas() {
     { label: '14 SE', value: '14' },
     { label: '11 EXP', value: '11' }
   ];
-
-  const [filtroTipo, setFiltroTipo] = useState('');
-  const [filtroCliente, setFiltroCliente] = useState('');
-  const [filtroControl, setFiltroControl] = useState('');
 
   const [dialogoVisible, setDialogoVisible] = useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
@@ -169,17 +185,11 @@ export default function VistaVentas() {
   const [errorCargaNota, setErrorCargaNota] = useState('');
   const [errorEmisionNota, setErrorEmisionNota] = useState('');
 
-  const ventasFiltradas = ventas.filter(v => {
-    if (filtroTipo && v.tipoCodigo !== filtroTipo) return false;
-    if (filtroCliente && !v.cliente.toLowerCase().includes(filtroCliente.toLowerCase())) return false;
-    if (filtroControl && !v.numeroControl.toLowerCase().includes(filtroControl.toLowerCase())) return false;
-    return true;
-  });
-
   const limpiarFiltros = () => {
     setFiltroTipo('');
     setFiltroCliente('');
     setFiltroControl('');
+    setPagina(0);
   };
 
   const abrirAcciones = (venta) => {
@@ -565,20 +575,20 @@ export default function VistaVentas() {
           <div className="grid align-items-end mb-4">
             <div className="col-12 sm:col-6 xl:col-3 flex flex-column gap-2">
               <label className="premium-label">Tipo DTE</label>
-              <Dropdown value={filtroTipo} options={tiposDte} onChange={(e) => setFiltroTipo(e.value)} placeholder="Todos" className="w-full" />
+              <Dropdown value={filtroTipo} options={tiposDte} onChange={(e) => { setFiltroTipo(e.value); setPagina(0); }} placeholder="Todos" className="w-full" />
             </div>
             <div className="col-12 sm:col-6 xl:col-3 flex flex-column gap-2">
               <label className="premium-label">Cliente</label>
               <div className="premium-input-group">
                 <i className="pi pi-search premium-input-icon" style={{ fontSize: '0.8rem' }}></i>
-                <InputText value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} placeholder="Buscar por cliente..." className="w-full" />
+                <InputText value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setPagina(0); }} placeholder="Buscar por cliente..." className="w-full" />
               </div>
             </div>
             <div className="col-12 sm:col-6 xl:col-3 flex flex-column gap-2">
               <label className="premium-label">N° Control</label>
               <div className="premium-input-group">
                 <i className="pi pi-hashtag premium-input-icon" style={{ fontSize: '0.8rem' }}></i>
-                <InputText value={filtroControl} onChange={(e) => setFiltroControl(e.target.value)} placeholder="Buscar por número..." />
+                <InputText value={filtroControl} onChange={(e) => { setFiltroControl(e.target.value); setPagina(0); }} placeholder="Buscar por número..." />
               </div>
             </div>
             <div className="col-12 xl:col-3 flex flex-column sm:flex-row gap-2">
@@ -588,12 +598,12 @@ export default function VistaVentas() {
           </div>
 
           <div className="premium-table ventas-table">
-            <DataTable value={ventasFiltradas} paginator rows={5} size="small" loading={cargando} emptyMessage={errorCarga ? "No se pudieron cargar las ventas" : "No hay ventas registradas"} responsiveLayout="stack" breakpoint="1024px" sortField="fechaOrden" sortOrder={-1}>
-              <Column field="fecha" sortField="fechaOrden" header="Fecha de Emisión" body={(f) => new Date(f.fecha).toLocaleDateString()} sortable></Column>
-              <Column field="tipo" header="Tipo DTE" body={tipoDteTemplate} sortable></Column>
+            <DataTable value={ventas} lazy paginator first={pagina * filas} rows={filas} rowsPerPageOptions={[10, 20, 50, 100]} totalRecords={totalRegistros} onPage={(e) => { setPagina(e.page); setFilas(e.rows); }} onSort={(e) => { setOrden({ campo: e.sortField, direccion: e.sortOrder }); setPagina(0); }} sortField={orden.campo} sortOrder={orden.direccion} size="small" loading={cargando} emptyMessage={errorCarga ? "No se pudieron cargar las ventas" : "No hay ventas registradas"} responsiveLayout="stack" breakpoint="1024px">
+              <Column field="fecha" header="Fecha de Emisión" body={(f) => new Date(f.fecha).toLocaleDateString()} sortable></Column>
+              <Column field="tipo" sortField="tipoDte" header="Tipo DTE" body={tipoDteTemplate} sortable></Column>
               <Column field="numeroControl" header="Número de Control" sortable body={(f) => obtenerCorrelativoNumeroControl(f.numeroControl)}></Column>
-              <Column field="cliente" header="Cliente" sortable></Column>
-              <Column field="total" header="Total" body={(f) => `$${f.total.toFixed(2)}`} sortable></Column>
+              <Column field="cliente" header="Cliente"></Column>
+              <Column field="total" sortField="totalGeneral" header="Total" body={(f) => `$${f.total.toFixed(2)}`} sortable></Column>
               <Column header="Estado" body={estadoVentaTemplate}></Column>
               <Column header="Acciones" body={accionesTemplate} style={{ width: '80px' }}></Column>
             </DataTable>

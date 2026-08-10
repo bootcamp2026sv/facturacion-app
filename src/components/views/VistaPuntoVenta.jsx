@@ -92,7 +92,7 @@ export default function VistaPuntoVenta() {
   // Estos hooks guardan la parte más grande de cada responsabilidad:
   // catálogos, carrito y campos del pago.
   const documentoSinIva = esTipoDteSinIva(tipoDte);
-  const catalogos = useCatalogosPuntoVenta();
+  const catalogos = useCatalogosPuntoVenta({ busquedaProducto: busqueda, busquedaCliente });
   const carritoVenta = useCarritoPuntoVenta({ tipoDte, documentoSinIva });
   const pago = usePagoPuntoVenta();
 

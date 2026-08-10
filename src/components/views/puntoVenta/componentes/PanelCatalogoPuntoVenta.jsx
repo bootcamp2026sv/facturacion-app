@@ -42,7 +42,7 @@ export default function PanelCatalogoPuntoVenta({
             </button>
           ))}
           <button
-            onClick={recargarProductos}
+            onClick={() => recargarProductos()}
             disabled={cargandoCatalogos || recargandoProductos}
             title="Recargar productos"
             className="flex align-items-center justify-content-center gap-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 px-3 py-2 text-sm font-semibold"

@@ -70,34 +70,19 @@ export default function VistaGeografia() {
     const cargarGeografiaAPI = async () => {
       setCargando(true);
 
-      // 1. Cargar Departamentos
       try {
-        const resDeptos = await api.get('/departamentos');
-        setDepartamentos(resDeptos.data || []);
+        const { data } = await api.get('/geografia');
+        setDepartamentos(data?.departamentos || []);
+        setMunicipios(data?.municipios || []);
+        setDistritos(data?.distritos || []);
       } catch (error) {
-        console.error("Error al cargar departamentos:", error);
+        console.error("Error al cargar geografía:", error);
         toast.current.show({ 
           severity: 'error', 
-          summary: 'Error Departamentos', 
-          detail: 'No se pudieron cargar los departamentos desde el servidor.', 
+          summary: 'Error de geografía',
+          detail: 'No se pudo cargar el catálogo geográfico del servidor.',
           life: 3000 
         });
-      }
-
-      // 2. Cargar Municipios
-      try {
-        const resMunis = await api.get('/municipios');
-        setMunicipios(resMunis.data || []);
-      } catch (error) {
-        console.error("Error al cargar municipios:", error);
-      }
-
-      // 3. Cargar Distritos
-      try {
-        const resDists = await api.get('/distritos');
-        setDistritos(resDists.data || []);
-      } catch (error) {
-        console.error("Error al cargar distritos:", error);
       }
 
       setCargando(false);
@@ -142,7 +127,7 @@ export default function VistaGeografia() {
     setNuevoMuni({
       codigo: corregido.codigo,
       nombre: corregido.nombre,
-      departamentoId: depto?.id || (deptoOpciones[0]?.value || 0)
+      departamentoId: muni.departamentoId || depto?.id || (deptoOpciones[0]?.value || 0)
     });
     setIdMuniSeleccionado(muni.id);
     setEditandoMuni(true);
@@ -160,7 +145,7 @@ export default function VistaGeografia() {
     setNuevoDist({
       codigo: corregido.codigo,
       nombre: corregido.nombre,
-      municipioId: muni?.id || (muniOpciones[0]?.value || 0)
+      municipioId: dist.municipioId || muni?.id || (muniOpciones[0]?.value || 0)
     });
     setIdDistSeleccionado(dist.id);
     setEditandoDist(true);

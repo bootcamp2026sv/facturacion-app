@@ -35,11 +35,18 @@ export default function FormularioExportacionDte11({ cliente, value, onChange, d
   const [catalogos, setCatalogos] = useState({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  const dropdownRefs = useRef({});
+  const paisRef = useRef(null);
+  const tipoPersonaRef = useRef(null);
+  const tipoItemRef = useRef(null);
+  const recintoRef = useRef(null);
+  const tipoRegimenRef = useRef(null);
+  const regimenRef = useRef(null);
+  const incotermRef = useRef(null);
 
   const cerrarRegimenAlDesplazar = (evento) => {
     if (evento?.target?.closest?.('.p-dropdown-panel')) return;
-    Object.values(dropdownRefs.current).forEach((dropdown) => dropdown?.hide?.());
+    [paisRef, tipoPersonaRef, tipoItemRef, recintoRef, tipoRegimenRef, regimenRef, incotermRef]
+      .forEach((referencia) => referencia.current?.hide?.());
   };
 
   useEffect(() => {
@@ -47,14 +54,8 @@ export default function FormularioExportacionDte11({ cliente, value, onChange, d
     return () => window.removeEventListener('scroll', cerrarRegimenAlDesplazar, true);
   }, []);
 
-  const refDropdown = (nombre) => (elemento) => {
-    dropdownRefs.current[nombre] = elemento;
-  };
-
   useEffect(() => {
     const controller = new AbortController();
-    setCargando(true);
-    setError('');
 
     Promise.all(Object.entries(ENDPOINTS).map(async ([clave, endpoint]) => {
       const numerico = clave === 'tiposItem' || clave === 'tiposPersona';
@@ -139,24 +140,24 @@ export default function FormularioExportacionDte11({ cliente, value, onChange, d
 
       <div className="grid m-0">
         <Campo label="País de destino">
-          <Dropdown ref={refDropdown('pais')} value={value.codPais || null} options={catalogos.paises || []} onChange={(e) => seleccionar('codPais', 'paises', e)} placeholder="Seleccione el país" filter showClear disabled={disabled || cargando} className="w-full" />
+          <Dropdown ref={paisRef} value={value.codPais || null} options={catalogos.paises || []} onChange={(e) => seleccionar('codPais', 'paises', e)} placeholder="Seleccione el país" filter showClear disabled={disabled || cargando} className="w-full" />
         </Campo>
         <Campo label="Tipo de persona">
-          <Dropdown ref={refDropdown('tipoPersona')} value={value.tipoPersona ?? null} options={catalogos.tiposPersona || []} onChange={(e) => seleccionar('tipoPersona', 'tiposPersona', e)} placeholder="Seleccione el tipo" disabled={disabled || cargando} className="w-full" />
+          <Dropdown ref={tipoPersonaRef} value={value.tipoPersona ?? null} options={catalogos.tiposPersona || []} onChange={(e) => seleccionar('tipoPersona', 'tiposPersona', e)} placeholder="Seleccione el tipo" disabled={disabled || cargando} className="w-full" />
         </Campo>
         <Campo label="Tipo de exportación">
-          <Dropdown ref={refDropdown('tipoItem')} value={value.tipoItemExpor ?? null} options={catalogos.tiposItem || []} onChange={(e) => seleccionar('tipoItemExpor', 'tiposItem', e)} placeholder="Seleccione el medio" disabled={disabled || cargando} className="w-full" />
+          <Dropdown ref={tipoItemRef} value={value.tipoItemExpor ?? null} options={catalogos.tiposItem || []} onChange={(e) => seleccionar('tipoItemExpor', 'tiposItem', e)} placeholder="Seleccione el medio" disabled={disabled || cargando} className="w-full" />
         </Campo>
         <Campo label="Recinto fiscal">
-          <Dropdown ref={refDropdown('recinto')} value={value.recintoFiscal || null} options={catalogos.recintos || []} onChange={(e) => seleccionar('recintoFiscal', 'recintos', e)} placeholder="Seleccione el recinto" filter disabled={disabled || cargando} className="w-full" />
+          <Dropdown ref={recintoRef} value={value.recintoFiscal || null} options={catalogos.recintos || []} onChange={(e) => seleccionar('recintoFiscal', 'recintos', e)} placeholder="Seleccione el recinto" filter disabled={disabled || cargando} className="w-full" />
         </Campo>
         <Campo label="Tipo de régimen">
-          <Dropdown ref={refDropdown('tipoRegimen')} value={value.tipoRegimen || null} options={catalogos.tiposRegimen || []} onChange={(e) => seleccionar('tipoRegimen', 'tiposRegimen', e)} placeholder="Seleccione el tipo" filter disabled={disabled || cargando} className="w-full" />
+          <Dropdown ref={tipoRegimenRef} value={value.tipoRegimen || null} options={catalogos.tiposRegimen || []} onChange={(e) => seleccionar('tipoRegimen', 'tiposRegimen', e)} placeholder="Seleccione el tipo" filter disabled={disabled || cargando} className="w-full" />
         </Campo>
         <Campo label="Régimen aduanero">
           <div className="exportacion-regimen-dropdown">
             <Dropdown
-              ref={refDropdown('regimen')}
+              ref={regimenRef}
               value={value.regimen || null}
               options={catalogos.regimenes || []}
               optionLabel="label"
@@ -176,7 +177,7 @@ export default function FormularioExportacionDte11({ cliente, value, onChange, d
           </div>
         </Campo>
         <Campo label="Incoterm">
-          <Dropdown ref={refDropdown('incoterm')} value={value.codIncoterms || null} options={catalogos.incoterms || []} onChange={(e) => seleccionar('codIncoterms', 'incoterms', e)} placeholder="Seleccione el Incoterm" disabled={disabled || cargando} className="w-full" />
+          <Dropdown ref={incotermRef} value={value.codIncoterms || null} options={catalogos.incoterms || []} onChange={(e) => seleccionar('codIncoterms', 'incoterms', e)} placeholder="Seleccione el Incoterm" disabled={disabled || cargando} className="w-full" />
         </Campo>
         <Campo label="Dirección / complemento del receptor">
           <InputText value={value.complemento ?? direccion} onChange={(e) => actualizar('complemento', e.target.value)} placeholder="Dirección del cliente" disabled={disabled} className="w-full" />

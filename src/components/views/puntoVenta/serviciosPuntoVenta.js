@@ -4,25 +4,29 @@ import api from '../../../services/api';
 let catalogosPosCache = null;
 let catalogosPosPromise = null;
 
-// Carga todos los catálogos necesarios para comenzar una venta.
+// La carga inicial trae solo datos compactos; productos y clientes se buscan por página.
 export const obtenerCatalogosPos = async () => {
   if (catalogosPosCache) return catalogosPosCache;
 
   if (!catalogosPosPromise) {
     catalogosPosPromise = Promise.all([
-      api.get('/Productos'),
-      api.get('/Clientes'),
-      api.get('/Comercios'),
-      api.get('/distritos'),
-      api.get('/ActividadEconomicas'),
+      api.get('/pos/inicial'),
+      api.get('/pos/productos', { params: { page: 0, size: 50 } }),
+      api.get('/pos/clientes', { params: { page: 0, size: 50 } }),
     ])
-      .then(([resProductos, resClientes, resComercios, resDistritos, resActividades]) => {
+      .then(([resInicial, resProductos, resClientes]) => {
+        const inicial = resInicial.data || {};
+        const clientes = resClientes.data?.content || [];
+        if (inicial.clientePredeterminado && !clientes.some((cliente) => cliente.id === inicial.clientePredeterminado.id)) {
+          clientes.unshift(inicial.clientePredeterminado);
+        }
         catalogosPosCache = {
-          productos: resProductos.data || [],
-          clientes: resClientes.data || [],
-          comercios: resComercios.data || [],
-          distritos: resDistritos.data || [],
-          actividades: resActividades.data || [],
+          productos: resProductos.data?.content || [],
+          clientes,
+          comercio: inicial.comercio || null,
+          clientePredeterminado: inicial.clientePredeterminado || null,
+          distritos: inicial.distritos || [],
+          actividades: inicial.actividades || [],
         };
         return catalogosPosCache;
       })
@@ -36,9 +40,16 @@ export const obtenerCatalogosPos = async () => {
 };
 
 // Recargas puntuales usadas por los botones de productos y clientes.
-export const obtenerProductosPuntoVenta = async () => (await api.get('/Productos')).data || [];
+const configuracionBusqueda = (q, signal) => ({
+  params: { page: 0, size: 50, q },
+  ...(signal && typeof signal.addEventListener === 'function' ? { signal } : {}),
+});
 
-export const obtenerClientesPuntoVenta = async () => (await api.get('/Clientes')).data || [];
+export const obtenerProductosPuntoVenta = async (q = '', signal) =>
+  (await api.get('/pos/productos', configuracionBusqueda(q, signal))).data?.content || [];
+
+export const obtenerClientesPuntoVenta = async (q = '', signal) =>
+  (await api.get('/pos/clientes', configuracionBusqueda(q, signal))).data?.content || [];
 
 export const crearClientePuntoVenta = async (datos) => (await api.post('/Clientes', datos)).data;
 

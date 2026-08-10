@@ -53,6 +53,9 @@ export default function VistaControlSistema() {
   const [erroresCorrelativo, setErroresCorrelativo] = useState({});
 
   const [usuarios, setUsuarios] = useState([]);
+  const [totalUsuarios, setTotalUsuarios] = useState(0);
+  const [paginaUsuarios, setPaginaUsuarios] = useState(0);
+  const [filasUsuarios, setFilasUsuarios] = useState(20);
   const [roles, setRoles] = useState([]);
   const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
   const [dialogoUsuario, setDialogoUsuario] = useState(false);
@@ -97,17 +100,21 @@ export default function VistaControlSistema() {
     }
   }, [notificarError, puede]);
 
-  const cargarUsuarios = useCallback(async () => {
+  const cargarUsuarios = useCallback(async (pagina = paginaUsuarios, filas = filasUsuarios) => {
     if (!puede('USUARIOS_VER')) return;
     setCargandoUsuarios(true);
     try {
-      setUsuarios(await usuariosService.listar());
+      const datos = await usuariosService.listar({ page: pagina, size: filas });
+      setUsuarios(datos.content || []);
+      setTotalUsuarios(datos.totalElements || 0);
+      setPaginaUsuarios(pagina);
+      setFilasUsuarios(filas);
     } catch (error) {
       notificarError(error, 'No fue posible cargar los usuarios.');
     } finally {
       setCargandoUsuarios(false);
     }
-  }, [notificarError, puede]);
+  }, [filasUsuarios, notificarError, paginaUsuarios, puede]);
 
   const cargarPermisos = useCallback(async () => {
     if (!puede('ROLES_VER')) return;
@@ -353,7 +360,7 @@ export default function VistaControlSistema() {
                   <div><h3 className="text-xl font-bold m-0">Cuentas del sistema</h3><p className="text-sm mt-1 mb-0" style={{ color: 'var(--text-muted)' }}>Cada persona tiene un único rol. Las cuentas se deshabilitan; no se eliminan.</p></div>
                   {puede('USUARIOS_CREAR') && <Button icon="pi pi-user-plus" label="Nuevo usuario" className="premium-btn" onClick={() => abrirUsuario()} />}
                 </div>
-                <DataTable value={usuarios} loading={cargandoUsuarios} paginator rows={10} size="small" className="premium-table" emptyMessage="No hay usuarios">
+                <DataTable value={usuarios} loading={cargandoUsuarios} lazy paginator first={paginaUsuarios * filasUsuarios} rows={filasUsuarios} totalRecords={totalUsuarios} rowsPerPageOptions={[10, 20, 50, 100]} onPage={(e) => cargarUsuarios(e.page, e.rows)} size="small" className="premium-table" emptyMessage="No hay usuarios">
                   <Column field="nombreUsuario" header="Usuario" body={(fila) => <div><strong>{fila.nombreUsuario}</strong>{fila.id === sesion?.id && <small className="block text-primary">Sesión actual</small>}</div>} />
                   <Column field="correo" header="Correo" />
                   <Column header="Rol" body={(fila) => <Tag value={fila.rol?.nombre || 'Sin rol'} severity="info" />} />

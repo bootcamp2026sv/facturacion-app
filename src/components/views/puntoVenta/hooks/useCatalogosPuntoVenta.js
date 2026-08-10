@@ -14,7 +14,7 @@ import { esClienteFinal } from '../reglasPuntoVenta.js';
 const MENSAJE_CLIENTE_PREDETERMINADO = 'No se encontro el cliente final/default. Cree o active un cliente "Consumidor Final", "Cliente Final" o "Clientes Varios" antes de vender.';
 
 // Administra los catálogos y las recargas que necesita el POS.
-export function useCatalogosPuntoVenta() {
+export function useCatalogosPuntoVenta({ busquedaProducto = '', busquedaCliente = '' } = {}) {
   const [productos, setProductos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [distritos, setDistritos] = useState([]);
@@ -29,12 +29,12 @@ export function useCatalogosPuntoVenta() {
   const [esGranContribuyente, setEsGranContribuyente] = useState(false);
 
   // Recarga solo productos para no volver a pedir todos los catálogos.
-  const recargarProductos = useCallback(async () => {
+  const recargarProductos = useCallback(async (signal) => {
     setRecargandoProductos(true);
     setErrorCatalogos('');
 
     try {
-      const respuesta = await obtenerProductosPuntoVenta();
+      const respuesta = await obtenerProductosPuntoVenta(busquedaProducto.trim(), signal);
       const productosApi = respuesta
         .filter((producto) => producto.activo !== false)
         .map(mapearProductoApi);
@@ -42,30 +42,39 @@ export function useCatalogosPuntoVenta() {
       setProductos(productosApi);
       actualizarCatalogoPosCache('productos', respuesta);
     } catch (error) {
+      if (error.code === 'ERR_CANCELED') return;
       console.error('Error al recargar productos:', error);
       setErrorCatalogos(error.response?.data?.message || 'No se pudieron recargar los productos.');
     } finally {
-      setRecargandoProductos(false);
+      if (!signal?.aborted) setRecargandoProductos(false);
     }
-  }, []);
+  }, [busquedaProducto]);
 
   // Recarga clientes y conserva el cliente actual cuando todavía existe.
-  const recargarClientes = useCallback(async (clienteActual = null) => {
+  const recargarClientes = useCallback(async (clienteActual = null, signal) => {
     setCargandoClientes(true);
     setErrorClientes('');
 
     try {
-      const respuesta = await obtenerClientesPuntoVenta();
+      const respuesta = await obtenerClientesPuntoVenta(busquedaCliente.trim(), signal);
       const clientesApi = respuesta
         .filter((cliente) => cliente.activo !== false)
         .map(mapearClienteApi);
-      const clienteVigente = clientesApi.find((cliente) => cliente.value === clienteActual);
+      setClientes((actuales) => {
+        const clienteAnterior = actuales.find((disponible) => disponible.value === clienteActual) || null;
+        if (clienteAnterior && !clientesApi.some((disponible) => disponible.value === clienteActual)) {
+          return [clienteAnterior, ...clientesApi];
+        }
+        return clientesApi;
+      });
+      const clienteVigente = clientesApi.find((disponible) => disponible.value === clienteActual) || null;
       const clienteDefault = clientesApi.find(esClienteFinal) || null;
-      const siguienteCliente = clienteVigente || clienteDefault || null;
+      const siguienteCliente = clienteVigente || (!clienteActual ? clienteDefault : null);
 
-      setClientes(clientesApi);
-      setCliente(siguienteCliente?.value || null);
-      setEsGranContribuyente(!!siguienteCliente?.granContribuyente);
+      if (siguienteCliente) {
+        setCliente(siguienteCliente.value);
+        setEsGranContribuyente(!!siguienteCliente.granContribuyente);
+      }
       actualizarCatalogoPosCache('clientes', respuesta);
 
       if (!clienteDefault) {
@@ -74,13 +83,14 @@ export function useCatalogosPuntoVenta() {
 
       return { clienteDefault, siguienteCliente };
     } catch (error) {
+      if (error.code === 'ERR_CANCELED') return { clienteDefault: null, siguienteCliente: null };
       console.error('Error al recargar clientes del POS:', error);
       setErrorClientes(error.response?.data?.message || 'No se pudieron actualizar los clientes.');
       return { clienteDefault: null, siguienteCliente: null };
     } finally {
-      setCargandoClientes(false);
+      if (!signal?.aborted) setCargandoClientes(false);
     }
-  }, []);
+  }, [busquedaCliente]);
 
   // La primera carga usa una promesa compartida para evitar solicitudes duplicadas.
   useEffect(() => {
@@ -102,7 +112,7 @@ export function useCatalogosPuntoVenta() {
           .map(mapearClienteApi));
         setDistritos(catalogos.distritos || []);
         setActividades(catalogos.actividades || []);
-        setComercio(catalogos.comercios[0] || null);
+        setComercio(catalogos.comercio || null);
 
         const clienteDefault = catalogos.clientes
           .filter((cliente) => cliente.activo !== false)
@@ -130,6 +140,24 @@ export function useCatalogosPuntoVenta() {
       activo = false;
     };
   }, []);
+
+  useEffect(() => {
+    const controlador = new AbortController();
+    const espera = setTimeout(() => recargarProductos(controlador.signal), busquedaProducto ? 300 : 0);
+    return () => {
+      clearTimeout(espera);
+      controlador.abort();
+    };
+  }, [busquedaProducto, recargarProductos]);
+
+  useEffect(() => {
+    const controlador = new AbortController();
+    const espera = setTimeout(() => recargarClientes(cliente, controlador.signal), busquedaCliente ? 300 : 0);
+    return () => {
+      clearTimeout(espera);
+      controlador.abort();
+    };
+  }, [busquedaCliente, cliente, recargarClientes]);
 
   return {
     productos,

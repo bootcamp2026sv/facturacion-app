@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -12,67 +12,25 @@ export default function VistaInicio({ alCambiarVista }) {
     productosCount: 0
   });
   const [ultimasVentas, setUltimasVentas] = useState([]);
-  const cargadoRef = useRef(false);
+  const [errorCarga, setErrorCarga] = useState('');
 
   useEffect(() => {
-    if (cargadoRef.current) return;
-    cargadoRef.current = true;
     const cargarDatosDashboard = async () => {
       setCargando(true);
+      setErrorCarga('');
       try {
-        // Cargar productos
-        let prodsCount = 0;
-        try {
-          const resProds = await api.get('/Productos');
-          prodsCount = (resProds.data || []).length;
-        } catch (e) {
-          console.error("Error al cargar productos para stats:", e);
-        }
-
-        // Cargar clientes
-        let clisCount = 0;
-        try {
-          const resClis = await api.get('/Clientes');
-          clisCount = (resClis.data || []).length;
-        } catch (e) {
-          console.error("Error al cargar clientes para stats:", e);
-        }
-
-        // Cargar ventas
-        let listadoVentas = [];
-        try {
-          const resVentas = await api.get('/Ventas');
-          listadoVentas = resVentas.data || [];
-        } catch (e) {
-          console.error("Error al cargar ventas para stats:", e);
-          // Fallback a ventas de demostración si la API de ventas falla
-          listadoVentas = [
-            { id: 1, numeroControl: 'DTE-01-M001P001-000000000001000', codigoGeneracion: '288e60c6-aeb4-414b-9227-9b4c16d35c1e', fecha: '2026-06-07T14:30:00', cliente: 'Distribuidora Alimentos S.A.', totalGeneral: 678.00, tipoDte: '01' },
-            { id: 2, numeroControl: 'DTE-03-M001P001-000000000000254', codigoGeneracion: '7a8b60d2-cf14-49c7-8142-2b4c16d35f4a', fecha: '2026-06-07T11:15:00', cliente: 'Juan Carlos Pérez', totalGeneral: 25.50, tipoDte: '03' }
-          ];
-        }
-
-        // Calcular estadísticas
-        const totalFacturado = listadoVentas.reduce((sum, v) => {
-          const val = parseFloat(v.totalGeneral || v.total || 0);
-          return sum + val;
-        }, 0);
-
+        const { data } = await api.get('/dashboard/resumen');
         setStats({
-          totalFacturado,
-          dtesEmitidos: listadoVentas.length,
-          clientesCount: clisCount,
-          productosCount: prodsCount
+          totalFacturado: Number(data?.totalFacturado || 0),
+          dtesEmitidos: Number(data?.dtesEmitidos || 0),
+          clientesCount: Number(data?.clientesCount || 0),
+          productosCount: Number(data?.productosCount || 0)
         });
-
-        // Tomar las últimas 4 ventas
-        const ultimas = [...listadoVentas]
-          .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-          .slice(0, 4);
-        setUltimasVentas(ultimas);
-
+        setUltimasVentas(Array.isArray(data?.ultimasVentas) ? data.ultimasVentas : []);
       } catch (error) {
         console.error("Error cargando dashboard:", error);
+        setErrorCarga(error.response?.data?.message || 'No fue posible obtener el resumen del servidor.');
+        setUltimasVentas([]);
       } finally {
         setCargando(false);
       }
@@ -135,6 +93,12 @@ export default function VistaInicio({ alCambiarVista }) {
 
   return (
     <div className="p-4 premium-fade-in">
+      {errorCarga && (
+        <div className="p-3 mb-4 border-round bg-red-50 text-red-700 flex align-items-center gap-2">
+          <i className="pi pi-exclamation-triangle" />
+          <span>{errorCarga}</span>
+        </div>
+      )}
       {/* Encabezado */}
       <div className="mb-4">
         <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>

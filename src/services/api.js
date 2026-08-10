@@ -58,16 +58,25 @@ api.interceptors.request.use(
 );
 
 // Controlar peticiones de refresco encoladas para evitar múltiples llamadas paralelas de refresh token
-let isRefreshing = false;
-let refreshSubscribers = [];
+let renovacionEnCurso = null;
 
-const subscribeTokenRefresh = (callback) => {
-  refreshSubscribers.push(callback);
-};
+const renovarAccessToken = async () => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    throw new Error('No existe un token para renovar la sesión');
+  }
 
-const onRefreshed = (token) => {
-  refreshSubscribers.map((callback) => callback(token));
-  refreshSubscribers = [];
+  const respuesta = await apiAuth.post('/auth/refresh', { refreshToken });
+  const { accessToken, refreshToken: nuevoRefreshToken } = respuesta.data || {};
+  if (!accessToken) {
+    throw new Error('El servidor no devolvió un token de acceso');
+  }
+
+  localStorage.setItem('accessToken', accessToken);
+  if (nuevoRefreshToken) {
+    localStorage.setItem('refreshToken', nuevoRefreshToken);
+  }
+  return accessToken;
 };
 
 // Interceptor de Response: Maneja errores, especialmente el refresco del token en error 401
@@ -85,52 +94,21 @@ api.interceptors.response.use(
     }
 
     // Si el error es 401 (No autorizado) y no es una petición de refresco/login en sí misma
-    if (clasificarErrorAutorizacion(response?.status) === 'RENOVAR_SESION' && !originalRequest._retry) {
-      if (isRefreshing) {
-        // Encolar la petición hasta que termine el refresco
-        return new Promise((resolve) => {
-          subscribeTokenRefresh((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(api(originalRequest));
-          });
-        });
-      }
-
+    if (originalRequest && clasificarErrorAutorizacion(response?.status) === 'RENOVAR_SESION' && !originalRequest._retry) {
       originalRequest._retry = true;
-      isRefreshing = true;
-
-      const refreshToken = localStorage.getItem('refreshToken');
-
-      if (!refreshToken) {
-        limpiarSesion();
-        isRefreshing = false;
-        return Promise.reject(error);
-      }
 
       try {
-        // Llamada para refrescar el token
-        const res = await apiAuth.post('/auth/refresh', { refreshToken });
-        
-        if (res.status === 200 && res.data.accessToken) {
-          const { accessToken, refreshToken: nuevoRefreshToken } = res.data;
-          
-          localStorage.setItem('accessToken', accessToken);
-          if (nuevoRefreshToken) {
-            localStorage.setItem('refreshToken', nuevoRefreshToken);
-          }
-
-          // Continuar con las peticiones encoladas
-          onRefreshed(accessToken);
-          isRefreshing = false;
-
-          // Reintentar la petición original con el nuevo token
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return api(originalRequest);
+        if (!renovacionEnCurso) {
+          renovacionEnCurso = renovarAccessToken().finally(() => {
+            renovacionEnCurso = null;
+          });
         }
+        const accessToken = await renovacionEnCurso;
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return api(originalRequest);
       } catch (refreshError) {
-        // Si falla el refresco de token, el refresh token ya no es válido, se desloguea
         limpiarSesion();
-        isRefreshing = false;
         return Promise.reject(refreshError);
       }
     }

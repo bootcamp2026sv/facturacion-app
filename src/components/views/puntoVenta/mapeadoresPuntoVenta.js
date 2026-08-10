@@ -48,8 +48,8 @@ export const mapearClienteApi = (cliente) => {
     actividadEconomica,
     distritoId: distrito?.id || cliente.distrito_id || cliente.distritoId || null,
     direccion: {
-      departamento: departamento?.Nombre || departamento?.nombre || '',
-      municipio: municipio?.Nombre || municipio?.nombre || '',
+      departamento: distrito?.departamentoNombre || departamento?.Nombre || departamento?.nombre || '',
+      municipio: distrito?.municipioNombre || municipio?.Nombre || municipio?.nombre || '',
       distrito: distrito?.Nombre || distrito?.nombre || '',
       complemento: cliente.complementoDireccion || cliente.ComplementoDireccion || '',
     },

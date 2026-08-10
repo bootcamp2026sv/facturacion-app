@@ -1,23 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button } from "primereact/button";
 import { Toast } from "primereact/toast";
 import { useTema } from "../context/ThemeContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import VistaInicio from "./views/VistaInicio";
-import VistaProductos from "./views/VistaProductos";
-import VistaCategorias from "./views/VistaCategorias";
-import VistaClientes from "./views/VistaClientes";
-import VistaCodigosActividad from "./views/VistaCodigosActividad";
-import VistaUnidadesMedida from "./views/VistaUnidadesMedida";
-import VistaVentas from "./views/VistaVentas";
-import VistaPuntoVenta from "./views/VistaPuntoVenta";
-import VistaPuntoVentaClasico from "./views/VistaPuntoVentaClasico";
-import VistaComercios from "./views/VistaComercios";
-import VistaGeografia from "./views/VistaGeografia";
-import VistaControlSistema from "./views/VistaControlSistema";
-import VistaCatalogosExportacion from "./views/VistaCatalogosExportacion";
 import { filtrarMenuPorPermisos, primeraVistaAutorizada, puedeVerVista } from "../utils/permisos.js";
 import { onForbidden } from "../services/api.js";
+
+const VistaInicio = lazy(() => import("./views/VistaInicio"));
+const VistaProductos = lazy(() => import("./views/VistaProductos"));
+const VistaCategorias = lazy(() => import("./views/VistaCategorias"));
+const VistaClientes = lazy(() => import("./views/VistaClientes"));
+const VistaCodigosActividad = lazy(() => import("./views/VistaCodigosActividad"));
+const VistaUnidadesMedida = lazy(() => import("./views/VistaUnidadesMedida"));
+const VistaVentas = lazy(() => import("./views/VistaVentas"));
+const VistaPuntoVenta = lazy(() => import("./views/VistaPuntoVenta"));
+const VistaPuntoVentaClasico = lazy(() => import("./views/VistaPuntoVentaClasico"));
+const VistaComercios = lazy(() => import("./views/VistaComercios"));
+const VistaGeografia = lazy(() => import("./views/VistaGeografia"));
+const VistaControlSistema = lazy(() => import("./views/VistaControlSistema"));
+const VistaCatalogosExportacion = lazy(() => import("./views/VistaCatalogosExportacion"));
 
 const VISTA_ACTIVA_STORAGE_KEY = "panel.vistaActiva";
 const VISTAS_VALIDAS = [
@@ -280,7 +281,9 @@ export default function PanelPrincipal() {
         <main
           className={`p-4 flex-1 min-h-0 ${vistaAutorizada === "pos-clasico" ? "overflow-hidden" : "overflow-auto"}`}
         >
-          {elementoVistaActual.componente}
+          <Suspense fallback={<div className="flex justify-content-center p-6"><i className="pi pi-spin pi-spinner text-3xl text-primary" /></div>}>
+            {elementoVistaActual.componente}
+          </Suspense>
         </main>
       </div>
     </div>

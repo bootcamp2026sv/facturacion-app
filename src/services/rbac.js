@@ -1,7 +1,8 @@
 import api from './api';
 
 export const usuariosService = {
-  listar: async () => (await api.get('/usuarios')).data,
+  listar: async ({ page = 0, size = 20, sortBy = 'nombreUsuario', sortDir = 'asc' } = {}) =>
+    (await api.get('/usuarios', { params: { page, size, sortBy, sortDir } })).data,
   crear: async (datos) => (await api.post('/usuarios', datos)).data,
   editar: async (id, datos) => (await api.patch(`/usuarios/${id}`, datos)).data,
   cambiarEstado: async (id, habilitado) =>

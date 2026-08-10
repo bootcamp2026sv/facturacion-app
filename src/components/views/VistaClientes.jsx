@@ -51,6 +51,11 @@ export default function VistaClientes() {
   const [filtroGlobal, setFiltroGlobal] = useState('');
   const [filtroGranContribuyente, setFiltroGranContribuyente] = useState('TODOS');
   const [filtroDistrito, setFiltroDistrito] = useState(null);
+  const [pagina, setPagina] = useState(0);
+  const [filas, setFilas] = useState(20);
+  const [totalRegistros, setTotalRegistros] = useState(0);
+  const [orden, setOrden] = useState({ campo: 'nombre', direccion: 1 });
+  const [recarga, setRecarga] = useState(0);
 
   // Estado del formulario
   const [datosFormulario, setDatosFormulario] = useState({
@@ -114,7 +119,7 @@ export default function VistaClientes() {
     setCargando(true);
     try {
       await api.delete(`/Clientes/${clienteAEliminar.id}`);
-      setClientes(prev => prev.filter(c => c.id !== clienteAEliminar.id));
+      setRecarga((actual) => actual + 1);
       toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Cliente eliminado correctamente.', life: 3000 });
       if (idSeleccionado === clienteAEliminar.id) {
         cancelarEdicion();
@@ -162,24 +167,12 @@ export default function VistaClientes() {
     const cargarDatosAPI = async () => {
       setCargando(true);
       try {
-        // 1. Obtener listado de distritos desde el API
-        const respuestaDistritos = await api.get('/distritos');
-        setDistritos(respuestaDistritos.data || []);
-
-        // 2. Obtener listado de actividades económicas desde el API
-        const respuestaActividades = await api.get('/ActividadEconomicas');
+        const [respuestaGeografia, respuestaActividades] = await Promise.all([
+          api.get('/geografia'),
+          api.get('/ActividadEconomicas')
+        ]);
+        setDistritos(respuestaGeografia.data?.distritos || []);
         setActividades(respuestaActividades.data || []);
-
-        // 3. Obtener listado de clientes registrados
-        const respuestaClientes = await api.get('/Clientes');
-        setClientes(respuestaClientes.data || []);
-
-        toast.current.show({ 
-          severity: 'success', 
-          summary: 'Sincronizado', 
-          detail: 'Datos sincronizados con el servidor exitosamente.', 
-          life: 3000 
-        });
       } catch (error) {
         console.error("Error al sincronizar con la API:", error);
         toast.current.show({ 
@@ -195,6 +188,41 @@ export default function VistaClientes() {
     };
     cargarDatosAPI();
   }, []);
+
+  useEffect(() => {
+    const controlador = new AbortController();
+    const espera = setTimeout(async () => {
+      setCargando(true);
+      try {
+        const { data } = await api.get('/Clientes', {
+          signal: controlador.signal,
+          params: {
+            page: pagina,
+            size: filas,
+            q: filtroGlobal.trim(),
+            granContribuyente: filtroGranContribuyente === 'TODOS' ? undefined : filtroGranContribuyente === 'GC',
+            distritoId: filtroDistrito || undefined,
+            sortBy: orden.campo,
+            sortDir: orden.direccion === 1 ? 'asc' : 'desc'
+          }
+        });
+        setClientes(Array.isArray(data?.content) ? data.content : []);
+        setTotalRegistros(Number(data?.totalElements || 0));
+      } catch (error) {
+        if (error.code === 'ERR_CANCELED') return;
+        console.error('Error al cargar clientes:', error);
+        setClientes([]);
+        setTotalRegistros(0);
+        toast.current?.show({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los clientes.', life: 4000 });
+      } finally {
+        if (!controlador.signal.aborted) setCargando(false);
+      }
+    }, filtroGlobal ? 300 : 0);
+    return () => {
+      clearTimeout(espera);
+      controlador.abort();
+    };
+  }, [pagina, filas, filtroGlobal, filtroGranContribuyente, filtroDistrito, orden, recarga]);
   
 
   const resetearFormulario = () => {
@@ -233,9 +261,8 @@ export default function VistaClientes() {
 
     try {
       if (editando) {
-        const respuesta = await api.put(`/Clientes/${idSeleccionado}`, datosFormulario);
-        const clienteActualizado = respuesta.data;
-        setClientes(prev => prev.map(c => c.id === idSeleccionado ? clienteActualizado : c));
+        await api.put(`/Clientes/${idSeleccionado}`, datosFormulario);
+        setRecarga((actual) => actual + 1);
         toast.current.show({ 
           severity: 'success', 
           summary: 'Actualizado', 
@@ -246,7 +273,8 @@ export default function VistaClientes() {
       } else {
         const respuesta = await api.post('/Clientes', datosFormulario); 
         const clienteGuardado = respuesta.data;
-        setClientes(prev => [...prev, clienteGuardado]);
+        setPagina(0);
+        setRecarga((actual) => actual + 1);
         toast.current.show({ 
           severity: 'success', 
           summary: 'Registrado', 
@@ -368,33 +396,6 @@ export default function VistaClientes() {
     </div>
   );
 
-  // Lógica de búsqueda y filtrado de clientes
-  const clientesFiltrados = clientes.filter(cliente => {
-    const query = filtroGlobal.toLowerCase().trim();
-    const matchGlobal = !query || 
-      (cliente.nombre || '').toLowerCase().includes(query) ||
-      (cliente.apellidos || '').toLowerCase().includes(query) ||
-      (cliente.numDocumento || '').toLowerCase().includes(query) ||
-      (cliente.nombreComercial || '').toLowerCase().includes(query) ||
-      (cliente.correo || '').toLowerCase().includes(query) ||
-      (cliente.telefono || '').toLowerCase().includes(query) ||
-      (cliente.nrc || '').toLowerCase().includes(query) ||
-      ((cliente.distrito?.nombre || cliente.distrito?.Nombre) || '').toLowerCase().includes(query) ||
-      ((cliente.actividadEconomica?.descActividad || cliente.actividadEconomica?.descActividad) || '').toLowerCase().includes(query);
-
-    let matchGC = true;
-    if (filtroGranContribuyente === 'GC') {
-      matchGC = cliente.granContribuyente === true;
-    } else if (filtroGranContribuyente === 'REGULAR') {
-      matchGC = cliente.granContribuyente === false;
-    }
-
-    const distId = cliente.distrito?.id || cliente.distrito_id || cliente.distritoId;
-    const matchDist = !filtroDistrito || distId === filtroDistrito;
-
-    return matchGlobal && matchGC && matchDist;
-  });
-
   const opcionesGC = [
     { label: 'Todos los Clientes', value: 'TODOS' },
     { label: 'Grandes Contribuyentes (GC)', value: 'GC' },
@@ -406,7 +407,7 @@ export default function VistaClientes() {
       <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-2">
         <h3 className="m-0 text-base font-bold" style={{ color: 'var(--text-primary)' }}>Listado de Clientes</h3>
         <span className="text-xs text-500" style={{ color: 'var(--text-muted)' }}>
-          Mostrando {clientesFiltrados.length} de {clientes.length} registros
+          Mostrando {clientes.length} de {totalRegistros} registros
         </span>
       </div>
       <div className="grid">
@@ -416,7 +417,7 @@ export default function VistaClientes() {
             <InputText
               type="search"
               value={filtroGlobal}
-              onChange={(e) => setFiltroGlobal(e.target.value)}
+              onChange={(e) => { setFiltroGlobal(e.target.value); setPagina(0); }}
               placeholder="Buscar por nombre, DUI/NIT, correo..."
               className="w-full"
             />
@@ -426,7 +427,7 @@ export default function VistaClientes() {
           <Dropdown
             value={filtroGranContribuyente}
             options={opcionesGC}
-            onChange={(e) => setFiltroGranContribuyente(e.value)}
+            onChange={(e) => { setFiltroGranContribuyente(e.value); setPagina(0); }}
             placeholder="Clasificación Tributaria"
             className="w-full"
           />
@@ -435,7 +436,7 @@ export default function VistaClientes() {
           <Dropdown
             value={filtroDistrito}
             options={[{ label: 'Todos los Distritos', value: null }, ...distritos.map(d => ({ label: d.nombre || d.Nombre || 'Distrito', value: d.id }))]}
-            onChange={(e) => setFiltroDistrito(e.value)}
+            onChange={(e) => { setFiltroDistrito(e.value); setPagina(0); }}
             placeholder="Filtrar por Distrito"
             className="w-full"
             filter
@@ -701,9 +702,17 @@ export default function VistaClientes() {
             <div className="pt-2">
               <div className="premium-table">
                 <DataTable 
-                  value={clientesFiltrados} 
+                  value={clientes}
+                  lazy
                   paginator 
-                  rows={10} 
+                  first={pagina * filas}
+                  rows={filas}
+                  totalRecords={totalRegistros}
+                  rowsPerPageOptions={[10, 20, 50, 100]}
+                  onPage={(e) => { setPagina(e.page); setFilas(e.rows); }}
+                  onSort={(e) => { setOrden({ campo: e.sortField, direccion: e.sortOrder }); setPagina(0); }}
+                  sortField={orden.campo}
+                  sortOrder={orden.direccion}
                   loading={cargando}
                   header={headerTabla}
                   size="small" 
@@ -714,8 +723,8 @@ export default function VistaClientes() {
                   <Column header="#" body={(rowData, options) => options.rowIndex + 1} style={{ width: '70px' }} className="text-center"></Column>
                   <Column header="DUI/NIT" field="numDocumento" body={documentoTemplate} sortable></Column>
                   <Column header="Cliente / Razón Social" field="nombre" body={clienteTemplate} sortable></Column>
-                  <Column header="Actividad Económica" field="actividadEconomica.descActividad" body={actividadTemplate} sortable></Column>
-                  <Column header="Ubicación" field="distrito.nombre" body={localizacionTemplate} sortable></Column>
+                  <Column header="Actividad Económica" field="actividadEconomica.descActividad" body={actividadTemplate}></Column>
+                  <Column header="Ubicación" field="distrito.nombre" body={localizacionTemplate}></Column>
                   <Column header="Acciones" body={plantillaAcciones} exportable={false} style={{ width: '120px' }} className="text-center"></Column>
                 </DataTable>
               </div>
