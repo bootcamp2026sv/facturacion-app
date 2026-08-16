@@ -1,0 +1,16 @@
+.git
+.gitignore
+.agents
+.claude
+.gemini
+.env
+.env.*
+node_modules
+dist
+coverage
+test
+*.log
+Dockerfile*
+DOCKER_DEPLOY.md
+CHECKLIST_PRODUCCION.txt
+api-docs.json
