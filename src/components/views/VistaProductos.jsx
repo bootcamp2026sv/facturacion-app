@@ -13,6 +13,7 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { InputTextarea } from 'primereact/inputtextarea';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { resolverUrlMedia } from '../../utils/media';
 
 export default function VistaProductos() {
   const { puede } = useAuth();
@@ -23,6 +24,8 @@ export default function VistaProductos() {
   const [dialogoEliminarVisible, setDialogoEliminarVisible] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [imagenArchivo, setImagenArchivo] = useState(null);
+  const [imagenVistaPrevia, setImagenVistaPrevia] = useState(null);
 
   const productoVacio = {
     id: null,
@@ -41,7 +44,8 @@ export default function VistaProductos() {
     descripcion: '',
     stockMinimo: 0,
     activo: true,
-    unimedidaId: null
+    unimedidaId: null,
+    imagenUrl: null
   };
 
   const [producto, setProducto] = useState(productoVacio);
@@ -111,12 +115,56 @@ export default function VistaProductos() {
   }
 
   const abrirNuevo = () => {
+    liberarVistaPrevia();
     setProducto(productoVacio);
+    setImagenArchivo(null);
+    setImagenVistaPrevia(null);
     setDialogoVisible(true);
   };
 
   const ocultarDialogo = () => {
+    liberarVistaPrevia();
+    setImagenArchivo(null);
     setDialogoVisible(false);
+  };
+
+  const liberarVistaPrevia = () => {
+    if (imagenVistaPrevia?.startsWith('blob:')) URL.revokeObjectURL(imagenVistaPrevia);
+  };
+
+  const seleccionarImagen = (archivo) => {
+    if (!archivo) return;
+    if (!['image/png', 'image/jpeg'].includes(archivo.type)) {
+      toast.current.show({ severity: 'warn', summary: 'Formato no permitido', detail: 'Selecciona una imagen PNG o JPEG.', life: 3500 });
+      return;
+    }
+    if (archivo.size > 5 * 1024 * 1024) {
+      toast.current.show({ severity: 'warn', summary: 'Imagen demasiado grande', detail: 'La imagen original no puede superar 5 MB.', life: 3500 });
+      return;
+    }
+    liberarVistaPrevia();
+    setImagenArchivo(archivo);
+    setImagenVistaPrevia(URL.createObjectURL(archivo));
+  };
+
+  const eliminarImagen = async () => {
+    liberarVistaPrevia();
+    setImagenArchivo(null);
+    if (!producto.id || !producto.imagenUrl) {
+      setImagenVistaPrevia(null);
+      setProducto((actual) => ({ ...actual, imagenUrl: null }));
+      return;
+    }
+    try {
+      await api.delete(`/Productos/${producto.id}/imagen`);
+      setImagenVistaPrevia(null);
+      setProducto((actual) => ({ ...actual, imagenUrl: null }));
+      cargarProductos();
+      toast.current.show({ severity: 'success', summary: 'Imagen eliminada', detail: 'El producto volvera a usar el icono predeterminado.', life: 3000 });
+    } catch (error) {
+      const apiMsg = error.response?.data?.message || 'No se pudo eliminar la imagen.';
+      toast.current.show({ severity: 'error', summary: 'Error', detail: apiMsg, life: 4000 });
+    }
   };
 
   const ocultarDialogoEliminar = () => {
@@ -172,27 +220,33 @@ export default function VistaProductos() {
         unimedidaId: producto.unimedidaId
       };
 
+      let productoGuardado;
       if (producto.id) {
-        // Actualizar
-        await api.put(`/Productos/${producto.id}`, payload);
-        toast.current.show({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Producto actualizado correctamente.',
-          life: 3000
-        });
+        productoGuardado = (await api.put(`/Productos/${producto.id}`, payload)).data;
       } else {
-        // Crear
-        await api.post('/Productos', payload);
-        toast.current.show({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Producto creado correctamente.',
-          life: 3000
-        });
+        productoGuardado = (await api.post('/Productos', payload)).data;
       }
 
+      let errorImagen = null;
+      if (imagenArchivo && productoGuardado?.id) {
+        const formulario = new FormData();
+        formulario.append('archivo', imagenArchivo);
+        try {
+          productoGuardado = (await api.post(`/Productos/${productoGuardado.id}/imagen`, formulario, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })).data;
+        } catch (errorCargaImagen) {
+          errorImagen = errorCargaImagen.response?.data?.message || 'El producto se guardo, pero su imagen no pudo procesarse.';
+        }
+      }
+
+      toast.current.show(errorImagen
+        ? { severity: 'warn', summary: 'Producto guardado sin imagen', detail: errorImagen, life: 5500 }
+        : { severity: 'success', summary: 'Éxito', detail: producto.id ? 'Producto actualizado correctamente.' : 'Producto creado correctamente.', life: 3000 });
+
       cargarProductos();
+      liberarVistaPrevia();
+      setImagenArchivo(null);
       setDialogoVisible(false);
     } catch (error) {
       console.error('Error al guardar producto:', error);
@@ -210,6 +264,9 @@ export default function VistaProductos() {
 
   const editarProducto = (prodSelected) => {
     // Mapear uniMedida object a unimedidaId y categoria a categoriaId
+    liberarVistaPrevia();
+    setImagenArchivo(null);
+    setImagenVistaPrevia(resolverUrlMedia(prodSelected.imagenUrl));
     setProducto({
       ...prodSelected,
       unimedidaId: prodSelected.uniMedida?.id || null,
@@ -251,6 +308,13 @@ export default function VistaProductos() {
   };
 
   // Plantillas de columnas
+  const plantillaImagen = (rowData) => {
+    const url = resolverUrlMedia(rowData.imagenUrl);
+    return url ? (
+      <img src={url} alt="" style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '8px', background: 'var(--surface-ground)' }} />
+    ) : <i className="pi pi-image text-2xl" style={{ color: 'var(--text-muted)' }} />;
+  };
+
   const plantillaPrecioConIVA = (rowData) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(rowData.precioConIVA);
   };
@@ -435,6 +499,7 @@ export default function VistaProductos() {
           responsiveLayout="scroll"
         >
           <Column field="codigo" header="Código" sortable bodyClassName="font-bold"></Column>
+          <Column header="Imagen" body={plantillaImagen} style={{ width: '72px' }}></Column>
           <Column field="nombre" header="Nombre" sortable></Column>
           <Column field="categoria.nombre" header="Categoría"></Column>
           <Column field="marca" header="Marca"></Column>
@@ -533,6 +598,32 @@ export default function VistaProductos() {
                   disabled={guardando}
                 />
               </div>
+            </div>
+          </TabPanel>
+
+          <TabPanel header="Imagen" leftIcon="pi pi-image mr-2">
+            <div className="flex flex-column align-items-center gap-3 py-3">
+              <div className="flex align-items-center justify-content-center border-round-xl" style={{ width: '180px', height: '180px', background: 'var(--surface-ground)', border: '1px dashed var(--surface-border)' }}>
+                {imagenVistaPrevia ? (
+                  <img src={imagenVistaPrevia} alt="Vista previa del producto" style={{ maxWidth: '160px', maxHeight: '160px', objectFit: 'contain' }} />
+                ) : (
+                  <i className="pi pi-image text-6xl" style={{ color: 'var(--text-muted)' }} />
+                )}
+              </div>
+              <input
+                id="imagenProducto"
+                type="file"
+                accept="image/png,image/jpeg"
+                className="p-inputtext p-component w-full"
+                onChange={(e) => seleccionarImagen(e.target.files?.[0])}
+                disabled={guardando}
+              />
+              <small style={{ color: 'var(--text-muted)' }}>
+                PNG o JPEG, maximo 5 MB. Se ajustara automaticamente a 320 x 320 px y aproximadamente 120 KB.
+              </small>
+              {(imagenVistaPrevia || producto.imagenUrl) && (
+                <Button type="button" label="Quitar imagen" icon="pi pi-trash" severity="danger" outlined onClick={eliminarImagen} disabled={guardando} />
+              )}
             </div>
           </TabPanel>
 

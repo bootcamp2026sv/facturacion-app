@@ -5,6 +5,8 @@ import {
   construirDetallesVenta,
   construirPayloadVenta,
   crearDatosTicketVenta,
+  formatoFechaTicket,
+  normalizarFechaTicket,
   interpretarErrorHacienda,
   normalizarPlazo,
   parsearMontoPago,
@@ -160,9 +162,24 @@ test('normaliza plazos y montos de pago', () => {
   assert.equal(parsearMontoPago(''), null);
 });
 
+test('formatea fechas del API sin derribar el ticket', () => {
+  assert.equal(normalizarFechaTicket('2026-08-16T10:30:00')?.getFullYear(), 2026);
+  assert.equal(normalizarFechaTicket([2026, 8, 16, 10, 30])?.getMonth(), 7);
+  assert.match(formatoFechaTicket('2026-08-16T10:30:00'), /16/);
+  assert.equal(formatoFechaTicket('fecha-invalida'), 'Fecha no disponible');
+  assert.equal(formatoFechaTicket(null), 'Fecha no disponible');
+});
+
 test('crea el modelo del ticket con venta, receptor y forma de pago', () => {
   const ticket = crearDatosTicketVenta({
-    ventaGuardada: { id: 9, numeroControl: 'DTE-9', selloRecepcion: 'SELLO' },
+    ventaGuardada: {
+      id: 9,
+      numeroControl: 'DTE-9',
+      codigoGeneracion: '8511884C-8EB5-4BE7-AB91-612F575B433C',
+      ambiente: '01',
+      fecha: '2026-08-16T10:30:00',
+      selloRecepcion: 'SELLO',
+    },
     cambio: 3,
     carrito: [productoGravado],
     tipoDte: '01',
@@ -178,9 +195,10 @@ test('crea el modelo del ticket con venta, receptor y forma de pago', () => {
   });
 
   assert.equal(ticket.id, 9);
+  assert.equal(ticket.ambiente, '01');
+  assert.equal(ticket.fecha, '2026-08-16T10:30:00');
   assert.equal(ticket.cliente.label, 'Ana');
   assert.equal(ticket.efectivoRecibido, 103);
   assert.equal(ticket.cambio, 3);
   assert.equal(ticket.items[0].nombre, 'Producto gravado');
 });
-

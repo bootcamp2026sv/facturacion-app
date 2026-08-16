@@ -176,6 +176,7 @@ export default function VistaVentas() {
   const [consultaCargando, setConsultaCargando] = useState(false);
   const [respuestaConsulta, setRespuestaConsulta] = useState(null);
   const [errorConsulta, setErrorConsulta] = useState('');
+  const [operacionHacienda, setOperacionHacienda] = useState('consultar');
   const [notaVisible, setNotaVisible] = useState(false);
   const [tipoDteNota, setTipoDteNota] = useState('05');
   const [ventaOrigenNota, setVentaOrigenNota] = useState(null);
@@ -312,6 +313,8 @@ export default function VistaVentas() {
     try {
       if (accionConfirmar === 'Anular') {
         await anulacionHacienda(ventaSeleccionada);
+      } else if (accionConfirmar === 'Enviar Hacienda') {
+        await enviarHacienda(ventaSeleccionada);
       } else if (accionConfirmar === 'Enviar Correo') {
         const respuesta = await api.post(`/Ventas/${ventaSeleccionada.id}/correo`, { destinatario: emailDestino });
         toast.current.show({ severity: 'success', summary: 'Correo enviado', detail: respuesta.data?.mensaje || 'El DTE fue enviado correctamente.', life: 5000 });
@@ -348,6 +351,7 @@ export default function VistaVentas() {
 
   const anulacionHacienda = async (venta = ventaSeleccionada) => {
     setDialogoVisible(false);
+    setOperacionHacienda('anular');
     setConsultaVisible(true);
     setRespuestaConsulta(null);
     setErrorConsulta('');
@@ -382,8 +386,40 @@ export default function VistaVentas() {
     return data?.message || data?.mensaje || data?.error || error.message || 'No se pudo consultar el DTE en Hacienda.';
   };
 
+  const enviarHacienda = async (venta = ventaSeleccionada) => {
+    setDialogoVisible(false);
+    setOperacionHacienda('enviar');
+    setConsultaVisible(true);
+    setRespuestaConsulta(null);
+    setErrorConsulta('');
+
+    if (!venta?.id) {
+      setErrorConsulta('No se encontro el ID de la venta seleccionada.');
+      return;
+    }
+
+    setConsultaCargando(true);
+    try {
+      const respuesta = await api.post('/hacienda/procesar-dte', { ventaId: venta.id });
+      setRespuestaConsulta(respuesta.data);
+      const sello = respuesta.data?.selloRecibido || respuesta.data?.selloRecepcion;
+      if (sello) {
+        setVentaSeleccionada((actual) => ({ ...actual, selloRecepcion: sello }));
+        setVentas((actuales) => actuales.map((actual) => (
+          actual.id === venta.id ? { ...actual, selloRecepcion: sello } : actual
+        )));
+      }
+    } catch (error) {
+      console.error('Error al enviar DTE a Hacienda:', error);
+      setErrorConsulta(obtenerMensajeErrorConsulta(error));
+    } finally {
+      setConsultaCargando(false);
+    }
+  };
+
   const consultarHacienda = async (venta = ventaSeleccionada) => {
     setDialogoVisible(false);
+    setOperacionHacienda('consultar');
     setConsultaVisible(true);
     setRespuestaConsulta(null);
     setErrorConsulta('');
@@ -407,6 +443,7 @@ export default function VistaVentas() {
 
   const mensajesConfirmacion = {
     'Anular': { titulo: 'Anular DTE', cuerpo: '¿Está seguro de anular este documento? Esta acción no se puede deshacer.', icono: 'pi pi-exclamation-triangle', color: '#ef4444', btn: 'Sí, Anular' },
+    'Enviar Hacienda': { titulo: 'Enviar DTE a Hacienda', cuerpo: '¿Desea firmar y enviar este DTE al ambiente fiscal configurado en la venta?', icono: 'pi pi-send', color: '#0ea5e9', btn: 'Sí, Enviar' },
     'Enviar Correo': { titulo: 'Enviar por Correo', cuerpo: '¿Desea enviar este DTE al correo electrónico del cliente?', icono: 'pi pi-envelope', color: '#8b5cf6', btn: 'Sí, Enviar' },
     'Ver PDF': { titulo: 'Ver PDF', cuerpo: '¿Desea abrir el documento PDF de este DTE?', icono: 'pi pi-file-pdf', color: '#3b82f6', btn: 'Sí, Abrir' },
     'Descargar JSON': { titulo: 'Descargar JSON', cuerpo: '¿Desea descargar el archivo JSON de este DTE?', icono: 'pi pi-download', color: '#f59e0b', btn: 'Sí, Descargar' },
@@ -414,6 +451,7 @@ export default function VistaVentas() {
   };
 
   const acciones = [
+    { id: 'Enviar Hacienda', permiso: 'VENTAS_EMITIR', icono: 'pi pi-send', label: 'Enviar MH', color: '#0ea5e9' },
     { id: 'Anular', permiso: 'VENTAS_ANULAR', icono: 'pi pi-ban', label: 'Anular', color: '#ef4444' },
     { id: 'Enviar Correo', permiso: 'VENTAS_ENVIAR', icono: 'pi pi-envelope', label: 'Enviar Correo', color: '#8b5cf6' },
     { id: 'Ver PDF', permiso: 'VENTAS_DOCUMENTOS', icono: 'pi pi-file-pdf', label: 'Ver PDF', color: '#3b82f6' },
@@ -457,13 +495,20 @@ export default function VistaVentas() {
     <div className="ventas-modal-actions flex flex-nowrap justify-content-between w-full">
       {acciones.map((accion) => {
         const esAccionNota = accion.id === 'Nota Créd/Déb';
-        const deshabilitada = esAccionNota && !puedeEmitirNota(ventaSeleccionada);
+        const esEnvioHacienda = accion.id === 'Enviar Hacienda';
+        const deshabilitada = (esAccionNota && !puedeEmitirNota(ventaSeleccionada))
+          || (esEnvioHacienda && Boolean(obtenerSelloRecepcion(ventaSeleccionada)));
+        const tituloAccion = esAccionNota && deshabilitada
+          ? motivoNotaNoDisponible(ventaSeleccionada)
+          : esEnvioHacienda && deshabilitada
+            ? 'El DTE ya tiene sello de recepción de Hacienda.'
+            : accion.label;
         return (
           <button
             key={accion.id}
             className="flex flex-column align-items-center gap-1 p-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 min-w-0"
             style={{ background: 'transparent', opacity: deshabilitada ? 0.42 : 1 }}
-            title={deshabilitada ? motivoNotaNoDisponible(ventaSeleccionada) : accion.label}
+            title={tituloAccion}
             disabled={deshabilitada}
             onClick={() => accion.id === 'Consultar Hacienda' ? consultarHacienda(ventaSeleccionada) : confirmarAccion(accion.id)}
             onMouseEnter={(e) => {
@@ -488,10 +533,22 @@ export default function VistaVentas() {
     </div>
   );
 
+  const reintentarOperacionHacienda = () => {
+    if (operacionHacienda === 'enviar') return enviarHacienda(ventaSeleccionada);
+    if (operacionHacienda === 'anular') return anulacionHacienda(ventaSeleccionada);
+    return consultarHacienda(ventaSeleccionada);
+  };
+
+  const etiquetaOperacionHacienda = operacionHacienda === 'enviar'
+    ? 'Enviando DTE a Hacienda...'
+    : operacionHacienda === 'anular'
+      ? 'Anulando DTE en Hacienda...'
+      : 'Consultando estado del DTE en Hacienda...';
+
   const pieConsulta = (
     <div className="flex flex-column sm:flex-row gap-2 justify-content-end">
       <Button label="Cerrar" icon="pi pi-times" className="p-button-outlined p-button-secondary" onClick={() => setConsultaVisible(false)} />
-      <Button label={consultaCargando ? 'Consultando...' : 'Reintentar'} icon={consultaCargando ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} className="p-button-sm premium-btn" onClick={() => consultarHacienda(ventaSeleccionada)} disabled={consultaCargando || !ventaSeleccionada?.id} />
+      <Button label={consultaCargando ? 'Procesando...' : 'Reintentar'} icon={consultaCargando ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} className="p-button-sm premium-btn" onClick={reintentarOperacionHacienda} disabled={consultaCargando || !ventaSeleccionada?.id} />
     </div>
   );
 
@@ -679,7 +736,7 @@ export default function VistaVentas() {
         onHide={cerrarNota}
       />
 
-      <Dialog header="Consulta Hacienda" visible={consultaVisible} style={{ width: '560px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '760px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConsultaVisible(false)} footer={pieConsulta} draggable={false} resizable={false}>
+      <Dialog header="Operación con Hacienda" visible={consultaVisible} style={{ width: '560px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '760px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConsultaVisible(false)} footer={pieConsulta} draggable={false} resizable={false}>
         <div className="flex flex-column gap-3" style={{ maxWidth: '100%', overflow: 'hidden' }}>
           {ventaSeleccionada && (
             <div className="flex align-items-center gap-3 p-3 border-round-xl" style={{ background: 'var(--surface-muted)', minWidth: 0 }}>
@@ -696,7 +753,7 @@ export default function VistaVentas() {
           {consultaCargando && (
             <div className="flex flex-column align-items-center gap-3 py-4">
               <i className="pi pi-spin pi-spinner text-3xl" style={{ color: '#06b6d4' }}></i>
-              <p className="m-0 text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>Consultando estado del DTE en Hacienda...</p>
+              <p className="m-0 text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{etiquetaOperacionHacienda}</p>
             </div>
           )}
 

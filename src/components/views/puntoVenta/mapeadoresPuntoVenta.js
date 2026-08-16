@@ -2,6 +2,7 @@ import {
   ICONO_CATEGORIA,
   TRIBUTACION_A_IVA,
 } from './constantesPuntoVenta.js';
+import { resolverUrlMedia } from '../../../utils/media.js';
 
 // La API y la pantalla no usan exactamente los mismos nombres.
 // Estos mapeadores dejan un formato único para el resto del POS.
@@ -18,7 +19,7 @@ export const mapearProductoApi = (producto) => {
     precioConIVA: Number(producto.precioConIVA || producto.precioSinIVA || 0),
     categoria,
     icono: ICONO_CATEGORIA[categoriaKey] || 'pi pi-box',
-    imagen: producto.imagen || producto.imagenUrl || producto.urlImagen || producto.foto || producto.image || null,
+    imagen: resolverUrlMedia(producto.imagen || producto.imagenUrl || producto.urlImagen || producto.foto || producto.image),
     tipoIva,
     existencia: Number(producto.existencia || 0),
     lineaLibre: !!producto.productoPersonalizable,

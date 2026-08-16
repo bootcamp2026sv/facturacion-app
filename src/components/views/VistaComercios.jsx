@@ -4,10 +4,14 @@ import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { InputSwitch } from 'primereact/inputswitch';
+import { TabPanel, TabView } from 'primereact/tabview';
 
 import api from '../../services/api';
 import { obtenerValoresCorreoPorDefecto } from '../../utils/configuracionCorreo';
 import { useAuth } from '../../context/AuthContext';
+import { resolverUrlMedia } from '../../utils/media';
+import { actualizarCatalogoPosCache } from './puntoVenta/serviciosPuntoVenta';
+import './VistaComercios.css';
 
 // Catálogos de prueba locales
 const MUNICIPIOS_SIMULADOS = [
@@ -62,6 +66,21 @@ const crearConfiguracionCorreoInicial = () => ({
   contrasenaConfigurada: false
 });
 
+function EncabezadoSeccion({ icono, titulo, descripcion, complemento }) {
+  return (
+    <div className="comercio-seccion__encabezado">
+      <div className="comercio-seccion__titulo-wrap">
+        <span className="comercio-seccion__icono"><i className={`pi ${icono}`} /></span>
+        <div>
+          <h3>{titulo}</h3>
+          {descripcion && <p>{descripcion}</p>}
+        </div>
+      </div>
+      {complemento}
+    </div>
+  );
+}
+
 export default function VistaComercios() {
   const { puede } = useAuth();
   const toast = useRef(null);
@@ -75,6 +94,8 @@ export default function VistaComercios() {
   const [guardandoAmbiente, setGuardandoAmbiente] = useState(false);
   const [guardandoCorreo, setGuardandoCorreo] = useState(false);
   const [probandoCorreo, setProbandoCorreo] = useState(false);
+  const [logoArchivo, setLogoArchivo] = useState(null);
+  const [logoVistaPrevia, setLogoVistaPrevia] = useState(null);
   const [configuraciones, setConfiguraciones] = useState({
     '00': crearConfiguracionInicial(),
     '01': crearConfiguracionInicial()
@@ -96,7 +117,8 @@ export default function VistaComercios() {
     codEstableMH: 'M001',
     codPuntoVentaMH: 'P001',
     distrito_id: 1,
-    actividadEconomica_id: 1
+    actividadEconomica_id: 1,
+    logoUrl: null
   });
 
   const cargadoRef = useRef(false);
@@ -121,6 +143,7 @@ export default function VistaComercios() {
         const comercio = listaComercios.length > 0 ? listaComercios[0] : null;
 
         if (comercio) {
+          actualizarCatalogoPosCache('comercio', comercio);
           setDatosComercio({
             id: comercio.id,
             nombre: comercio.nombre || comercio.Nombre || '',
@@ -135,8 +158,10 @@ export default function VistaComercios() {
             codEstableMH: comercio.codEstableMH || comercio.CodEstableMH || '',
             codPuntoVentaMH: comercio.codPuntoVentaMH || comercio.CodPuntoVentaMH || '',
             distrito_id: comercio.distrito_id || comercio.Distrito_id || comercio.distrito?.id || comercio.Distrito?.id || 1,
-            actividadEconomica_id: comercio.actividadEconomica_id || comercio.ActividadEconomica_id || comercio.actividadEconomica?.id || comercio.ActividadEconomica?.id || 1
+            actividadEconomica_id: comercio.actividadEconomica_id || comercio.ActividadEconomica_id || comercio.actividadEconomica?.id || comercio.ActividadEconomica?.id || 1,
+            logoUrl: comercio.logoUrl || null
           });
+          setLogoVistaPrevia(resolverUrlMedia(comercio.logoUrl));
           if (puede('COMERCIO_CONFIGURAR')) {
           const resConfiguracion = await api.get(`/Comercios/${comercio.id}/configuracion-facturacion`);
           setConfiguraciones((actual) => {
@@ -202,7 +227,21 @@ export default function VistaComercios() {
         respuesta = await api.post('/Comercios', datosComercio);
       }
 
-      const comercioGuardado = respuesta.data;
+      let comercioGuardado = respuesta.data;
+      let errorLogo = null;
+      if (logoArchivo && comercioGuardado?.id) {
+        const formularioLogo = new FormData();
+        formularioLogo.append('archivo', logoArchivo);
+        try {
+          comercioGuardado = (await api.post(`/Comercios/${comercioGuardado.id}/logo`, formularioLogo, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })).data;
+          setLogoArchivo(null);
+          setLogoVistaPrevia(resolverUrlMedia(comercioGuardado.logoUrl));
+        } catch (errorCargaLogo) {
+          errorLogo = errorCargaLogo.response?.data?.message || 'El comercio se guardo, pero el logo no pudo procesarse.';
+        }
+      }
       setDatosComercio({
         id: comercioGuardado.id,
         nombre: comercioGuardado.nombre || comercioGuardado.Nombre || '',
@@ -217,10 +256,14 @@ export default function VistaComercios() {
         codEstableMH: comercioGuardado.codEstableMH || comercioGuardado.CodEstableMH || '',
         codPuntoVentaMH: comercioGuardado.codPuntoVentaMH || comercioGuardado.CodPuntoVentaMH || '',
         distrito_id: comercioGuardado.distrito_id || comercioGuardado.Distrito_id || comercioGuardado.distrito?.id || comercioGuardado.Distrito?.id || 1,
-        actividadEconomica_id: comercioGuardado.actividadEconomica_id || comercioGuardado.ActividadEconomica_id || comercioGuardado.actividadEconomica?.id || comercioGuardado.ActividadEconomica?.id || 1
+        actividadEconomica_id: comercioGuardado.actividadEconomica_id || comercioGuardado.ActividadEconomica_id || comercioGuardado.actividadEconomica?.id || comercioGuardado.ActividadEconomica?.id || 1,
+        logoUrl: comercioGuardado.logoUrl || null
       });
+      actualizarCatalogoPosCache('comercio', comercioGuardado);
 
-      toast.current.show({ severity: 'success', summary: 'Guardado', detail: 'Datos de comercio actualizados correctamente.', life: 3000 });
+      toast.current.show(errorLogo
+        ? { severity: 'warn', summary: 'Comercio guardado sin logo', detail: errorLogo, life: 5500 }
+        : { severity: 'success', summary: 'Guardado', detail: 'Datos de comercio actualizados correctamente.', life: 3000 });
 
     } catch (error) {
       console.error("Error al guardar comercio:", error.response?.data || error);
@@ -228,6 +271,41 @@ export default function VistaComercios() {
       toast.current.show({ severity: 'error', summary: 'Error', detail: apiMsg, life: 6000 });
     } finally {
       setCargando(false);
+    }
+  };
+
+  const seleccionarLogo = (archivo) => {
+    if (!archivo) return;
+    if (!['image/png', 'image/jpeg'].includes(archivo.type)) {
+      toast.current.show({ severity: 'warn', summary: 'Formato no permitido', detail: 'Selecciona un logo PNG o JPEG.', life: 3500 });
+      return;
+    }
+    if (archivo.size > 5 * 1024 * 1024) {
+      toast.current.show({ severity: 'warn', summary: 'Logo demasiado grande', detail: 'El archivo original no puede superar 5 MB.', life: 3500 });
+      return;
+    }
+    if (logoVistaPrevia?.startsWith('blob:')) URL.revokeObjectURL(logoVistaPrevia);
+    setLogoArchivo(archivo);
+    setLogoVistaPrevia(URL.createObjectURL(archivo));
+  };
+
+  const eliminarLogo = async () => {
+    if (logoVistaPrevia?.startsWith('blob:')) URL.revokeObjectURL(logoVistaPrevia);
+    setLogoArchivo(null);
+    if (!datosComercio.id || !datosComercio.logoUrl) {
+      setLogoVistaPrevia(null);
+      setDatosComercio((actual) => ({ ...actual, logoUrl: null }));
+      return;
+    }
+    try {
+      await api.delete(`/Comercios/${datosComercio.id}/logo`);
+      setLogoVistaPrevia(null);
+      setDatosComercio((actual) => ({ ...actual, logoUrl: null }));
+      actualizarCatalogoPosCache('comercio', { ...datosComercio, logoUrl: null });
+      toast.current.show({ severity: 'success', summary: 'Logo eliminado', detail: 'Los documentos volveran a usar el encabezado sin logo.', life: 3500 });
+    } catch (error) {
+      const apiMsg = error.response?.data?.message || 'No se pudo eliminar el logo.';
+      toast.current.show({ severity: 'error', summary: 'Error', detail: apiMsg, life: 4500 });
     }
   };
 
@@ -352,9 +430,10 @@ export default function VistaComercios() {
 
   if (cargandoInicial) {
     return (
-      <div className="p-4 premium-fade-in flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-        <div className="premium-surface-card text-center p-6 flex flex-column align-items-center justify-content-center border-round-xl border-1 border-300 dark:border-slate-700" style={{ maxWidth: '400px', background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
-          <i className="pi pi-spin pi-spinner text-primary text-5xl mb-4"></i>
+      <div className="comercio-configuracion comercio-configuracion--cargando premium-fade-in">
+        <Toast ref={toast} />
+        <div className="comercio-cargando">
+          <span className="comercio-cargando__icono"><i className="pi pi-spin pi-spinner" /></span>
           <h3 className="text-xl font-bold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>Cargando Configuración</h3>
           <p className="text-sm m-0" style={{ color: 'var(--text-muted)' }}>Obteniendo datos del comercio emisor desde el servidor...</p>
         </div>
@@ -363,25 +442,92 @@ export default function VistaComercios() {
   }
 
   return (
-    <div className="p-4 premium-fade-in">
+    <div className="comercio-configuracion premium-fade-in">
       <Toast ref={toast} />
 
-      <div className="mb-4">
-        <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Configuración de Comercio Emisor
-        </h2>
-      </div>
+      <header className="comercio-cabecera">
+        <div>
+          <span className="comercio-cabecera__ruta">Administración / Emisor</span>
+          <h1>Configuración del comercio</h1>
+          <p>Administra la identidad fiscal, la conexión con Hacienda y el envío de documentos.</p>
+        </div>
+        <div className="comercio-cabecera__estado">
+          <span className={`comercio-chip ${datosComercio.id ? 'comercio-chip--exito' : 'comercio-chip--pendiente'}`}>
+            <i className={`pi ${datosComercio.id ? 'pi-check-circle' : 'pi-clock'}`} />
+            {datosComercio.id ? 'Emisor registrado' : 'Registro pendiente'}
+          </span>
+          <span className={`comercio-chip ${datosComercio.logoUrl || logoArchivo ? 'comercio-chip--exito' : ''}`}>
+            <i className="pi pi-image" />
+            {datosComercio.logoUrl || logoArchivo ? 'Logo configurado' : 'Sin logo'}
+          </span>
+        </div>
+      </header>
 
-      <div className="premium-surface-card">
-        <div className="p-fluid pt-3" style={{ maxWidth: '850px', margin: '0 auto' }}>
-          
-          <form onSubmit={guardarComercio} className="flex flex-column gap-4">
+      <section className="comercio-resumen">
+        <div className="comercio-resumen__logo">
+          {logoVistaPrevia ? (
+            <img src={logoVistaPrevia} alt={`Logo de ${datosComercio.nombreComercial || datosComercio.nombre}`} />
+          ) : (
+            <i className="pi pi-building" />
+          )}
+        </div>
+        <div className="comercio-resumen__identidad">
+          <span>Comercio emisor</span>
+          <h2>{datosComercio.nombreComercial || datosComercio.nombre || 'Comercio sin nombre'}</h2>
+          <p>{datosComercio.nombre && datosComercio.nombre !== datosComercio.nombreComercial ? datosComercio.nombre : 'Identidad principal de tus documentos electrónicos'}</p>
+        </div>
+        <dl className="comercio-resumen__datos">
+          <div><dt>NIT</dt><dd>{datosComercio.nit || 'No configurado'}</dd></div>
+          <div><dt>Establecimiento</dt><dd>{datosComercio.codEstableMH || 'Pendiente'}</dd></div>
+          <div><dt>Punto de venta</dt><dd>{datosComercio.codPuntoVentaMH || 'Pendiente'}</dd></div>
+        </dl>
+      </section>
+
+      <div className="comercio-contenido premium-surface-card">
+        <form onSubmit={guardarComercio} className="comercio-formulario p-fluid">
+          <TabView className="comercio-tabs premium-tabs">
+            <TabPanel header="Datos del comercio" leftIcon="pi pi-building mr-2">
+              <div className="comercio-general-grid">
+            <section className="comercio-seccion comercio-seccion--logo">
+              <EncabezadoSeccion
+                icono="pi-image"
+                titulo="Identidad visual"
+                descripcion="Este logo se utiliza en el PDF y en el ticket térmico."
+              />
+              <div className="comercio-logo-editor">
+                <div className="comercio-logo-editor__preview">
+                  {logoVistaPrevia ? (
+                    <img src={logoVistaPrevia} alt="Vista previa del logo" />
+                  ) : (
+                    <i className="pi pi-building" />
+                  )}
+                </div>
+                <div className="comercio-logo-editor__controles">
+                  <input
+                    id="logoComercio"
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    className="p-inputtext p-component comercio-file-input"
+                    onChange={(e) => seleccionarLogo(e.target.files?.[0])}
+                    disabled={cargando || !puede('COMERCIO_EDITAR')}
+                  />
+                  <small>
+                    PNG o JPEG, máximo 5 MB. Se ajustará automáticamente a 600 × 240 px.
+                  </small>
+                  {(logoVistaPrevia || datosComercio.logoUrl) && puede('COMERCIO_EDITAR') && (
+                    <Button type="button" label="Quitar logo" icon="pi pi-trash" severity="danger" outlined onClick={eliminarLogo} disabled={cargando} className="align-self-start" />
+                  )}
+                </div>
+              </div>
+            </section>
             
             {/* 1. Información Legal */}
-            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
-              <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <i className="pi pi-building text-primary"></i> 1. Información Legal y Fiscal
-              </h3>
+            <div className="comercio-seccion comercio-seccion--legal">
+              <EncabezadoSeccion
+                icono="pi-id-card"
+                titulo="Identidad legal y fiscal"
+                descripcion="Información con la que el comercio se identifica ante sus clientes y Hacienda."
+              />
               <div className="grid">
                 <div className="col-12 md:col-6 flex flex-column gap-2">
                   <label htmlFor="nombre" className="font-bold text-xs text-800">Razón Social <span className="text-red-500">*</span></label>
@@ -436,10 +582,12 @@ export default function VistaComercios() {
             </div>
 
             {/* 2. Hacienda */}
-            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
-              <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <i className="pi pi-key text-primary"></i> 2. Parámetros de Hacienda (MH)
-              </h3>
+            <div className="comercio-seccion comercio-seccion--hacienda">
+              <EncabezadoSeccion
+                icono="pi-key"
+                titulo="Parámetros del emisor"
+                descripcion="Códigos operativos y actividad económica declarada."
+              />
               <div className="grid">
                 <div className="col-12 md:col-6 flex flex-column gap-2">
                   <label htmlFor="codEstableMH" className="font-bold text-xs text-800">Cod. Establecimiento <span className="text-red-500">*</span></label>
@@ -480,10 +628,12 @@ export default function VistaComercios() {
             </div>
 
             {/* 3. Dirección y contacto */}
-            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'rgba(0,0,0,0.01)', border: '1px solid var(--surface-border-light)' }}>
-              <h3 className="text-base font-bold mt-0 mb-3 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <i className="pi pi-map text-primary"></i> 3. Dirección y Contacto Comercial
-              </h3>
+            <div className="comercio-seccion comercio-seccion--contacto">
+              <EncabezadoSeccion
+                icono="pi-map-marker"
+                titulo="Dirección y contacto"
+                descripcion="Datos visibles para clientes y documentos comerciales."
+              />
               <div className="grid">
                 <div className="col-12 md:col-6 flex flex-column gap-2">
                   <label htmlFor="telefono" className="font-bold text-xs text-800">Teléfono Emisor</label>
@@ -517,8 +667,8 @@ export default function VistaComercios() {
                     onChange={(e) => setDatosComercio({...datosComercio, distrito_id: e.value})} 
                   />
                 </div>
-                <div className="col-12 md:col-6 flex align-items-center justify-content-between mt-4 p-2 bg-transparent">
-                  <div className="flex flex-column">
+                <div className="col-12 md:col-6 comercio-switch-card comercio-switch-card--compact">
+                  <div>
                     <span className="font-bold text-xs text-800">¿Gran Contribuyente?</span>
                     <span className="text-xs text-500" style={{ color: 'var(--text-muted)' }}>Clasificación del comercio emisor</span>
                   </div>
@@ -541,29 +691,55 @@ export default function VistaComercios() {
               </div>
             </div>
 
-            {/* 4. Credenciales de facturación electrónica */}
-            {puede('COMERCIO_CONFIGURAR') && <>
-            <div className="border-round-xl p-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04))', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <div className="flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-base font-bold mt-0 mb-2 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                    <i className="pi pi-shield text-primary"></i> 4. Facturación electrónica
-                  </h3>
-                  <p className="text-xs m-0" style={{ color: 'var(--text-muted)', maxWidth: '560px' }}>
-                    Guarda las credenciales y el certificado del Ministerio de Hacienda por separado. Los valores existentes se muestran protegidos.
-                  </p>
+              </div>
+              {puede('COMERCIO_EDITAR') && (
+                <div className="comercio-acciones comercio-acciones--principal">
+                  <div>
+                    <strong>Datos generales del emisor</strong>
+                    <span>Guarda la identidad, los códigos fiscales, el logo y la dirección.</span>
+                  </div>
+                  <Button
+                    type="submit"
+                    label={cargando ? 'Guardando...' : 'Guardar datos del comercio'}
+                    icon={cargando ? 'pi pi-spin pi-spinner' : 'pi pi-save'}
+                    className="premium-btn"
+                    disabled={cargando}
+                  />
                 </div>
-                <div className="flex gap-2 p-1 border-round-lg" style={{ background: 'rgba(99,102,241,0.1)' }}>
-                  {['00', '01'].map((ambiente) => (
-                    <button
-                      key={ambiente}
-                      type="button"
-                      onClick={() => setAmbienteActivo(ambiente)}
-                      className={`border-none border-round-lg px-3 py-2 cursor-pointer text-xs font-bold transition-colors ${ambienteActivo === ambiente ? 'bg-primary text-white' : 'bg-transparent text-primary'}`}
-                    >
-                      {ambiente === '00' ? '00 · Pruebas' : '01 · Producción'}
-                    </button>
-                  ))}
+              )}
+            </TabPanel>
+
+            {/* 4. Credenciales de facturación electrónica */}
+            {puede('COMERCIO_CONFIGURAR') && (
+            <TabPanel header="Facturación electrónica" leftIcon="pi pi-shield mr-2">
+            <div className="comercio-seccion comercio-seccion--facturacion">
+              <EncabezadoSeccion
+                icono="pi-shield"
+                titulo="Credenciales de Hacienda"
+                descripcion="Cada ambiente conserva de forma independiente sus claves y certificado digital."
+                complemento={(
+                  <div className="comercio-ambientes" role="group" aria-label="Ambiente de facturación">
+                    {['00', '01'].map((ambiente) => (
+                      <button
+                        key={ambiente}
+                        type="button"
+                        onClick={() => setAmbienteActivo(ambiente)}
+                        className={ambienteActivo === ambiente ? 'is-active' : ''}
+                      >
+                        <span>{ambiente}</span>
+                        <strong>{ambiente === '00' ? 'Pruebas' : 'Producción'}</strong>
+                        <i className={`pi ${configuraciones[ambiente].nombreCertificado ? 'pi-check-circle' : 'pi-circle'}`} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              />
+
+              <div className={`comercio-aviso-ambiente comercio-aviso-ambiente--${ambienteActivo}`}>
+                <i className={`pi ${ambienteActivo === '00' ? 'pi-wrench' : 'pi-bolt'}`} />
+                <div>
+                  <strong>Ambiente {ambienteActivo === '00' ? 'de pruebas' : 'de producción'}</strong>
+                  <span>{ambienteActivo === '00' ? 'Úsalo para validar la integración sin emitir documentos productivos.' : 'Estas credenciales se usarán para documentos fiscales reales.'}</span>
                 </div>
               </div>
 
@@ -598,35 +774,34 @@ export default function VistaComercios() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.14)' }}>
-                <span className="text-xs flex align-items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+              <div className="comercio-acciones comercio-acciones--facturacion">
+                <span className="comercio-acciones__nota">
                   <i className="pi pi-info-circle text-primary"></i>
                   El certificado se guardará en la carpeta segura del ambiente seleccionado.
                 </span>
                 <Button type="button" label={guardandoAmbiente ? 'Guardando ambiente...' : `Guardar ${ambienteActivo === '00' ? 'pruebas' : 'producción'}`} icon={guardandoAmbiente ? 'pi pi-spin pi-spinner' : 'pi pi-cloud-upload'} className="premium-btn" onClick={guardarConfiguracionFacturacion} disabled={guardandoAmbiente || cargando} />
               </div>
             </div>
+            </TabPanel>
+            )}
 
             {/* 5. Correo SMTP para documentos */}
-            <div className="border-round-xl p-4 mt-4 bg-light border-1 border-300 dark:border-slate-700" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.07), rgba(59,130,246,0.05))', border: '1px solid rgba(16,185,129,0.22)' }}>
-              <div className="flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-base font-bold mt-0 mb-2 flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                    <i className="pi pi-envelope text-green-500"></i> 5. Configuración de correo para documentos
-                  </h3>
-                  <p className="text-xs m-0" style={{ color: 'var(--text-muted)', maxWidth: '620px' }}>
-                    Esta configuración pertenece al comercio y se utiliza para enviar documentos tanto en pruebas como en producción. La contraseña no se muestra después de guardarla.
-                  </p>
-                </div>
-                <div className="flex align-items-center gap-2 px-3 py-2 border-round-lg" style={{ background: configuracionCorreo.contrasenaConfigurada ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' }}>
-                  <i className={`pi ${configuracionCorreo.contrasenaConfigurada ? 'pi-check-circle text-green-500' : 'pi-info-circle text-orange-500'}`}></i>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                    {configuracionCorreo.contrasenaConfigurada ? 'Contraseña guardada' : 'Sin contraseña guardada'}
+            {puede('COMERCIO_CONFIGURAR') && (
+            <TabPanel header="Correo SMTP" leftIcon="pi pi-envelope mr-2">
+            <div className="comercio-seccion comercio-seccion--correo">
+              <EncabezadoSeccion
+                icono="pi-send"
+                titulo="Envío de documentos por correo"
+                descripcion="Configura una única cuenta SMTP para los ambientes de pruebas y producción."
+                complemento={(
+                  <span className={`comercio-chip ${configuracionCorreo.contrasenaConfigurada ? 'comercio-chip--exito' : 'comercio-chip--pendiente'}`}>
+                    <i className={`pi ${configuracionCorreo.contrasenaConfigurada ? 'pi-check-circle' : 'pi-info-circle'}`} />
+                    {configuracionCorreo.contrasenaConfigurada ? 'Contraseña guardada' : 'Falta contraseña'}
                   </span>
-                </div>
-              </div>
+                )}
+              />
 
-              <div className="flex align-items-center justify-content-between gap-3 mb-4 p-3 border-round-lg" style={{ background: 'rgba(255,255,255,0.42)', border: '1px solid rgba(16,185,129,0.14)' }}>
+              <div className={`comercio-switch-card comercio-switch-card--correo ${configuracionCorreo.correoActivo ? 'is-active' : ''}`}>
                 <div>
                   <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Activar envío de correo</span>
                   <p className="text-xs m-0 mt-1" style={{ color: 'var(--text-muted)' }}>Permite enviar documentos desde cualquier ambiente fiscal.</p>
@@ -694,8 +869,8 @@ export default function VistaComercios() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3" style={{ borderTop: '1px solid rgba(16,185,129,0.16)' }}>
-                <span className="text-xs flex align-items-start gap-2" style={{ color: 'var(--text-muted)', maxWidth: '620px' }}>
+              <div className="comercio-acciones comercio-acciones--correo">
+                <span className="comercio-acciones__nota">
                   <i className="pi pi-info-circle text-green-500 mt-1"></i>
                   <span>Gmail normalmente usa una contraseña de aplicación. En cPanel y Plesk confirma el nombre exacto del servidor y el puerto con tu proveedor.</span>
                 </span>
@@ -706,22 +881,10 @@ export default function VistaComercios() {
                 </div>
               </div>
             </div>
-
-            </>}
-
-            {puede('COMERCIO_EDITAR') && <div className="flex justify-content-end mt-2">
-              <Button 
-                type="submit" 
-                label={cargando ? "Guardando..." : "Guardar Configuración"} 
-                icon={cargando ? "pi pi-spin pi-spinner" : "pi pi-save"} 
-                className="premium-btn" 
-                style={{ width: '240px' }}
-                disabled={cargando}
-              />
-            </div>}
-
+            </TabPanel>
+            )}
+          </TabView>
           </form>
-        </div>
       </div>
     </div>
   );

@@ -457,7 +457,12 @@ export default function VistaPuntoVenta() {
     } catch (error) {
       // El error se conserva para que DialogoPagoPuntoVenta lo muestre.
       console.error('Error al guardar venta:', error);
-      setErrorVenta(error.response?.data?.message || error.response?.data?.error || 'No se pudo guardar la venta.');
+      setErrorVenta(
+        error.response?.data?.message
+        || error.response?.data?.mensaje
+        || error.response?.data?.error
+        || 'No se pudo guardar la venta.',
+      );
     } finally {
       setGuardandoVenta(false);
     }

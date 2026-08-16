@@ -1,4 +1,50 @@
+import { useEffect, useMemo, useState } from 'react';
+import QRCode from 'qrcode';
 import { formatoDinero, formatoFechaTicket } from '../reglasPuntoVenta';
+import { resolverUrlMedia } from '../../../../utils/media.js';
+import { construirUrlConsultaHacienda } from '../../../../utils/consultaHacienda.js';
+
+function QrConsultaHacienda({ ticket }) {
+  const [qrGenerado, setQrGenerado] = useState({ url: null, dataUrl: null });
+  const urlConsulta = useMemo(() => construirUrlConsultaHacienda({
+    ambiente: ticket.ambiente,
+    codigoGeneracion: ticket.codigoGeneracion,
+    fecha: ticket.fecha,
+  }), [ticket.ambiente, ticket.codigoGeneracion, ticket.fecha]);
+
+  useEffect(() => {
+    let vigente = true;
+
+    if (urlConsulta) {
+      QRCode.toDataURL(urlConsulta, {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        width: 240,
+        color: { dark: '#000000', light: '#ffffff' },
+      }).then((dataUrl) => {
+        if (vigente) setQrGenerado({ url: urlConsulta, dataUrl });
+      }).catch(() => {});
+    }
+
+    return () => { vigente = false; };
+  }, [urlConsulta]);
+
+  if (!urlConsulta) return null;
+  const imagenQr = qrGenerado.url === urlConsulta ? qrGenerado.dataUrl : null;
+
+  return (
+    <div className="ticket-qr-contenedor">
+      {imagenQr ? (
+        <a href={urlConsulta} target="_blank" rel="noreferrer" className="ticket-qr-enlace" title="Verificar DTE en Hacienda">
+          <img src={imagenQr} alt="QR para verificar el DTE en Hacienda" className="ticket-qr" />
+        </a>
+      ) : (
+        <div className="ticket-qr-cargando">Generando QR...</div>
+      )}
+      <div className="ticket-qr-etiqueta">Escanee para verificar en Hacienda</div>
+    </div>
+  );
+}
 
 // Solo dibuja el contenido del ticket. La impresión la inicia el diálogo.
 export default function TicketVenta({ ticket, ticketAncho }) {
@@ -6,6 +52,10 @@ export default function TicketVenta({ ticket, ticketAncho }) {
 
   const nombreComercio = ticket.comercio?.nombreComercial || ticket.comercio?.nombre || 'Comercio';
   const direccion = ticket.comercio?.complementoDireccion || ticket.comercio?.direccion || '';
+  const logoUrl = resolverUrlMedia(
+    ticket.comercio?.logoUrl
+      || (ticket.comercio?.id ? `/api/v1/media/comercios/${ticket.comercio.id}/logo` : null),
+  );
   const muestraIvaSeparado = ticket.tipoDte === '03';
   const subtotalTicket = muestraIvaSeparado
     ? Object.values(ticket.resumen.porTipo || {}).reduce((acumulado, valor) => acumulado + Number(valor || 0), 0)
@@ -22,6 +72,14 @@ export default function TicketVenta({ ticket, ticketAncho }) {
   return (
     <div className={`thermal-ticket ticket-${ticketAncho}`}>
       <div className="ticket-center ticket-header">
+        {logoUrl && (
+          <img
+            src={logoUrl}
+            alt={`Logo de ${nombreComercio}`}
+            className="ticket-logo"
+            onError={(evento) => { evento.currentTarget.style.display = 'none'; }}
+          />
+        )}
         <div className="ticket-title">{nombreComercio}</div>
         {ticket.comercio?.nombre && ticket.comercio.nombre !== nombreComercio && <div>{ticket.comercio.nombre}</div>}
         {ticket.comercio?.nit && <div>NIT: {ticket.comercio.nit}</div>}
@@ -91,6 +149,10 @@ export default function TicketVenta({ ticket, ticketAncho }) {
       {ticket.plazo && <div className="ticket-row"><span>Plazo</span><span>{ticket.plazo}</span></div>}
       {ticket.efectivoRecibido !== null && <div className="ticket-row"><span>Recibido</span><span>{formatoDinero(ticket.efectivoRecibido)}</span></div>}
       {ticket.cambio !== null && <div className="ticket-row"><span>Cambio</span><span>{formatoDinero(ticket.cambio)}</span></div>}
+
+      <div className="ticket-line" />
+
+      <QrConsultaHacienda ticket={ticket} />
 
       <div className="ticket-line" />
 

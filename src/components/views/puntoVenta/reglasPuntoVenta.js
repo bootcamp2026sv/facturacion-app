@@ -184,10 +184,40 @@ export const monto4 = (valor) => Number(redondear(valor || 0)).toFixed(4);
 
 export const formatoDinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 
-export const formatoFechaTicket = (fecha) => new Intl.DateTimeFormat('es-SV', {
-  dateStyle: 'short',
-  timeStyle: 'medium',
-}).format(fecha);
+export const normalizarFechaTicket = (fecha) => {
+  if (fecha instanceof Date) {
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+  }
+
+  if (Array.isArray(fecha) && fecha.length >= 3) {
+    const [anio, mes, dia, hora = 0, minuto = 0, segundo = 0] = fecha.map(Number);
+    const fechaDesdeArreglo = new Date(anio, mes - 1, dia, hora, minuto, segundo);
+    return Number.isNaN(fechaDesdeArreglo.getTime()) ? null : fechaDesdeArreglo;
+  }
+
+  if (typeof fecha === 'string') {
+    // LocalDateTime puede llegar como ISO o con un espacio entre fecha y hora.
+    const fechaDesdeTexto = new Date(fecha.trim().replace(' ', 'T'));
+    return Number.isNaN(fechaDesdeTexto.getTime()) ? null : fechaDesdeTexto;
+  }
+
+  if (typeof fecha === 'number') {
+    const fechaDesdeNumero = new Date(fecha);
+    return Number.isNaN(fechaDesdeNumero.getTime()) ? null : fechaDesdeNumero;
+  }
+
+  return null;
+};
+
+export const formatoFechaTicket = (fecha) => {
+  const fechaNormalizada = normalizarFechaTicket(fecha);
+  if (!fechaNormalizada) return 'Fecha no disponible';
+
+  return new Intl.DateTimeFormat('es-SV', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(fechaNormalizada);
+};
 
 export const normalizarPlazo = (valor) => {
   if (valor === 'días' || valor === 'dias') return 'dias';
@@ -303,8 +333,9 @@ export const crearDatosTicketVenta = ({
   id: ventaGuardada?.id,
   numeroControl: ventaGuardada?.numeroControl,
   codigoGeneracion: ventaGuardada?.codigoGeneracion,
+  ambiente: ventaGuardada?.ambiente || '00',
   selloRecepcion: String(ventaGuardada?.selloRecepcion || '').trim(),
-  fecha: new Date(),
+  fecha: ventaGuardada?.fecha || new Date(),
   tipoDte,
   tipoDteLabel: TIPOS_DTE.find((tipo) => tipo.value === tipoDte)?.label || `DTE ${tipoDte}`,
   metodoPago,
