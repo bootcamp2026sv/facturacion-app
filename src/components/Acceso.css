@@ -1,0 +1,471 @@
+.acceso-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: clamp(1rem, 3vw, 3rem);
+  overflow-x: hidden;
+  overflow-y: clip;
+}
+
+.acceso-shell::after {
+  content: '';
+  position: absolute;
+  width: min(34rem, 70vw);
+  height: min(34rem, 70vw);
+  right: -14rem;
+  bottom: -18rem;
+  border: 1px solid rgba(165, 180, 252, 0.14);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3rem rgba(165, 180, 252, 0.035), 0 0 0 7rem rgba(165, 180, 252, 0.025);
+  pointer-events: none;
+}
+
+.acceso-contenedor {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  width: min(1080px, 100%);
+  min-height: min(680px, calc(100dvh - 3rem));
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.2);
+  box-shadow: 0 30px 80px -32px rgba(2, 6, 23, 0.78), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.acceso-presentacion {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: clamp(2rem, 5vw, 4.25rem);
+  overflow: hidden;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(129, 140, 248, 0.28), transparent 35%),
+    radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.2), transparent 35%),
+    linear-gradient(145deg, #111827 0%, #172554 52%, #312e81 100%);
+}
+
+.acceso-presentacion__identidad {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.4rem;
+}
+
+.acceso-presentacion__subtitulo {
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.acceso-presentacion::before,
+.acceso-presentacion::after {
+  content: '';
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.acceso-presentacion::before {
+  width: 28rem;
+  height: 28rem;
+  right: -15rem;
+  top: -13rem;
+}
+
+.acceso-presentacion::after {
+  width: 22rem;
+  height: 22rem;
+  left: -14rem;
+  bottom: -12rem;
+}
+
+.acceso-marca,
+.acceso-presentacion__copy,
+.acceso-presentacion__pie {
+  position: relative;
+  z-index: 1;
+}
+
+.acceso-marca {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.acceso-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 3.5rem;
+  height: 3.5rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.15rem;
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  box-shadow: 0 16px 30px -12px rgba(99, 102, 241, 0.75);
+}
+
+.acceso-logo--comercio {
+  width: 5.5rem;
+  padding: 0.55rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 30px -12px rgba(2, 6, 23, 0.5);
+}
+
+.acceso-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.acceso-marca__texto {
+  min-width: 0;
+}
+
+.acceso-marca__texto strong,
+.acceso-marca__texto span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acceso-marca__texto strong {
+  max-width: 24rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.acceso-marca__texto span {
+  margin-top: 0.15rem;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.acceso-presentacion__copy {
+  max-width: 34rem;
+  margin: 4rem 0;
+}
+
+.acceso-presentacion__eyebrow,
+.acceso-formulario__eyebrow {
+  display: block;
+  margin-bottom: 1rem;
+  color: #a5b4fc;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.acceso-presentacion h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-size: clamp(2.4rem, 5vw, 4.7rem);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.acceso-presentacion h1 em {
+  color: #c4b5fd;
+  font-style: normal;
+}
+
+.acceso-presentacion__copy > p {
+  max-width: 34rem;
+  margin: 1.5rem 0 0;
+  color: rgba(226, 232, 240, 0.75);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.acceso-presentacion__beneficios {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acceso-presentacion__beneficios li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  color: rgba(241, 245, 249, 0.86);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.acceso-presentacion__beneficios i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  color: #c4b5fd;
+  background: rgba(196, 181, 253, 0.14);
+  font-size: 0.65rem;
+}
+
+.acceso-presentacion__pie {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(226, 232, 240, 0.58);
+  font-size: 0.72rem;
+}
+
+.acceso-presentacion__pie i {
+  color: #a5b4fc;
+}
+
+.acceso-formulario {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: clamp(2rem, 5vw, 4.5rem);
+  background: var(--card-bg-solid);
+}
+
+.acceso-formulario__contenido {
+  width: min(100%, 25rem);
+  margin: 0 auto;
+}
+
+.acceso-formulario__encabezado {
+  margin-bottom: 2.25rem;
+}
+
+.acceso-formulario__eyebrow {
+  margin-bottom: 0.75rem;
+  color: #6366f1;
+}
+
+.acceso-formulario h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.8rem, 3vw, 2.35rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.acceso-formulario__encabezado p {
+  margin: 0.8rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.acceso-formulario__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.acceso-formulario__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.acceso-formulario__campo label {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.acceso-formulario__campo .p-inputtext,
+.acceso-formulario__campo .p-password,
+.acceso-formulario__campo .p-password-input {
+  width: 100%;
+}
+
+.acceso-formulario__campo .p-inputtext,
+.acceso-formulario__campo .p-password-input {
+  min-height: 3.25rem;
+  border: 1px solid var(--surface-border-light);
+  border-radius: 0.85rem;
+  background: var(--surface-muted);
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.acceso-formulario__campo .p-inputtext:focus,
+.acceso-formulario__campo .p-password-input:focus {
+  border-color: #6366f1;
+  background: var(--card-bg-solid);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.13);
+}
+
+.acceso-formulario__campo .premium-input-icon {
+  color: var(--text-icon);
+}
+
+.acceso-formulario__campo:focus-within .premium-input-icon {
+  color: #6366f1;
+}
+
+.acceso-formulario__alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(225, 29, 72, 0.2);
+  border-radius: 0.85rem;
+  color: #be123c;
+  background: rgba(225, 29, 72, 0.08);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.acceso-formulario__alerta--aviso {
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.acceso-formulario__alerta i {
+  margin-top: 0.12rem;
+  flex: 0 0 auto;
+}
+
+.acceso-formulario__submit.p-button {
+  min-height: 3.25rem;
+  margin-top: 0.4rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 14px 26px -14px rgba(99, 102, 241, 0.9);
+  font-weight: 800;
+}
+
+.acceso-formulario__submit.p-button:not(:disabled):hover {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 18px 30px -14px rgba(99, 102, 241, 0.95);
+  transform: translateY(-1px);
+}
+
+.acceso-formulario__seguridad {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 1.75rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.acceso-formulario__seguridad i {
+  color: #10b981;
+}
+
+@media (max-width: 860px) {
+  .acceso-contenedor {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .acceso-presentacion {
+    min-height: 28rem;
+    padding: 2rem;
+  }
+
+  .acceso-presentacion__copy {
+    margin: 3rem 0;
+  }
+
+  .acceso-formulario {
+    padding: 2.5rem 2rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .acceso-shell {
+    align-items: flex-start;
+    padding: 0.75rem;
+  }
+
+  .acceso-contenedor {
+    border-radius: 20px;
+  }
+
+  .acceso-presentacion {
+    min-height: 0;
+    padding: 1.5rem;
+  }
+
+  .acceso-presentacion__copy {
+    margin: 2.75rem 0 2rem;
+  }
+
+  .acceso-presentacion h1 {
+    font-size: clamp(2.25rem, 12vw, 3.4rem);
+  }
+
+  .acceso-presentacion__copy > p {
+    font-size: 0.9rem;
+  }
+
+  .acceso-presentacion__beneficios {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .acceso-presentacion__pie {
+    margin-top: 2rem;
+  }
+
+  .acceso-formulario {
+    padding: 2rem 1.5rem 2.25rem;
+  }
+
+  .acceso-formulario__encabezado {
+    margin-bottom: 1.75rem;
+  }
+}
+
+@media (max-height: 700px) {
+  .acceso-shell {
+    overflow-y: auto;
+  }
+
+  .acceso-shell::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acceso-formulario__submit.p-button:not(:disabled):hover {
+    transform: none;
+  }
+}

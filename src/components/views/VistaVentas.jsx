@@ -39,9 +39,20 @@ const obtenerCorrelativoNumeroControl = (numeroControl) => {
 };
 
 const nombreCliente = (cliente) => {
-  if (!cliente) return 'Consumidor final';
+  if (typeof cliente === 'string') return cliente.trim() || 'Consumidor final';
+  if (!cliente || typeof cliente !== 'object') return 'Consumidor final';
+
   return [cliente.nombre, cliente.nombres, cliente.apellidos]
-    .filter(Boolean).join(' ').trim() || cliente.nombreComercial || 'Consumidor final';
+    .filter(Boolean).join(' ').trim()
+    || cliente.nombreComercial
+    || cliente.razonSocial
+    || cliente.nombreCliente
+    || 'Consumidor final';
+};
+
+const nombreClienteVenta = (venta) => {
+  const cliente = venta?.cliente || venta?.nombreReceptor;
+  return nombreCliente(cliente);
 };
 
 const formatearFechaVenta = (fecha) => {
@@ -131,16 +142,18 @@ export default function VistaVentas() {
             sortDir: orden.direccion === 1 ? 'asc' : 'desc'
           }
         });
-        const contenido = Array.isArray(respuesta.data?.content) ? respuesta.data.content : [];
+        const contenido = Array.isArray(respuesta.data?.content)
+          ? respuesta.data.content
+          : Array.isArray(respuesta.data) ? respuesta.data : [];
         setVentas(contenido.map((venta) => ({
           ...venta,
-          cliente: venta.cliente || venta.nombreReceptor || nombreCliente(venta.cliente),
-          tipo: etiquetaTipoDte(venta.tipoDte),
-          tipoCodigo: venta.tipoDte,
+          cliente: nombreClienteVenta(venta),
+          tipo: etiquetaTipoDte(String(venta.tipoDte || '')),
+          tipoCodigo: String(venta.tipoDte || ''),
           total: Number(venta.totalGeneral || 0),
           fecha: venta.fecha || venta.createdAt
         })));
-        setTotalRegistros(Number(respuesta.data?.totalElements || 0));
+        setTotalRegistros(Number(respuesta.data?.totalElements ?? contenido.length));
       } catch (error) {
         if (error.code === 'ERR_CANCELED') return;
         console.error('Error al cargar ventas:', error);
@@ -640,20 +653,26 @@ export default function VistaVentas() {
   return (
     <div className="vista-ventas p-3 md:p-4 premium-fade-in">
       <Toast ref={toast} />
-      <div className="mb-4">
-        <h2 className="text-3xl font-bold m-0" style={{ background: 'linear-gradient(135deg, var(--text-primary), #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Gestión de Ventas (DTE)</h2>
-        <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Emisión de documentos electrónicos y consulta histórica de ventas.</p>
-      </div>
+      <div className="premium-surface-card ventas-panel">
+        <header className="ventas-panel__header">
+          <div className="min-w-0">
+            <span className="ventas-panel__eyebrow">Historial</span>
+            <h2 className="m-0">Ventas registradas</h2>
+          </div>
+          <div className="ventas-panel__total" aria-live="polite">
+            <span>Registros</span>
+            <strong>{totalRegistros}</strong>
+          </div>
+        </header>
 
-      <div className="premium-surface-card">
-        <div className="p-3 md:p-4">
+        <div className="ventas-panel__body p-3 md:p-4">
           {errorCarga && (
             <div className="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 p-3 mb-4 border-round-xl" style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.22)', color: '#be123c' }}>
               <span className="text-sm flex align-items-start gap-2 min-w-0"><i className="pi pi-exclamation-circle mt-1"></i><span className="overflow-wrap-anywhere">{errorCarga}</span></span>
               <Button label="Reintentar" icon="pi pi-refresh" className="p-button-sm p-button-outlined w-full sm:w-auto" onClick={cargarVentas} />
             </div>
           )}
-          <div className="grid align-items-end mb-4">
+          <div className="grid align-items-end mb-4 ventas-filtros">
             <div className="col-12 sm:col-6 xl:col-3 flex flex-column gap-2">
               <label className="premium-label">Tipo DTE</label>
               <Dropdown value={filtroTipo} options={tiposDte} onChange={(e) => { setFiltroTipo(e.value); setPagina(0); }} placeholder="Todos" className="w-full" />
@@ -672,7 +691,7 @@ export default function VistaVentas() {
                 <InputText value={filtroControl} onChange={(e) => { setFiltroControl(e.target.value); setPagina(0); }} placeholder="Buscar por número..." />
               </div>
             </div>
-            <div className="col-12 xl:col-3 flex flex-column sm:flex-row gap-2">
+            <div className="col-12 xl:col-3 flex flex-column sm:flex-row gap-2 ventas-filtros__acciones">
               <Button icon={cargando ? "pi pi-spin pi-spinner" : "pi pi-refresh"} label={cargando ? "Cargando..." : "Actualizar"} className="premium-btn w-full" onClick={cargarVentas} disabled={cargando} />
               <Button icon="pi pi-times" label="Limpiar" className="p-button-outlined premium-btn-secondary w-full" onClick={limpiarFiltros} />
             </div>
@@ -719,7 +738,7 @@ export default function VistaVentas() {
               <Column field="fecha" header="Fecha" body={fechaVentaTemplate} sortable style={{ width: '108px', minWidth: '108px' }}></Column>
               <Column field="tipo" sortField="tipoDte" header="DTE" body={tipoDteTemplate} sortable style={{ width: '72px', minWidth: '72px' }}></Column>
               <Column field="numeroControl" header="N.º control" sortable body={(f) => <span className="ventas-celda-control">{obtenerCorrelativoNumeroControl(f.numeroControl)}</span>} style={{ width: '112px', minWidth: '112px' }}></Column>
-              <Column field="cliente" header="Cliente" body={(f) => <span className="ventas-celda-cliente">{f.cliente}</span>} style={{ minWidth: '130px' }}></Column>
+              <Column field="cliente" header="Cliente" body={(f) => <span className="ventas-celda-cliente">{f.cliente}</span>} style={{ width: '34%', minWidth: '180px' }}></Column>
               <Column field="total" sortField="totalGeneral" header="Total" body={(f) => <span className="ventas-celda-total">${f.total.toFixed(2)}</span>} sortable style={{ width: '82px', minWidth: '82px' }}></Column>
               <Column header="Estado" body={estadoVentaTemplate} style={{ width: '104px', minWidth: '104px' }}></Column>
               <Column header="Acciones" body={accionesTemplate} style={{ width: '72px', minWidth: '72px' }}></Column>

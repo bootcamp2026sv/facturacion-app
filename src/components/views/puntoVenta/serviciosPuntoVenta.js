@@ -1,4 +1,5 @@
 import api from '../../../services/api';
+import { guardarMarcaComercio } from '../../../utils/marcaComercio';
 
 // La caché evita repetir la carga inicial de catálogos si la vista se vuelve a abrir.
 let catalogosPosCache = null;
@@ -16,6 +17,7 @@ export const obtenerCatalogosPos = async () => {
     ])
       .then(([resInicial, resProductos, resClientes]) => {
         const inicial = resInicial.data || {};
+        guardarMarcaComercio(inicial.comercio);
         const clientes = resClientes.data?.content || [];
         if (inicial.clientePredeterminado && !clientes.some((cliente) => cliente.id === inicial.clientePredeterminado.id)) {
           clientes.unshift(inicial.clientePredeterminado);

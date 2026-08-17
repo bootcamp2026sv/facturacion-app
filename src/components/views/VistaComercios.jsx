@@ -10,6 +10,7 @@ import api from '../../services/api';
 import { obtenerValoresCorreoPorDefecto } from '../../utils/configuracionCorreo';
 import { useAuth } from '../../context/AuthContext';
 import { resolverUrlMedia } from '../../utils/media';
+import { guardarMarcaComercio } from '../../utils/marcaComercio';
 import { actualizarCatalogoPosCache } from './puntoVenta/serviciosPuntoVenta';
 import './VistaComercios.css';
 
@@ -143,6 +144,7 @@ export default function VistaComercios() {
         const comercio = listaComercios.length > 0 ? listaComercios[0] : null;
 
         if (comercio) {
+          guardarMarcaComercio(comercio);
           actualizarCatalogoPosCache('comercio', comercio);
           setDatosComercio({
             id: comercio.id,
@@ -259,6 +261,7 @@ export default function VistaComercios() {
         actividadEconomica_id: comercioGuardado.actividadEconomica_id || comercioGuardado.ActividadEconomica_id || comercioGuardado.actividadEconomica?.id || comercioGuardado.ActividadEconomica?.id || 1,
         logoUrl: comercioGuardado.logoUrl || null
       });
+      guardarMarcaComercio(comercioGuardado);
       actualizarCatalogoPosCache('comercio', comercioGuardado);
 
       toast.current.show(errorLogo
@@ -301,6 +304,7 @@ export default function VistaComercios() {
       await api.delete(`/Comercios/${datosComercio.id}/logo`);
       setLogoVistaPrevia(null);
       setDatosComercio((actual) => ({ ...actual, logoUrl: null }));
+      guardarMarcaComercio({ ...datosComercio, logoUrl: null });
       actualizarCatalogoPosCache('comercio', { ...datosComercio, logoUrl: null });
       toast.current.show({ severity: 'success', summary: 'Logo eliminado', detail: 'Los documentos volveran a usar el encabezado sin logo.', life: 3500 });
     } catch (error) {

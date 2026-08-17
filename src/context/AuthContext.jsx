@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { authService, onAutoLogout } from '../services/api';
+import api, { authService, onAutoLogout } from '../services/api';
 import { normalizarSesion, tienePermiso } from '../utils/permisos';
+import { guardarMarcaComercio } from '../utils/marcaComercio';
 
 const AuthContext = createContext(null);
 
@@ -74,7 +75,22 @@ export const AuthProvider = ({ children }) => {
       const respuesta = await authService.login(username, password);
       localStorage.setItem('accessToken', respuesta.accessToken);
       localStorage.setItem('refreshToken', respuesta.refreshToken);
-      return guardarUsuario(respuesta.usuario);
+      const sesion = guardarUsuario(respuesta.usuario);
+
+      // El login no incluye el comercio; se consulta con el token recién creado
+      // para que la próxima pantalla de acceso pueda mostrar su nombre.
+      guardarMarcaComercio(null);
+      try {
+        const respuestaComercios = await api.get('/Comercios');
+        const comercios = Array.isArray(respuestaComercios.data)
+          ? respuestaComercios.data
+          : respuestaComercios.data ? [respuestaComercios.data] : [];
+        guardarMarcaComercio(comercios[0]);
+      } catch {
+        // El acceso no debe fallar si el comercio todavía no está configurado.
+      }
+
+      return sesion;
     } finally {
       setCargando(false);
     }

@@ -5,6 +5,7 @@ import { useTema } from "../context/ThemeContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { filtrarMenuPorPermisos, primeraVistaAutorizada, puedeVerVista } from "../utils/permisos.js";
 import { onForbidden } from "../services/api.js";
+import { MARCA_COMERCIO_EVENT, obtenerMarcaComercio } from "../utils/marcaComercio.js";
 
 const VistaInicio = lazy(() => import("./views/VistaInicio"));
 const VistaProductos = lazy(() => import("./views/VistaProductos"));
@@ -55,6 +56,17 @@ export default function PanelPrincipal() {
   const [vistaActiva, setVistaActiva] = useState(obtenerVistaInicial);
   const { tema, alternarTema } = useTema();
   const { usuario, logout } = useAuth();
+  const [nombreComercio, setNombreComercio] = useState(() => obtenerMarcaComercio()?.nombre || '');
+
+  useEffect(() => {
+    const actualizarNombreComercio = () => setNombreComercio(obtenerMarcaComercio()?.nombre || '');
+    window.addEventListener(MARCA_COMERCIO_EVENT, actualizarNombreComercio);
+    window.addEventListener('storage', actualizarNombreComercio);
+    return () => {
+      window.removeEventListener(MARCA_COMERCIO_EVENT, actualizarNombreComercio);
+      window.removeEventListener('storage', actualizarNombreComercio);
+    };
+  }, []);
 
   useEffect(() => {
     onForbidden((mensaje) => toast.current?.show({
@@ -220,9 +232,9 @@ export default function PanelPrincipal() {
           >
             <i className="pi pi-bolt text-white text-sm"></i>
           </div>
-          {!estaColapsado && (
+          {!estaColapsado && nombreComercio && (
             <span className="font-bold text-base ml-3 text-0 white-space-nowrap">
-              BOOTCAMP 2026
+              {nombreComercio}
             </span>
           )}
         </div>
