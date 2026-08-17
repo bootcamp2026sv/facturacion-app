@@ -185,27 +185,27 @@ export default function VistaInicio({ alCambiarVista }) {
                 <i className="pi pi-directions text-primary mr-2"></i>Accesos Rápidos
               </h3>
               <div className="flex flex-column gap-2">
-                <div onClick={() => alCambiarVista?.('pos')} className="flex align-items-center justify-content-between p-2 border-round hover:surface-hover cursor-pointer transition-colors transition-duration-150">
+                <button type="button" onClick={() => alCambiarVista?.('pos')} className="flex align-items-center justify-content-between w-full p-2 border-round border-none bg-transparent text-left hover:surface-hover cursor-pointer transition-colors transition-duration-150">
                   <div className="flex align-items-center gap-2">
                     <i className="pi pi-shopping-cart text-primary"></i>
                     <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Nueva Venta (POS)</span>
                   </div>
                   <i className="pi pi-angle-right" style={{ color: 'var(--text-muted)' }}></i>
-                </div>
-                <div onClick={() => alCambiarVista?.('clientes')} className="flex align-items-center justify-content-between p-2 border-round hover:surface-hover cursor-pointer transition-colors transition-duration-150">
+                </button>
+                <button type="button" onClick={() => alCambiarVista?.('clientes')} className="flex align-items-center justify-content-between w-full p-2 border-round border-none bg-transparent text-left hover:surface-hover cursor-pointer transition-colors transition-duration-150">
                   <div className="flex align-items-center gap-2">
                     <i className="pi pi-users text-primary"></i>
                     <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Registrar Nuevo Cliente</span>
                   </div>
                   <i className="pi pi-angle-right" style={{ color: 'var(--text-muted)' }}></i>
-                </div>
-                <div onClick={() => alCambiarVista?.('productos')} className="flex align-items-center justify-content-between p-2 border-round hover:surface-hover cursor-pointer transition-colors transition-duration-150">
+                </button>
+                <button type="button" onClick={() => alCambiarVista?.('productos')} className="flex align-items-center justify-content-between w-full p-2 border-round border-none bg-transparent text-left hover:surface-hover cursor-pointer transition-colors transition-duration-150">
                   <div className="flex align-items-center gap-2">
                     <i className="pi pi-box text-primary"></i>
                     <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Administrar Inventario</span>
                   </div>
                   <i className="pi pi-angle-right" style={{ color: 'var(--text-muted)' }}></i>
-                </div>
+                </button>
               </div>
             </div>
 

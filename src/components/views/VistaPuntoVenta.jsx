@@ -215,20 +215,26 @@ export default function VistaPuntoVenta() {
   // En pantalla completa se bloquea el desplazamiento de la página principal.
   const togglePantallaCompleta = useCallback(() => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
+      const solicitarPantallaCompleta = document.documentElement.requestFullscreen?.bind(document.documentElement);
+      if (!solicitarPantallaCompleta) return;
+      solicitarPantallaCompleta().catch(() => {});
+      return;
     }
+
+    const salirDePantallaCompleta = document.exitFullscreen?.bind(document);
+    if (salirDePantallaCompleta) salirDePantallaCompleta().catch(() => {});
   }, []);
 
   useEffect(() => {
     const manejarCambioPantalla = () => {
       const estaEnPantallaCompleta = !!document.fullscreenElement;
+      const esPantallaEstrecha = window.matchMedia?.('(max-width: 767px)').matches ?? false;
+      const bloquearDesplazamiento = estaEnPantallaCompleta && !esPantallaEstrecha;
       setPantallaCompleta(estaEnPantallaCompleta);
-      document.body.style.overflow = estaEnPantallaCompleta ? 'hidden' : '';
-      document.documentElement.style.overflow = estaEnPantallaCompleta ? 'hidden' : '';
+      document.body.style.overflow = bloquearDesplazamiento ? 'hidden' : '';
+      document.documentElement.style.overflow = bloquearDesplazamiento ? 'hidden' : '';
       const principal = document.querySelector('main');
-      if (principal) principal.style.overflow = estaEnPantallaCompleta ? 'hidden' : '';
+      if (principal) principal.style.overflow = bloquearDesplazamiento ? 'hidden' : '';
     };
 
     document.addEventListener('fullscreenchange', manejarCambioPantalla);

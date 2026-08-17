@@ -6,11 +6,11 @@ export function ContenedorPuntoVenta({ children, style }) {
 }
 
 export function AvisoPagoExitoso({ children }) {
-  return <div className="punto-venta__aviso punto-venta__aviso--exito premium-fade-in-fast">{children}</div>;
+  return <div role="status" className="punto-venta__aviso punto-venta__aviso--exito premium-fade-in-fast">{children}</div>;
 }
 
 export function AvisoError({ children }) {
-  return <div className="punto-venta__aviso punto-venta__aviso--error">{children}</div>;
+  return <div role="alert" className="punto-venta__aviso punto-venta__aviso--error">{children}</div>;
 }
 
 export function PanelCatalogo({ children }) {

@@ -44,7 +44,14 @@ const obtenerVistaInicial = () => {
 
 export default function PanelPrincipal() {
   const toast = useRef(null);
-  const [estaColapsado, setEstaColapsado] = useState(false);
+  const sidebarRef = useRef(null);
+  const toggleSidebarRef = useRef(null);
+  const [esPantallaCompacta, setEsPantallaCompacta] = useState(() => (
+    typeof window !== "undefined" && window.matchMedia("(max-width: 1024px)").matches
+  ));
+  const [estaColapsado, setEstaColapsado] = useState(() => (
+    typeof window !== "undefined" && window.matchMedia("(max-width: 1024px)").matches
+  ));
   const [vistaActiva, setVistaActiva] = useState(obtenerVistaInicial);
   const { tema, alternarTema } = useTema();
   const { usuario, logout } = useAuth();
@@ -55,6 +62,35 @@ export default function PanelPrincipal() {
     }));
     return () => onForbidden(null);
   }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1024px)");
+    const actualizarModoResponsive = (evento) => {
+      const pantallaCompacta = evento.matches;
+      setEsPantallaCompacta(pantallaCompacta);
+      setEstaColapsado(pantallaCompacta);
+    };
+
+    actualizarModoResponsive(mediaQuery);
+    mediaQuery.addEventListener("change", actualizarModoResponsive);
+    return () => mediaQuery.removeEventListener("change", actualizarModoResponsive);
+  }, []);
+
+  useEffect(() => {
+    if (!esPantallaCompacta || estaColapsado) return undefined;
+
+    const primerElementoNavegable = sidebarRef.current?.querySelector(".nav-item");
+    primerElementoNavegable?.focus();
+
+    const cerrarConEscape = (evento) => {
+      if (evento.key !== "Escape") return;
+      setEstaColapsado(true);
+      requestAnimationFrame(() => toggleSidebarRef.current?.focus());
+    };
+
+    document.addEventListener("keydown", cerrarConEscape);
+    return () => document.removeEventListener("keydown", cerrarConEscape);
+  }, [esPantallaCompacta, estaColapsado]);
 
   const ELEMENTOS_MENU = [
     {
@@ -150,13 +186,25 @@ export default function PanelPrincipal() {
     elementosMenuAutorizados.find((item) => item.id === vistaAutorizada) || elementosMenuAutorizados[0];
 
   return (
-    <div className="flex h-screen overflow-hidden surface-ground">
+    <div className="flex h-screen overflow-hidden surface-ground panel-principal">
       <Toast ref={toast} position="top-right" />
       {/* 1. SIDEBAR */}
+      {esPantallaCompacta && !estaColapsado && (
+        <button
+          type="button"
+          className="premium-sidebar-backdrop"
+          aria-label="Cerrar menú de navegación"
+          onClick={() => setEstaColapsado(true)}
+        />
+      )}
       <aside
-        className="flex flex-column h-screen sticky top-0 border-right-1 premium-sidebar transition-all transition-duration-200"
+        id="panel-principal-sidebar"
+        ref={sidebarRef}
+        aria-hidden={esPantallaCompacta && estaColapsado}
+        inert={esPantallaCompacta && estaColapsado ? "" : undefined}
+        className={`flex flex-column h-screen sticky top-0 border-right-1 premium-sidebar transition-all transition-duration-200 panel-principal__sidebar ${esPantallaCompacta ? "panel-principal__sidebar--compacta" : ""} ${!estaColapsado ? "panel-principal__sidebar--abierta" : ""}`}
         style={{
-          width: estaColapsado ? "72px" : "260px",
+          width: esPantallaCompacta ? "min(300px, calc(100vw - 1rem))" : estaColapsado ? "72px" : "260px",
           overflowX: "hidden",
           flexShrink: 0,
         }}
@@ -186,8 +234,12 @@ export default function PanelPrincipal() {
             return (
               <button
                 key={item.id}
-                onClick={() => setVistaActiva(item.id)}
+                onClick={() => {
+                  setVistaActiva(item.id);
+                  if (esPantallaCompacta) setEstaColapsado(true);
+                }}
                 title={estaColapsado ? item.etiqueta : undefined}
+                aria-current={esActivo ? "page" : undefined}
                 className={`flex align-items-center border-none border-round cursor-pointer p-3 text-sm w-full nav-item ${
                   esActivo ? "nav-item-active" : "bg-transparent"
                 } ${estaColapsado ? "justify-content-center px-0" : "justify-content-start"}`}
@@ -245,32 +297,37 @@ export default function PanelPrincipal() {
       {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-column min-w-0">
         {/* Top Header */}
-        <header className="flex align-items-center justify-content-between h-4rem px-4 border-bottom-1 surface-border premium-panel-header sticky top-0 z-5">
-          <div className="flex align-items-center gap-3">
+        <header className="flex align-items-center justify-content-between h-4rem px-4 border-bottom-1 surface-border premium-panel-header sticky top-0 z-5 panel-principal__header">
+          <div className="flex align-items-center gap-3 min-w-0">
             <Button
               icon={estaColapsado ? "pi pi-bars" : "pi pi-align-left"}
               onClick={() => setEstaColapsado(!estaColapsado)}
               className="p-button-text premium-toggle-btn"
+              aria-label={estaColapsado ? "Abrir menú de navegación" : "Colapsar menú de navegación"}
+              aria-expanded={!estaColapsado}
+              aria-controls="panel-principal-sidebar"
+              ref={toggleSidebarRef}
             />
             <h1
-              className="margin-0 text-xl font-bold"
+              className="margin-0 text-xl font-bold panel-principal__titulo"
               style={{ color: "var(--header-title)" }}
             >
               {elementoVistaActual.etiqueta}
             </h1>
           </div>
 
-          <div className="flex align-items-center gap-2">
+          <div className="flex align-items-center gap-2 panel-principal__acciones">
             <Button
               icon={tema === "dark" ? "pi pi-sun" : "pi pi-moon"}
               onClick={alternarTema}
               className="p-button-text premium-toggle-btn"
+              aria-label={tema === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
               tooltip={tema === "dark" ? "Modo claro" : "Modo oscuro"}
               tooltipOptions={{ position: "bottom" }}
             />
-            <div className="flex align-items-center gap-2 surface-ground p-2 border-round-xl">
+            <div className="flex align-items-center gap-2 surface-ground p-2 border-round-xl panel-principal__usuario">
               <i className="pi pi-user text-primary"></i>
-              <span className="text-sm font-medium text-secondary">
+              <span className="text-sm font-medium text-secondary panel-principal__usuario-nombre">
                 {usuario?.nombreUsuario || "Usuario"}
               </span>
             </div>
@@ -279,7 +336,7 @@ export default function PanelPrincipal() {
 
         {/* Active View Container */}
         <main
-          className={`p-4 flex-1 min-h-0 ${vistaAutorizada === "pos-clasico" ? "overflow-hidden" : "overflow-auto"}`}
+          className={`p-4 flex-1 min-h-0 panel-principal__main ${vistaAutorizada === "pos-clasico" ? "overflow-hidden" : "overflow-auto"}`}
         >
           <Suspense fallback={<div className="flex justify-content-center p-6"><i className="pi pi-spin pi-spinner text-3xl text-primary" /></div>}>
             {elementoVistaActual.componente}

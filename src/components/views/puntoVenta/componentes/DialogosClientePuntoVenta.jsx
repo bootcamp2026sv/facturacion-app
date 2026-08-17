@@ -68,10 +68,10 @@ export default function DialogosClientePuntoVenta({
                     <i className={`pi ${clienteDisponible.value === 0 ? 'pi-user' : 'pi-user-check'} text-sm`} style={{ color: cliente === clienteDisponible.value ? '#fff' : 'var(--text-muted)' }}></i>
                   </div>
                   <div className="text-left flex-1 min-w-0">
-                    <div className="flex align-items-center gap-2">
-                      <p className="font-semibold m-0 text-sm" style={{ color: 'var(--text-primary)' }}>{clienteDisponible.label}</p>
-                      {clienteDisponible.granContribuyente && <Tag value="Gran Contribuyente" severity="warning" style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem' }} />}
-                    </div>
+              <div className="flex align-items-center gap-2 min-w-0">
+                <p className="font-semibold m-0 text-sm min-w-0 overflow-wrap-anywhere" style={{ color: 'var(--text-primary)' }}>{clienteDisponible.label}</p>
+                {clienteDisponible.granContribuyente && <Tag value="Gran Contribuyente" severity="warning" style={{ fontSize: '0.6rem', padding: '0.15rem 0.4rem', flexShrink: 0 }} />}
+              </div>
                     <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>{clienteDisponible.nit}</p>
                   </div>
                   {cliente === clienteDisponible.value && <i className="pi pi-check text-sm" style={{ color: '#6366f1', flexShrink: 0 }}></i>}
@@ -100,7 +100,7 @@ export default function DialogosClientePuntoVenta({
           {errorClienteRapido && (
             <div className="flex align-items-center gap-2 p-2 border-round-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444' }}>
               <i className="pi pi-exclamation-circle text-sm"></i>
-              <p className="text-xs font-semibold m-0">{errorClienteRapido}</p>
+              <p className="text-xs font-semibold m-0 overflow-wrap-anywhere">{errorClienteRapido}</p>
             </div>
           )}
 

@@ -138,6 +138,286 @@
   background: rgba(255, 255, 255, 0.25);
 }
 
+/* --- Responsive application shell --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: clamp(14px, calc(13px + 0.25vw), 16px);
+}
+
+body {
+  overflow-x: hidden;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.panel-principal__main,
+.panel-principal__main > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.panel-principal__titulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-principal__usuario,
+.panel-principal__usuario-nombre {
+  min-width: 0;
+}
+
+.panel-principal__usuario-nombre {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.premium-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.48);
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.panel-principal__main .p-tabview,
+.panel-principal__main .p-tabview-panels,
+.panel-principal__main .p-card,
+.panel-principal__main .p-toolbar,
+.panel-principal__main .p-datatable,
+.panel-principal__main .p-datatable-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.panel-principal__main .p-tabview-nav {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.panel-principal__main .p-tabview-nav-link {
+  white-space: nowrap;
+}
+
+.panel-principal__main .p-toolbar {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.panel-principal__main .premium-table,
+.panel-principal__main .p-datatable-wrapper {
+  overflow-x: auto;
+}
+
+.panel-principal__main .p-datatable-table {
+  max-width: none;
+}
+
+.panel-principal__main h1.text-3xl,
+.panel-principal__main h2.text-3xl {
+  font-size: clamp(1.4rem, 2.4vw, 1.875rem) !important;
+  line-height: 1.15;
+}
+
+.panel-principal__main h3,
+.panel-principal__main .p-card-title {
+  overflow-wrap: anywhere;
+}
+
+.inicio-servicio > span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.inicio-servicio .p-badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .panel-principal__sidebar.panel-principal__sidebar--compacta {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    height: 100dvh !important;
+    transform: translateX(-105%);
+    box-shadow: 18px 0 42px -22px rgba(15, 23, 42, 0.7);
+    transition: transform 0.24s ease-in-out;
+  }
+
+  .panel-principal__sidebar.panel-principal__sidebar--compacta.panel-principal__sidebar--abierta {
+    transform: translateX(0);
+  }
+
+  .panel-principal__main {
+    padding: 0.875rem !important;
+  }
+
+  .panel-principal__header {
+    padding-right: 0.75rem !important;
+    padding-left: 0.75rem !important;
+  }
+
+  .panel-principal__acciones {
+    flex-shrink: 0;
+  }
+
+  .panel-principal__usuario-nombre {
+    max-width: 9rem;
+  }
+
+  .panel-principal {
+    height: 100dvh !important;
+    min-height: 100dvh;
+  }
+
+  .premium-surface-card,
+  .premium-card-static {
+    border-radius: 14px;
+  }
+
+  .panel-principal__main .p-tabview-nav {
+    flex-wrap: nowrap;
+  }
+
+  .panel-principal__main .p-datatable .p-paginator {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel-principal__header {
+    gap: 0.35rem;
+  }
+
+  .panel-principal__header .p-button {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .panel-principal__titulo {
+    font-size: clamp(0.92rem, 4vw, 1.1rem) !important;
+  }
+
+  .panel-principal__usuario {
+    padding: 0.45rem !important;
+  }
+
+  .panel-principal__usuario-nombre {
+    display: none;
+  }
+
+  .panel-principal__main > .p-4 {
+    padding: 0.75rem !important;
+  }
+
+  .panel-principal__main .premium-tabs .p-tabview-nav li .p-tabview-nav-link {
+    padding: 0.8rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .panel-principal__main .p-dialog,
+  .p-dialog {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    margin: 0.5rem;
+  }
+
+  .panel-principal__main .p-dialog-content,
+  .p-dialog .p-dialog-content {
+    max-height: calc(100dvh - 8.5rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .p-dialog .p-dialog-footer {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .p-dialog .p-dialog-footer > .p-button {
+    flex: 1 1 9rem;
+    min-width: 0;
+  }
+
+  .p-dialog .p-dialog-footer > .flex:not(.ventas-modal-actions) {
+    flex-wrap: wrap;
+  }
+
+  .p-dialog .p-dialog-footer > .flex:not(.ventas-modal-actions) > .p-button {
+    flex: 1 1 9rem;
+    min-width: 0;
+  }
+
+  .panel-principal__main .p-toolbar .p-toolbar-group-start,
+  .panel-principal__main .p-toolbar .p-toolbar-group-end {
+    width: 100%;
+  }
+
+  .clientes-form-actions {
+    flex-direction: column;
+  }
+
+  .clientes-form-actions .p-button {
+    width: 100% !important;
+  }
+
+  .catalogo-form-actions {
+    flex-wrap: wrap;
+  }
+
+  .catalogo-form-actions .p-button {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+}
+
 /* --- Premium Buttons --- */
 .premium-btn {
   border-radius: 10px !important;
@@ -263,6 +543,31 @@
 .vista-ventas .p-datatable .p-datatable-tbody > tr > td {
   overflow-wrap: anywhere;
 }
+.vista-ventas .ventas-celda-fecha,
+.vista-ventas .ventas-celda-tipo,
+.vista-ventas .ventas-celda-control,
+.vista-ventas .ventas-celda-total,
+.vista-ventas .ventas-estado {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.vista-ventas .ventas-celda-control,
+.vista-ventas .ventas-celda-total {
+  font-variant-numeric: tabular-nums;
+}
+.vista-ventas .ventas-celda-cliente {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.vista-ventas .ventas-celda-acciones {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+}
 .ventas-dialog .p-dialog-header {
   min-width: 0;
 }
@@ -288,7 +593,65 @@
   font-size: 0.68rem !important;
 }
 
+.ventas-dialog .p-dialog-content {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.ventas-venta-resumen > div:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ventas-venta-resumen p {
+  overflow-wrap: anywhere;
+}
+
+.ventas-mobile-controls {
+  display: none;
+}
+.ventas-mobile-page-summary {
+  flex: 1 1 100%;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
 @media (max-width: 1024px) {
+  .ventas-mobile-controls {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .ventas-mobile-control-field {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .ventas-mobile-control-field .premium-label {
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .ventas-mobile-sort-button {
+    flex: 0 1 12rem;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .ventas-modal-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .ventas-modal-actions > button {
+    width: 100%;
+  }
+
   .vista-ventas .premium-surface-card {
     border-radius: 12px;
   }
@@ -352,6 +715,42 @@
   .ventas-table .p-datatable-tbody > tr > td > :not(.p-column-title) {
     width: 100%;
     text-align: left;
+  }
+  .ventas-table .p-datatable-tbody > tr > td:last-child {
+    flex-direction: row;
+  }
+  .ventas-table .p-datatable-tbody > tr > td:last-child > :not(.p-column-title) {
+    width: auto;
+    align-self: flex-end;
+    text-align: right;
+  }
+}
+
+@media (max-width: 640px) {
+  .ventas-mobile-control-field,
+  .ventas-mobile-sort-button {
+    flex-basis: 100%;
+  }
+
+  .ventas-modal-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .ventas-modal-actions > button {
+    min-height: 68px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .ventas-modal-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ventas-modal-actions > button {
+    min-height: 64px;
   }
 }
 

@@ -59,7 +59,7 @@ export default function DialogoProductoPuntoVenta({
               <InputText value={itemEditando.nombre} onChange={(e) => setItemEditando({ ...itemEditando, nombre: e.target.value })} className="w-full" style={{ borderRadius: '10px', padding: '0.65rem 1rem' }} />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 punto-venta__editor-precios-cantidad">
               <div className="flex-1 flex flex-column gap-1">
                 <div className="flex justify-content-between align-items-center">
                   <label className="premium-label">Precio unitario</label>

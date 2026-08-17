@@ -22,47 +22,57 @@ export default function PanelCatalogoPuntoVenta({
 }) {
   return (
     <PanelCatalogo>
-      <div className="premium-surface-card p-3 flex flex-column sm:flex-row gap-3 align-items-start sm:align-items-center">
-        <div className="premium-input-group flex-1 punto-venta__barra-herramientas">
+      <div className="premium-surface-card p-3 punto-venta__catalogo-herramientas">
+        <div className="premium-input-group punto-venta__barra-herramientas">
           <i className="pi pi-search premium-input-icon" style={{ fontSize: '0.85rem' }}></i>
-          <InputText value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." className="w-full" />
+          <InputText value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto..." aria-label="Buscar producto" className="w-full" />
         </div>
-        <div className="flex align-items-center gap-2 flex-wrap">
-          {categorias.map((categoria) => (
+        <div className="punto-venta__controles-catalogo flex align-items-center gap-2">
+          <div className="punto-venta__categorias flex align-items-center gap-2" role="group" aria-label="Categorías de productos">
+            {categorias.map((categoria) => (
+              <button
+                key={categoria}
+                type="button"
+                onClick={() => setCategoriaActiva(categoria)}
+                aria-pressed={categoriaActiva === categoria}
+                className="punto-venta__categoria border-none border-round-xl cursor-pointer px-3 py-2 text-sm font-semibold transition-all transition-duration-200"
+                style={{
+                  background: categoriaActiva === categoria ? 'linear-gradient(135deg, #6366f1, #818cf8)' : 'var(--surface-hover)',
+                  color: categoriaActiva === categoria ? '#fff' : 'var(--text-secondary)',
+                }}
+              >
+                {categoria}
+              </button>
+            ))}
+          </div>
+          <div className="punto-venta__acciones-catalogo flex align-items-center gap-2">
             <button
-              key={categoria}
-              onClick={() => setCategoriaActiva(categoria)}
-              className="border-none border-round-xl cursor-pointer px-3 py-2 text-sm font-semibold transition-all transition-duration-200"
-              style={{
-                background: categoriaActiva === categoria ? 'linear-gradient(135deg, #6366f1, #818cf8)' : 'var(--surface-hover)',
-                color: categoriaActiva === categoria ? '#fff' : 'var(--text-secondary)',
-              }}
+              type="button"
+              onClick={() => recargarProductos()}
+              disabled={cargandoCatalogos || recargandoProductos}
+              title="Recargar productos"
+              aria-label="Recargar productos"
+              className="flex align-items-center justify-content-center gap-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 px-3 py-2 text-sm font-semibold"
+              style={{ background: 'var(--surface-hover)', color: 'var(--text-secondary)', opacity: (cargandoCatalogos || recargandoProductos) ? 0.65 : 1 }}
+              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'var(--surface-border-light)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
             >
-              {categoria}
+              <i className={`pi ${recargandoProductos ? 'pi-spin pi-spinner' : 'pi-refresh'}`}></i>
+              <span>Recargar</span>
             </button>
-          ))}
-          <button
-            onClick={() => recargarProductos()}
-            disabled={cargandoCatalogos || recargandoProductos}
-            title="Recargar productos"
-            className="flex align-items-center justify-content-center gap-2 border-none border-round-xl cursor-pointer transition-all transition-duration-200 px-3 py-2 text-sm font-semibold"
-            style={{ background: 'var(--surface-hover)', color: 'var(--text-secondary)', opacity: (cargandoCatalogos || recargandoProductos) ? 0.65 : 1 }}
-            onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'var(--surface-border-light)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
-          >
-            <i className={`pi ${recargandoProductos ? 'pi-spin pi-spinner' : 'pi-refresh'}`}></i>
-            <span>Recargar</span>
-          </button>
-          <button
-            onClick={togglePantallaCompleta}
-            title={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
-            className="flex align-items-center justify-content-center border-none border-round-xl cursor-pointer transition-all transition-duration-200"
-            style={{ width: '36px', height: '36px', background: 'var(--surface-hover)', color: 'var(--text-muted)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-border-light)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
-          >
-            <i className={`pi ${pantallaCompleta ? 'pi-window-minimize' : 'pi-window-maximize'} text-sm`}></i>
-          </button>
+            <button
+              type="button"
+              onClick={togglePantallaCompleta}
+              title={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              aria-label={pantallaCompleta ? 'Salir de pantalla completa' : 'Activar pantalla completa'}
+              className="flex align-items-center justify-content-center border-none border-round-xl cursor-pointer transition-all transition-duration-200"
+              style={{ width: '36px', height: '36px', background: 'var(--surface-hover)', color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-border-light)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+            >
+              <i className={`pi ${pantallaCompleta ? 'pi-window-minimize' : 'pi-window-maximize'} text-sm`}></i>
+            </button>
+          </div>
         </div>
       </div>
 

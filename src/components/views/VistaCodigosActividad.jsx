@@ -220,7 +220,7 @@ export default function VistaCodigosActividad() {
                     />
                   </div>
 
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex gap-2 mt-1 catalogo-form-actions">
                     {puede('CATALOGOS_ADMINISTRAR') && <Button type="submit" label={editando ? "Guardar" : "Registrar Actividad"} icon={editando ? "pi pi-check" : "pi pi-briefcase"} className="premium-btn flex-grow-1" disabled={cargando} />}
                     {editando && (
                       <Button type="button" label="Cancelar" icon="pi pi-times" className="p-button-secondary p-button-outlined" onClick={cancelarEdicion} disabled={cargando} />

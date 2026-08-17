@@ -407,6 +407,9 @@
 }
 
 .comercio-file-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 0.52rem;
   background: var(--card-bg-solid);
   font-size: 0.8rem;

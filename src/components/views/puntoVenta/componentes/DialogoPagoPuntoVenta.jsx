@@ -58,12 +58,12 @@ export default function DialogoPagoPuntoVenta({
       )}
     >
       <div className="flex flex-column gap-3 py-2">
-        <div className="flex align-items-center gap-3 p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
+        <div className="flex align-items-center gap-3 p-3 border-round-xl punto-venta__pago-resumen" style={{ background: 'var(--surface-muted)' }}>
           <div className="flex align-items-center justify-content-center border-circle" style={{ width: '48px', height: '48px', minWidth: '48px', background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
             <i className="pi pi-file text-white"></i>
           </div>
-          <div>
-            <p className="font-bold m-0" style={{ color: 'var(--text-primary)' }}>{clienteSeleccionado?.label}</p>
+          <div className="min-w-0">
+            <p className="font-bold m-0" style={{ color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{clienteSeleccionado?.label}</p>
             <div className="flex align-items-center gap-2 mt-1 flex-wrap">
               <Tag value={TIPOS_DTE.find((tipo) => tipo.value === tipoDte)?.label} severity="info" style={{ fontSize: '0.65rem' }} />
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>• {METODOS_PAGO.find((metodo) => metodo.value === metodoPago)?.label}</span>
@@ -78,7 +78,7 @@ export default function DialogoPagoPuntoVenta({
               <div>
                 <p className="font-bold m-0 text-sm" style={{ color: 'var(--text-primary)' }}>Datos opcionales del receptor</p>
                 {!mostrarDatosReceptor && tieneDatosReceptorVenta && (
-                  <p className="m-0 text-xs text-overflow-ellipsis white-space-nowrap overflow-hidden" style={{ color: 'var(--text-muted)' }}>
+                  <p className="punto-venta__receptor-resumen m-0 text-xs" style={{ color: 'var(--text-muted)' }}>
                     {[datosReceptorVenta.nombre.trim(), datosReceptorVenta.correo.trim()].filter(Boolean).join(' · ')}
                   </p>
                 )}

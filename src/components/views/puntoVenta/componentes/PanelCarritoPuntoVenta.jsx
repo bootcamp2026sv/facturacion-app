@@ -71,7 +71,7 @@ export default function PanelCarritoPuntoVenta({
           </div>
           <div className="text-left flex-1 min-w-0">
             <p className="text-xs font-semibold m-0" style={{ color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Cliente</p>
-            <p className="font-semibold m-0 text-sm flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <p className="punto-venta__cliente-nombre font-semibold m-0 text-sm flex align-items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               {clienteSeleccionado?.label || 'Seleccione cliente'}
               {clienteSeleccionado?.granContribuyente && <Tag value="GC" severity="warning" style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem' }} />}
             </p>
@@ -93,7 +93,7 @@ export default function PanelCarritoPuntoVenta({
 
       {mostrarDatosCliente && clienteSeleccionado && (
         <div className="punto-venta__cliente-detalles px-2 py-1 border-bottom-1 surface-border" style={{ background: 'var(--surface-muted)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', columnGap: '0.4rem', rowGap: '0.1rem' }}>
+          <div className="punto-venta__cliente-detalles-grid" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', columnGap: '0.4rem', rowGap: '0.1rem' }}>
             <div className="col-12 md:col-6">
               <span className="block text-2xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Nombre</span>
               <span className="block text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{nombreClienteSeleccionado || 'No registrado'}</span>
@@ -141,6 +141,7 @@ export default function PanelCarritoPuntoVenta({
             <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Gran Contribuyente</span>
           </div>
           <button
+            type="button"
             onClick={() => { if (!documentoSinIva) setEsGranContribuyente(!esGranContribuyente); }}
             disabled={documentoSinIva}
             className={`border-none p-1 px-2 border-round text-xs font-bold transition-all transition-duration-200 ${documentoSinIva ? 'cursor-not-allowed' : 'cursor-pointer'}`}
@@ -158,13 +159,16 @@ export default function PanelCarritoPuntoVenta({
 
       <div className="px-3 py-2 border-bottom-1 surface-border flex flex-column gap-2" style={{ background: 'var(--surface-ground-light)' }}>
         <p className="text-xs font-semibold m-0" style={{ color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Tipo de DTE</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+        <div className="punto-venta__opciones-dte" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
           {TIPOS_DTE.map((tipo) => {
             const esActivo = tipoDte === tipo.value;
             return (
               <button
                 key={tipo.value}
+                type="button"
                 onClick={() => seleccionarTipoDte(tipo.value)}
+                aria-pressed={esActivo}
+                aria-label={`Seleccionar ${tipo.label}`}
                 className="border-none cursor-pointer p-2 flex align-items-center justify-content-center gap-2 transition-all transition-duration-150"
                 style={{
                   background: esActivo ? `${tipo.color}15` : 'transparent',
@@ -216,13 +220,15 @@ export default function PanelCarritoPuntoVenta({
               return (
                 <div key={item._key} className="p-2 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
                   <div className="flex align-items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{item.nombre}</span>
+                    <div className="flex-1 min-w-0 punto-venta__item-nombre">
+                      <span className="punto-venta__item-nombre font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{item.nombre}</span>
                     </div>
                     <div className="flex align-items-center gap-1" style={{ flexShrink: 0 }}>
                       <Tag value={etiquetaIva.label} severity={etiquetaIva.severity} style={{ fontSize: '0.55rem', padding: '0 0.4rem', height: '16px' }} />
                       <span className="font-bold text-sm" style={{ color: calculo.iva > 0 ? '#6366f1' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>${calculo.total.toFixed(2)}</span>
                       <button
+                        type="button"
+                        aria-label={`Quitar ${item.nombre}`}
                         onClick={() => quitarDelCarrito(item._key)}
                         className="flex align-items-center justify-content-center border-circle border-none cursor-pointer p-0"
                         style={{ width: '20px', height: '20px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontSize: '0.55rem', flexShrink: 0 }}
@@ -235,16 +241,16 @@ export default function PanelCarritoPuntoVenta({
                   </div>
                   <div className="flex align-items-center gap-2" style={{ marginTop: '4px' }}>
                     <div className="flex align-items-center" style={{ gap: '2px' }}>
-                      <button onClick={() => cambiarCantidad(item._key, -1)} className="flex align-items-center justify-content-center border-circle border-none cursor-pointer p-0" style={{ width: '24px', height: '24px', background: 'var(--surface-border-light)', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 'bold', lineHeight: 1 }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--text-icon)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-border-light)'; }}>−</button>
+                      <button type="button" aria-label={`Disminuir cantidad de ${item.nombre}`} onClick={() => cambiarCantidad(item._key, -1)} className="flex align-items-center justify-content-center border-circle border-none cursor-pointer p-0" style={{ width: '24px', height: '24px', background: 'var(--surface-border-light)', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 'bold', lineHeight: 1 }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--text-icon)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-border-light)'; }}>−</button>
                       <span className="font-bold text-center" style={{ width: '22px', fontSize: '0.85rem', color: 'var(--text-primary)' }}>{item.cantidad}</span>
-                      <button onClick={() => cambiarCantidad(item._key, 1)} className="flex align-items-center justify-content-center border-circle border-none cursor-pointer p-0" style={{ width: '24px', height: '24px', background: 'var(--surface-border-light)', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 'bold', lineHeight: 1 }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--text-icon)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-border-light)'; }}>+</button>
+                      <button type="button" aria-label={`Aumentar cantidad de ${item.nombre}`} onClick={() => cambiarCantidad(item._key, 1)} className="flex align-items-center justify-content-center border-circle border-none cursor-pointer p-0" style={{ width: '24px', height: '24px', background: 'var(--surface-border-light)', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 'bold', lineHeight: 1 }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--text-icon)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-border-light)'; }}>+</button>
                     </div>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       × ${obtenerPrecioParaDte(item, tipoDte).toFixed(2)}
                       {tipoDte === '01' && item.tipoIva === 'gravado' && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}> c/IVA</span>}
                     </span>
-                    {item.descuentoValor > 0 && <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>−{item.descuentoTipo === 'porcentaje' ? `${item.descuentoValor}%` : `$${item.descuentoValor}`}</span>}
-                    <button onClick={() => editarItem(item)} className="border-none bg-transparent cursor-pointer p-0 flex align-items-center text-xs" style={{ color: '#6366f1', marginLeft: 'auto' }}><i className="pi pi-pencil" style={{ fontSize: '0.6rem' }}></i></button>
+                    {item.descuentoValor > 0 && <span className="punto-venta__descuento text-xs font-semibold" style={{ color: '#ef4444' }}>−{item.descuentoTipo === 'porcentaje' ? `${item.descuentoValor}%` : `$${item.descuentoValor}`}</span>}
+                    <button type="button" aria-label={`Editar ${item.nombre}`} onClick={() => editarItem(item)} className="border-none bg-transparent cursor-pointer p-0 flex align-items-center text-xs" style={{ color: '#6366f1', marginLeft: 'auto' }}><i className="pi pi-pencil" style={{ fontSize: '0.6rem' }}></i></button>
                   </div>
                 </div>
               );
@@ -267,9 +273,9 @@ export default function PanelCarritoPuntoVenta({
           <div className="flex justify-content-between pt-2 border-top-1 surface-border"><span className="font-bold" style={{ color: 'var(--text-primary)' }}>Total a cobrar</span><span className="font-bold text-xl" style={{ color: '#6366f1' }}>${resumen.totalCobrar.toFixed(2)}</span></div>
         </div>
 
-        <div className="flex gap-1">
+        <div className="flex gap-1 punto-venta__metodos-pago">
           {METODOS_PAGO.map((metodo) => (
-            <button key={metodo.value} onClick={() => setMetodoPago(metodo.value)} className="flex-1 flex flex-column align-items-center gap-1 p-1 border-round-lg border-none cursor-pointer transition-all transition-duration-200" style={{ background: metodoPago === metodo.value ? `${COLOR_PAGO[metodo.value]}20` : 'var(--surface-muted)', border: `1.5px solid ${metodoPago === metodo.value ? COLOR_PAGO[metodo.value] : 'var(--surface-border-light)'}` }}>
+            <button key={metodo.value} type="button" aria-pressed={metodoPago === metodo.value} onClick={() => setMetodoPago(metodo.value)} className="punto-venta__metodo-pago flex-1 flex flex-column align-items-center gap-1 p-1 border-round-lg border-none cursor-pointer transition-all transition-duration-200" style={{ background: metodoPago === metodo.value ? `${COLOR_PAGO[metodo.value]}20` : 'var(--surface-muted)', border: `1.5px solid ${metodoPago === metodo.value ? COLOR_PAGO[metodo.value] : 'var(--surface-border-light)'}` }}>
               <i className={`${metodo.icono} text-xs`} style={{ color: metodoPago === metodo.value ? COLOR_PAGO[metodo.value] : 'var(--text-icon)' }}></i>
               <span className="text-xs font-semibold" style={{ color: metodoPago === metodo.value ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '0.6rem' }}>{metodo.label}</span>
             </button>

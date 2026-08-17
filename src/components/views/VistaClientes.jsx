@@ -352,7 +352,7 @@ export default function VistaClientes() {
     return (
       <div className="flex flex-column" style={{ maxWidth: '220px' }}>
         <span className="text-xs font-semibold">{distritoNombre}</span>
-        <span className="text-xs text-truncate overflow-hidden white-space-nowrap" style={{ color: 'var(--text-muted)' }} title={complemento}>
+        <span className="text-xs overflow-wrap-anywhere" style={{ color: 'var(--text-muted)' }} title={complemento}>
           {complemento}
         </span>
       </div>
@@ -662,7 +662,7 @@ export default function VistaClientes() {
                 </div>
 
                 {/* Acciones */}
-                <div className="flex gap-3 justify-content-end mt-2">
+                <div className="flex gap-3 justify-content-end mt-2 clientes-form-actions">
                   {editando ? (
                     <Button 
                       type="button" 

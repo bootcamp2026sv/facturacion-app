@@ -510,7 +510,7 @@ export default function VistaGeografia() {
 
               <div className="col-12 md:col-8">
                 <div className="premium-table">
-                  <DataTable value={departamentos} size="small" paginator rows={10} loading={cargando} emptyMessage="No hay departamentos registrados">
+                  <DataTable value={departamentos} size="small" paginator rows={10} loading={cargando} emptyMessage="No hay departamentos registrados" responsiveLayout="scroll">
                     <Column body={(rowData) => corregirCasingYInversion(rowData).codigo} header="Código MH" className="font-bold" style={{ width: '120px' }}></Column>
                     <Column body={(rowData) => corregirCasingYInversion(rowData).nombre} header="Departamento" sortable></Column>
                     <Column body={accionesDeptoTemplate} exportable={false} style={{ width: '120px' }}></Column>
@@ -572,7 +572,7 @@ export default function VistaGeografia() {
 
               <div className="col-12 md:col-8">
                 <div className="premium-table">
-                  <DataTable value={municipios} size="small" paginator rows={10} loading={cargando} emptyMessage="No hay municipios registrados">
+                  <DataTable value={municipios} size="small" paginator rows={10} loading={cargando} emptyMessage="No hay municipios registrados" responsiveLayout="scroll">
                     <Column body={(rowData) => corregirCasingYInversion(rowData).codigo} header="Código MH" className="font-bold" style={{ width: '120px' }}></Column>
                     <Column body={(rowData) => corregirCasingYInversion(rowData).nombre} header="Municipio" sortable></Column>
                     <Column body={deptoColumnTemplate} header="Departamento" sortable></Column>
@@ -631,7 +631,7 @@ export default function VistaGeografia() {
 
               <div className="col-12 md:col-8">
                 <div className="premium-table">
-                  <DataTable value={distritos} size="small" paginator rows={10} loading={cargando} emptyMessage="No hay distritos registrados">
+                  <DataTable value={distritos} size="small" paginator rows={10} loading={cargando} emptyMessage="No hay distritos registrados" responsiveLayout="scroll">
                     <Column body={(rowData) => corregirCasingYInversion(rowData).codigo} header="Código MH" className="font-bold" style={{ width: '120px' }}></Column>
                     <Column body={(rowData) => corregirCasingYInversion(rowData).nombre} header="Distrito" sortable></Column>
                     <Column body={muniColumnTemplate} header="Municipio" sortable></Column>

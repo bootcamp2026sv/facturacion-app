@@ -300,7 +300,7 @@ export default function VistaControlSistema() {
 
   const accionesUsuario = (fila) => puede('USUARIOS_EDITAR') ? (
     <div className="flex gap-1 flex-wrap">
-      <Button icon="pi pi-pencil" text rounded tooltip="Editar" onClick={() => abrirUsuario(fila)} />
+      <Button icon="pi pi-pencil" aria-label={`Editar usuario ${fila.nombreUsuario}`} text rounded tooltip="Editar" onClick={() => abrirUsuario(fila)} />
       <Button icon="pi pi-key" text rounded severity="secondary" tooltip="Restablecer contraseña" onClick={() => { setUsuarioPassword(fila); setNuevaPassword(''); }} />
       <Button icon={fila.habilitado ? 'pi pi-ban' : 'pi pi-check'} text rounded severity={fila.habilitado ? 'danger' : 'success'}
         tooltip={fila.habilitado ? 'Deshabilitar' : 'Habilitar'} disabled={fila.id === sesion?.id} onClick={() => cambiarEstadoUsuario(fila)} />
@@ -334,13 +334,13 @@ export default function VistaControlSistema() {
                     <h3 className="text-xl font-bold m-0">Series configuradas</h3>
                     <p className="text-sm mt-1 mb-0" style={{ color: 'var(--text-muted)' }}>El incremento ocurre únicamente al emitir un DTE.</p>
                   </div>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-2 flex-wrap correlativos-toolbar-actions">
                     <Button icon="pi pi-refresh" label="Actualizar" outlined onClick={() => cargarCorrelativos()} loading={cargandoCorrelativos} />
                     {puede('CORRELATIVOS_CREAR') && <Button icon="pi pi-plus" label="Nuevo correlativo" className="premium-btn" onClick={abrirNuevoCorrelativo} />}
                   </div>
                 </div>
                 <DataTable value={correlativos} loading={cargandoCorrelativos} size="small" paginator rows={10}
-                  emptyMessage="No hay correlativos configurados" className="premium-table" scrollable>
+                  emptyMessage="No hay correlativos configurados" className="premium-table correlativos-table" scrollable>
                   <Column field="tipoDte" header="Tipo DTE" body={(fila) => <strong>{obtenerEtiquetaTipoDte(fila.tipoDte)}</strong>} />
                   <Column field="ambiente" header="Ambiente" body={(fila) => <Tag value={obtenerEtiquetaAmbiente(fila.ambiente)} severity={fila.ambiente === '01' ? 'warning' : 'info'} />} />
                   <Column field="anio" header="Año" />
@@ -414,8 +414,8 @@ export default function VistaControlSistema() {
       </div>
 
       <Dialog visible={dialogoCorrelativoVisible} onHide={() => !guardandoCorrelativo && setDialogoCorrelativoVisible(false)}
-        header={formularioCorrelativo.id ? 'Editar correlativo DTE' : 'Registrar correlativo DTE'} style={{ width: '620px', maxWidth: 'calc(100vw - 1rem)' }} draggable={false}>
-        <form onSubmit={guardarCorrelativo} className="grid pt-2">
+        header={formularioCorrelativo.id ? 'Editar correlativo DTE' : 'Registrar correlativo DTE'} style={{ width: '620px', maxWidth: 'calc(100vw - 1rem)' }} className="correlativo-dialog" draggable={false}>
+        <form onSubmit={guardarCorrelativo} className="grid pt-2 correlativo-form">
           {!formularioCorrelativo.id && <>
             <div className="col-12 md:col-7"><label className="premium-label block mb-2">Tipo DTE</label><Dropdown value={formularioCorrelativo.tipoDte} options={TIPOS_DTE_CORRELATIVO} onChange={(e) => cambiarCampoCorrelativo('tipoDte', e.value)} editable className="w-full" />{erroresCorrelativo.tipoDte && <small className="p-error">{erroresCorrelativo.tipoDte}</small>}</div>
             <div className="col-12 md:col-5"><label className="premium-label block mb-2">Ambiente</label><Dropdown value={formularioCorrelativo.ambiente} options={AMBIENTES_CORRELATIVO} onChange={(e) => cambiarCampoCorrelativo('ambiente', e.value)} className="w-full" /></div>

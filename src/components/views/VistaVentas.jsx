@@ -44,6 +44,11 @@ const nombreCliente = (cliente) => {
     .filter(Boolean).join(' ').trim() || cliente.nombreComercial || 'Consumidor final';
 };
 
+const formatearFechaVenta = (fecha) => {
+  const fechaConvertida = new Date(fecha);
+  return Number.isNaN(fechaConvertida.getTime()) ? '—' : fechaConvertida.toLocaleDateString();
+};
+
 const obtenerSelloRecepcion = (venta) => String(venta?.selloRecepcion || '').trim();
 const obtenerSelloAnulacion = (venta) => String(venta?.selloAnulacion || '').trim();
 
@@ -163,6 +168,18 @@ export default function VistaVentas() {
     { label: '14 SE', value: '14' },
     { label: '11 EXP', value: '11' }
   ];
+
+  const opcionesOrden = [
+    { label: 'Fecha de emisión', value: 'fecha' },
+    { label: 'Tipo DTE', value: 'tipoDte' },
+    { label: 'Número de control', value: 'numeroControl' },
+    { label: 'Total', value: 'totalGeneral' },
+  ];
+
+  const opcionesFilas = [10, 20, 50, 100].map((valor) => ({
+    label: `${valor} por página`,
+    value: valor,
+  }));
 
   const [dialogoVisible, setDialogoVisible] = useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
@@ -461,11 +478,18 @@ export default function VistaVentas() {
   ].filter((accion) => puede(accion.permiso));
 
   const accionesTemplate = (fila) => acciones.length ? (
-    <Button icon="pi pi-ellipsis-h" className="p-button-rounded p-button-text premium-btn-secondary" onClick={() => abrirAcciones(fila)} />
+    <span className="ventas-celda-acciones">
+      <Button icon="pi pi-ellipsis-h" aria-label={`Acciones para ${fila.numeroControl || 'venta'}`} tooltip="Ver acciones" className="p-button-rounded p-button-text premium-btn-secondary" onClick={() => abrirAcciones(fila)} />
+    </span>
   ) : null;
+
+  const fechaVentaTemplate = (fila) => (
+    <span className="ventas-celda-fecha">{formatearFechaVenta(fila.fecha)}</span>
+  );
 
   const tipoDteTemplate = (fila) => (
     <span
+      className="ventas-celda-tipo"
       title={nombreTipoDte(fila.tipoCodigo)}
       aria-label={`${fila.tipo}: ${nombreTipoDte(fila.tipoCodigo)}`}
       style={{ cursor: 'help', textDecoration: 'underline dotted', textUnderlineOffset: '3px' }}
@@ -478,7 +502,7 @@ export default function VistaVentas() {
     const estado = obtenerEstadoVenta(fila);
     return (
       <span
-        className="inline-flex align-items-center gap-2 px-2 py-1 border-round-lg text-xs font-bold"
+        className="ventas-estado inline-flex align-items-center gap-2 px-2 py-1 border-round-lg text-xs font-bold"
         title={estado.titulo}
         style={{
           color: estado.color,
@@ -654,15 +678,51 @@ export default function VistaVentas() {
             </div>
           </div>
 
+          <div className="ventas-mobile-controls mb-4" aria-label="Controles de tabla">
+            <div className="ventas-mobile-control-field">
+              <label className="premium-label" htmlFor="ventas-orden">Ordenar por</label>
+              <Dropdown
+                inputId="ventas-orden"
+                value={orden.campo}
+                options={opcionesOrden}
+                optionLabel="label"
+                optionValue="value"
+                onChange={(e) => { setOrden((actual) => ({ ...actual, campo: e.value })); setPagina(0); }}
+                className="w-full"
+              />
+            </div>
+            <Button
+              icon={orden.direccion === 1 ? 'pi pi-sort-amount-up' : 'pi pi-sort-amount-down'}
+              label={orden.direccion === 1 ? 'Ascendente' : 'Descendente'}
+              outlined
+              className="ventas-mobile-sort-button"
+              aria-label={`Cambiar orden a ${orden.direccion === 1 ? 'descendente' : 'ascendente'}`}
+              onClick={() => { setOrden((actual) => ({ ...actual, direccion: actual.direccion === 1 ? -1 : 1 })); setPagina(0); }}
+            />
+            <div className="ventas-mobile-control-field">
+              <label className="premium-label" htmlFor="ventas-filas">Filas</label>
+              <Dropdown
+                inputId="ventas-filas"
+                value={filas}
+                options={opcionesFilas}
+                onChange={(e) => { setFilas(e.value); setPagina(0); }}
+                className="w-full"
+              />
+            </div>
+            <span className="ventas-mobile-page-summary" aria-live="polite">
+              Página {pagina + 1} de {Math.max(1, Math.ceil(totalRegistros / filas))} · {totalRegistros} ventas
+            </span>
+          </div>
+
           <div className="premium-table ventas-table">
             <DataTable value={ventas} lazy paginator first={pagina * filas} rows={filas} rowsPerPageOptions={[10, 20, 50, 100]} totalRecords={totalRegistros} onPage={(e) => { setPagina(e.page); setFilas(e.rows); }} onSort={(e) => { setOrden({ campo: e.sortField, direccion: e.sortOrder }); setPagina(0); }} sortField={orden.campo} sortOrder={orden.direccion} size="small" loading={cargando} emptyMessage={errorCarga ? "No se pudieron cargar las ventas" : "No hay ventas registradas"} responsiveLayout="stack" breakpoint="1024px">
-              <Column field="fecha" header="Fecha de Emisión" body={(f) => new Date(f.fecha).toLocaleDateString()} sortable></Column>
-              <Column field="tipo" sortField="tipoDte" header="Tipo DTE" body={tipoDteTemplate} sortable></Column>
-              <Column field="numeroControl" header="Número de Control" sortable body={(f) => obtenerCorrelativoNumeroControl(f.numeroControl)}></Column>
-              <Column field="cliente" header="Cliente"></Column>
-              <Column field="total" sortField="totalGeneral" header="Total" body={(f) => `$${f.total.toFixed(2)}`} sortable></Column>
-              <Column header="Estado" body={estadoVentaTemplate}></Column>
-              <Column header="Acciones" body={accionesTemplate} style={{ width: '80px' }}></Column>
+              <Column field="fecha" header="Fecha" body={fechaVentaTemplate} sortable style={{ width: '108px', minWidth: '108px' }}></Column>
+              <Column field="tipo" sortField="tipoDte" header="DTE" body={tipoDteTemplate} sortable style={{ width: '72px', minWidth: '72px' }}></Column>
+              <Column field="numeroControl" header="N.º control" sortable body={(f) => <span className="ventas-celda-control">{obtenerCorrelativoNumeroControl(f.numeroControl)}</span>} style={{ width: '112px', minWidth: '112px' }}></Column>
+              <Column field="cliente" header="Cliente" body={(f) => <span className="ventas-celda-cliente">{f.cliente}</span>} style={{ minWidth: '130px' }}></Column>
+              <Column field="total" sortField="totalGeneral" header="Total" body={(f) => <span className="ventas-celda-total">${f.total.toFixed(2)}</span>} sortable style={{ width: '82px', minWidth: '82px' }}></Column>
+              <Column header="Estado" body={estadoVentaTemplate} style={{ width: '104px', minWidth: '104px' }}></Column>
+              <Column header="Acciones" body={accionesTemplate} style={{ width: '72px', minWidth: '72px' }}></Column>
             </DataTable>
           </div>
         </div>
@@ -671,12 +731,12 @@ export default function VistaVentas() {
       <Dialog header={ventaSeleccionada ? ventaSeleccionada.numeroControl : 'Acciones'} visible={dialogoVisible} style={{ width: '580px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '760px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setDialogoVisible(false)} footer={pieDialogo} draggable={false} resizable={false}>
         {ventaSeleccionada && (
           <div className="flex flex-column gap-3">
-            <div className="flex align-items-center gap-3 p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
+            <div className="flex align-items-center gap-3 p-3 border-round-xl ventas-venta-resumen" style={{ background: 'var(--surface-muted)' }}>
               <div className="flex align-items-center justify-content-center border-circle" style={{ width: '44px', height: '44px', minWidth: '44px', background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
                 <i className="pi pi-file text-white"></i>
               </div>
-              <div>
-                <p className="font-bold m-0" style={{ color: 'var(--text-primary)', fontSize: '1.05rem' }}>{ventaSeleccionada.cliente}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold m-0" style={{ color: 'var(--text-primary)', fontSize: '1.05rem', overflowWrap: 'anywhere' }}>{ventaSeleccionada.cliente}</p>
                 <p className="text-sm m-0" style={{ color: 'var(--text-muted)' }}>{ventaSeleccionada.tipo} <span className="mx-2">•</span> ${ventaSeleccionada.total.toFixed(2)}</p>
               </div>
             </div>
@@ -684,7 +744,7 @@ export default function VistaVentas() {
             <div className="grid p-3 border-round-xl" style={{ background: 'var(--surface-muted)' }}>
               <div className="col-12 flex flex-column gap-1">
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Código de Generación</span>
-                <span className="font-bold text-sm font-monospace" style={{ color: 'var(--text-primary)' }}>{ventaSeleccionada.codigoGeneracion}</span>
+                <span className="font-bold text-sm font-monospace" style={{ color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{ventaSeleccionada.codigoGeneracion}</span>
               </div>
               <div className="col-12 flex flex-column gap-1 mt-2">
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Sello de Recepción MH</span>
