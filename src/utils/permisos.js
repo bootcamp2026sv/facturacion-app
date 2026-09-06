@@ -1,6 +1,7 @@
 export const PERMISOS_POR_VISTA = Object.freeze({
   inicio: [],
   ventas: ['VENTAS_VER'],
+  reportes: ['REPORTES_VER'],
   pos: ['VENTAS_EMITIR', 'VENTAS_EMITIR_AJUSTES'],
   'pos-clasico': ['VENTAS_EMITIR', 'VENTAS_EMITIR_AJUSTES'],
   productos: ['PRODUCTOS_VER'],

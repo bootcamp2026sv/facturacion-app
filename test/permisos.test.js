@@ -11,6 +11,7 @@ import {
 const menu = [
   { id: 'inicio' },
   { id: 'ventas' },
+  { id: 'reportes' },
   { id: 'productos' },
   { id: 'control' },
 ];
@@ -37,4 +38,9 @@ test('diferencia 401 de 403 para no cerrar sesión por falta de permiso', () => 
   assert.equal(clasificarErrorAutorizacion(401), 'RENOVAR_SESION');
   assert.equal(clasificarErrorAutorizacion(403), 'MOSTRAR_SIN_PERMISO');
   assert.equal(clasificarErrorAutorizacion(500), 'PROPAGAR_ERROR');
+});
+
+test('reportes exige el permiso específico y no se habilita solo por ver ventas', () => {
+  assert.equal(puedeVerVista({ permisos: ['VENTAS_VER'] }, 'reportes'), false);
+  assert.equal(puedeVerVista({ permisos: ['REPORTES_VER'] }, 'reportes'), true);
 });

@@ -20,11 +20,13 @@ const VistaComercios = lazy(() => import("./views/VistaComercios"));
 const VistaGeografia = lazy(() => import("./views/VistaGeografia"));
 const VistaControlSistema = lazy(() => import("./views/VistaControlSistema"));
 const VistaCatalogosExportacion = lazy(() => import("./views/VistaCatalogosExportacion"));
+const VistaReportesFacturacion = lazy(() => import("./views/VistaReportesFacturacion"));
 
 const VISTA_ACTIVA_STORAGE_KEY = "panel.vistaActiva";
 const VISTAS_VALIDAS = [
   "inicio",
   "ventas",
+  "reportes",
   "pos",
   "pos-clasico",
   "productos",
@@ -116,6 +118,12 @@ export default function PanelPrincipal() {
       etiqueta: "Ventas (DTE)",
       icono: "pi pi-percentage",
       componente: <VistaVentas />,
+    },
+    {
+      id: "reportes",
+      etiqueta: "Reportes de facturación",
+      icono: "pi pi-chart-line",
+      componente: <VistaReportesFacturacion />,
     },
     {
       id: "pos",
