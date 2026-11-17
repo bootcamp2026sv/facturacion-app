@@ -13,6 +13,11 @@ Iniciar el servidor:
 npm run start
 ```
 
-También se incluye `scripts\iniciar-frontend.cmd`, que puede registrarse en el Programador de tareas de Windows con la opción **Ejecutar tanto si el usuario inició sesión como si no** y **Ejecutar con los privilegios más altos**.
+También se incluyen:
+
+- `scripts\iniciar-frontend.cmd`: inicia el servidor.
+- `scripts\registrar-frontend-inicio.cmd`: registra automáticamente la tarea `Facturacion Frontend` para iniciar sesión en Windows.
+
+Ejecutar `registrar-frontend-inicio.cmd` una sola vez desde el explorador o una terminal.
 
 El servidor escucha en `http://localhost:5173` y sirve el contenido de `dist` mediante Vite Preview.
