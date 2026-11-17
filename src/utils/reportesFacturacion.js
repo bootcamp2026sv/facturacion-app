@@ -56,7 +56,12 @@ export const erroresLocalesReporte = (tipo, filas, columnas = []) => {
     if (tipo === 'excel-general') {
       if (['17', '18'].includes(String(fila.tipoDte))) return;
       if (fila.estado === 'ANULADO' && !String(fila.fechaAnulacion || '').trim()) errores.push(`Fila ${indice + 1}: falta fecha de anulación.`);
-      if (!String(fila.cliente || '').trim()) errores.push(`Fila ${indice + 1}: falta cliente.`);
+      // Un DTE-01 puede tener receptor null cuando se emitió para un cliente
+      // genérico sin datos personalizados. DTE-03 y los demás tipos siguen
+      // requiriendo cliente/receptor en el reporte general.
+      if (String(fila.tipoDte) !== '01' && !String(fila.cliente || '').trim()) {
+        errores.push(`Fila ${indice + 1}: falta cliente.`);
+      }
     }
     if (tipo === 'libro-contribuyentes' && (!String(fila.cliente || '').trim() || !String(fila.nrc || '').trim())) {
       errores.push(`Fila ${indice + 1}: complete cliente y NRC.`);
