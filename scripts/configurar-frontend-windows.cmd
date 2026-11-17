@@ -2,6 +2,9 @@
 setlocal
 cd /d "%~dp0.."
 
+echo Configurando URL del backend Tomcat...
+> .env.production echo VITE_API_URL=http://localhost:9000/Facturacion
+
 echo [1/4] Instalando dependencias npm...
 call npm install
 if errorlevel 1 goto :error
