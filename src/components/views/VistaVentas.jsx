@@ -3,6 +3,7 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
@@ -62,6 +63,7 @@ const formatearFechaVenta = (fecha) => {
 
 const obtenerSelloRecepcion = (venta) => String(venta?.selloRecepcion || '').trim();
 const obtenerSelloAnulacion = (venta) => String(venta?.selloAnulacion || '').trim();
+const obtenerSelloContingencia = (venta) => String(venta?.selloContingencia || '').trim();
 
 const puedeEmitirNota = (venta) => (
   venta?.tipoCodigo === '03'
@@ -215,6 +217,13 @@ export default function VistaVentas() {
   const [notaEmitiendo, setNotaEmitiendo] = useState(false);
   const [errorCargaNota, setErrorCargaNota] = useState('');
   const [errorEmisionNota, setErrorEmisionNota] = useState('');
+  const [contingenciaVisible, setContingenciaVisible] = useState(false);
+  const [contingenciaPaso, setContingenciaPaso] = useState(1);
+  const [contingenciaJson, setContingenciaJson] = useState('');
+  const [contingenciaTipo, setContingenciaTipo] = useState(4);
+  const [contingenciaMotivo, setContingenciaMotivo] = useState('Falla en el sistema de facturacion');
+  const [contingenciaCargando, setContingenciaCargando] = useState(false);
+  const [contingenciaError, setContingenciaError] = useState('');
 
   const limpiarFiltros = () => {
     setFiltroTipo('');
@@ -229,6 +238,10 @@ export default function VistaVentas() {
   };
 
   const confirmarAccion = (accion) => {
+    if (accion === 'Procesar Contingencia') {
+      abrirContingencia(ventaSeleccionada);
+      return;
+    }
     if (accion === 'Nota Créd/Déb' && !puedeEmitirNota(ventaSeleccionada)) {
       toast.current?.show({
         severity: 'warn',
@@ -242,6 +255,88 @@ export default function VistaVentas() {
     setEmailDestino('');
     setTipoNota('Crédito');
     setConfirmacionVisible(true);
+  };
+
+  const abrirContingencia = async (venta) => {
+    if (!venta?.id) return;
+    setDialogoVisible(false);
+    setVentaSeleccionada(venta);
+    setContingenciaVisible(true);
+    setContingenciaPaso(obtenerSelloContingencia(venta) ? 3 : 1);
+    setContingenciaError('');
+    try {
+      const respuesta = await api.get(`/Ventas/${venta.id}/json`);
+      const datos = typeof respuesta.data === 'string' ? JSON.parse(respuesta.data) : respuesta.data;
+      const documento = datos?.json ? (typeof datos.json === 'string' ? JSON.parse(datos.json) : datos.json) : datos;
+      if (documento && typeof documento === 'object') {
+        delete documento.selloRecibido;
+        delete documento.firma;
+      }
+      setContingenciaJson(JSON.stringify(documento, null, 2));
+      if (venta.selloContingencia) {
+        try {
+          const detalle = await api.get(`/Ventas/${venta.id}`);
+          if (detalle.data?.tipoContingencia) setContingenciaTipo(Number(detalle.data.tipoContingencia));
+          if (detalle.data?.motivoContin) setContingenciaMotivo(detalle.data.motivoContin);
+        } catch (_) { /* se conservan los valores actuales */ }
+      }
+    } catch (error) {
+      setContingenciaError(obtenerMensajeErrorApi(error, 'No se pudo cargar el JSON de la venta.'));
+    }
+  };
+
+  const guardarJsonContingencia = async () => {
+    try {
+      setContingenciaCargando(true); setContingenciaError('');
+      await api.put(`/hacienda/contingencia/json/${ventaSeleccionada.id}`, JSON.parse(contingenciaJson));
+      setContingenciaPaso(obtenerSelloContingencia(ventaSeleccionada) ? 3 : 2);
+    } catch (error) {
+      setContingenciaError(error instanceof SyntaxError ? 'El JSON editado no es válido.' : obtenerMensajeErrorApi(error, 'No se pudo guardar el JSON.'));
+    } finally { setContingenciaCargando(false); }
+  };
+
+  const restaurarJsonContingencia = async () => {
+    try {
+      setContingenciaCargando(true); setContingenciaError('');
+      const respuesta = await api.post(`/hacienda/contingencia/json/${ventaSeleccionada.id}/restaurar`);
+      setContingenciaJson(JSON.stringify(typeof respuesta.data === 'string' ? JSON.parse(respuesta.data) : respuesta.data, null, 2));
+    } catch (error) { setContingenciaError(obtenerMensajeErrorApi(error, 'No se pudo restaurar el JSON original.')); }
+    finally { setContingenciaCargando(false); }
+  };
+
+  const notificarContingencia = async () => {
+    try {
+      setContingenciaCargando(true); setContingenciaError('');
+      const respuesta = await api.post('/hacienda/contingencia/notificar', { ventaId: ventaSeleccionada.id, tipoContingencia: Number(contingenciaTipo), motivoContin: contingenciaMotivo });
+      let sello = respuesta.data?.selloRecibido || respuesta.data?.selloContingencia;
+      try {
+        const actualizada = await api.get(`/Ventas/${ventaSeleccionada.id}`);
+        sello = sello || actualizada.data?.selloContingencia;
+      } catch (_) { /* la respuesta principal sigue siendo válida */ }
+      if (sello) {
+        setVentaSeleccionada((actual) => ({ ...actual, selloContingencia: sello }));
+        setVentas((actuales) => actuales.map((actual) => actual.id === ventaSeleccionada.id ? { ...actual, selloContingencia: sello } : actual));
+      } else {
+        throw new Error(`Hacienda no devolvió el sello de contingencia. Respuesta: ${JSON.stringify(respuesta.data)}`);
+      }
+      setContingenciaPaso(3);
+    } catch (error) { setContingenciaError(obtenerMensajeErrorApi(error, 'No se pudo notificar la contingencia.')); }
+    finally { setContingenciaCargando(false); }
+  };
+
+  const enviarDteContingencia = async () => {
+    try {
+      setContingenciaCargando(true); setContingenciaError('');
+      const respuesta = await api.post('/hacienda/contingencia/procesar', { ventaId: ventaSeleccionada.id });
+      const sello = respuesta.data?.selloRecibido || respuesta.data?.selloRecepcion;
+      if (sello) {
+        setVentaSeleccionada((actual) => ({ ...actual, selloRecepcion: sello }));
+        setVentas((actuales) => actuales.map((actual) => actual.id === ventaSeleccionada.id ? { ...actual, selloRecepcion: sello } : actual));
+      }
+      toast.current?.show({ severity: 'success', summary: 'DTE enviado por contingencia', detail: sello ? `Sello: ${sello}` : 'Hacienda aceptó el envío.', life: 7000 });
+      setContingenciaVisible(false); await cargarVentas();
+    } catch (error) { setContingenciaError(obtenerMensajeErrorApi(error, 'No se pudo enviar el DTE por contingencia. Puede editar el JSON y reintentar.')); }
+    finally { setContingenciaCargando(false); }
   };
 
   const limpiarNota = () => {
@@ -346,7 +441,10 @@ export default function VistaVentas() {
       } else if (accionConfirmar === 'Enviar Hacienda') {
         await enviarHacienda(ventaSeleccionada);
       } else if (accionConfirmar === 'Enviar Correo') {
-        const respuesta = await api.post(`/Ventas/${ventaSeleccionada.id}/correo`, { destinatario: emailDestino });
+        const rutaCorreo = ventaSeleccionada.selloAnulacion
+          ? `/Ventas/${ventaSeleccionada.id}/correo-anulacion`
+          : `/Ventas/${ventaSeleccionada.id}/correo`;
+        const respuesta = await api.post(rutaCorreo, { destinatario: emailDestino });
         toast.current.show({ severity: 'success', summary: 'Correo enviado', detail: respuesta.data?.mensaje || 'El DTE fue enviado correctamente.', life: 5000 });
       } else if (accionConfirmar === 'Ver PDF') {
         const respuesta = await api.get(`/Ventas/${ventaSeleccionada.id}/pdf`, { responseType: 'blob' });
@@ -481,9 +579,10 @@ export default function VistaVentas() {
   };
 
   const acciones = [
+    ...(ventaSeleccionada && !obtenerSelloRecepcion(ventaSeleccionada) && puede('VENTAS_CONTINGENCIA') ? [{ id: 'Procesar Contingencia', permiso: 'VENTAS_CONTINGENCIA', icono: 'pi pi-exclamation-triangle', label: 'Procesar contingencia', color: '#f97316' }] : []),
     { id: 'Enviar Hacienda', permiso: 'VENTAS_EMITIR', icono: 'pi pi-send', label: 'Enviar MH', color: '#0ea5e9' },
     { id: 'Anular', permiso: 'VENTAS_ANULAR', icono: 'pi pi-ban', label: 'Anular', color: '#ef4444' },
-    { id: 'Enviar Correo', permiso: 'VENTAS_ENVIAR', icono: 'pi pi-envelope', label: 'Enviar Correo', color: '#8b5cf6' },
+    { id: 'Enviar Correo', permiso: 'VENTAS_ENVIAR', icono: 'pi pi-envelope', label: ventaSeleccionada?.selloAnulacion ? 'Enviar Invalidación' : 'Enviar Correo', color: '#8b5cf6' },
     { id: 'Ver PDF', permiso: 'VENTAS_DOCUMENTOS', icono: 'pi pi-file-pdf', label: 'Ver PDF', color: '#3b82f6' },
     { id: 'Consultar Hacienda', permiso: 'VENTAS_CONSULTAR', icono: 'pi pi-search', label: 'Consultar MH', color: '#06b6d4' },
     { id: 'Descargar JSON', permiso: 'VENTAS_DOCUMENTOS', icono: 'pi pi-download', label: 'Descargar JSON', color: '#f59e0b' },
@@ -606,12 +705,17 @@ export default function VistaVentas() {
   const cuerpoConfirmacion = () => {
     if (!accionConfirmar) return null;
     const msg = mensajesConfirmacion[accionConfirmar];
+    const esCorreoInvalidacion = accionConfirmar === 'Enviar Correo' && Boolean(ventaSeleccionada?.selloAnulacion);
     return (
       <div className="flex flex-column align-items-center gap-3 py-3">
         <div className="flex align-items-center justify-content-center border-circle" style={{ width: '60px', height: '60px', background: `${msg.color}15` }}>
           <i className={`${msg.icono} text-2xl`} style={{ color: msg.color }}></i>
         </div>
-        <p className="text-center m-0 text-700" style={{ lineHeight: '1.5' }}>{msg.cuerpo}</p>
+        <p className="text-center m-0 text-700" style={{ lineHeight: '1.5' }}>
+          {esCorreoInvalidacion
+            ? '¿Desea enviar el PDF y JSON de invalidación al correo indicado?'
+            : msg.cuerpo}
+        </p>
 
         {accionConfirmar === 'Enviar Correo' && (
           <div className="w-full premium-input-group">
@@ -796,8 +900,38 @@ export default function VistaVentas() {
         )}
       </Dialog>
 
-      <Dialog header={accionConfirmar ? mensajesConfirmacion[accionConfirmar].titulo : ''} visible={confirmacionVisible} style={{ width: '440px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '640px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConfirmacionVisible(false)} footer={pieConfirmacion} draggable={false} resizable={false}>
+      <Dialog header={accionConfirmar === 'Enviar Correo' && ventaSeleccionada?.selloAnulacion ? 'Enviar Invalidación por Correo' : accionConfirmar ? mensajesConfirmacion[accionConfirmar].titulo : ''} visible={confirmacionVisible} style={{ width: '440px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '640px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => setConfirmacionVisible(false)} footer={pieConfirmacion} draggable={false} resizable={false}>
         {cuerpoConfirmacion()}
+      </Dialog>
+
+      <Dialog header="Procesar contingencia individual" visible={contingenciaVisible} style={{ width: '760px', maxWidth: 'calc(100vw - 1rem)' }} breakpoints={{ '760px': 'calc(100vw - 1rem)' }} className="ventas-dialog" onHide={() => !contingenciaCargando && setContingenciaVisible(false)} draggable={false} resizable={false}>
+        <div className="flex flex-column gap-3">
+          <div className="flex align-items-center gap-2 text-sm font-semibold">
+            <span className={contingenciaPaso >= 1 ? 'text-primary' : ''}>1. Editar JSON</span><i className="pi pi-angle-right" />
+            <span className={contingenciaPaso >= 2 ? 'text-primary' : ''}>2. Notificar</span><i className="pi pi-angle-right" />
+            <span className={contingenciaPaso >= 3 ? 'text-primary' : ''}>3. Enviar DTE</span>
+          </div>
+          {contingenciaError && <div className="p-3 border-round-lg" style={{ color: '#be123c', background: 'rgba(244,63,94,.08)' }}>{contingenciaError}</div>}
+          {contingenciaPaso === 1 && <>
+            <InputTextarea value={contingenciaJson} onChange={(e) => setContingenciaJson(e.target.value)} autoResize rows={18} spellCheck={false} className="w-full" style={{ fontFamily: 'monospace', fontSize: '.78rem' }} />
+            <div className="flex justify-content-between gap-2"><Button label="Restaurar original" icon="pi pi-history" className="p-button-outlined" onClick={restaurarJsonContingencia} loading={contingenciaCargando} /><Button label="Guardar JSON y continuar" icon="pi pi-save" onClick={guardarJsonContingencia} loading={contingenciaCargando} /></div>
+          </>}
+          {contingenciaPaso === 2 && <>
+            <div className="field"><label className="font-semibold">Tipo de contingencia</label><Dropdown value={contingenciaTipo} options={[
+              { label: '1 — No disponibilidad del sistema del MH', value: 1 },
+              { label: '2 — No disponibilidad del sistema del emisor', value: 2 },
+              { label: '3 — Falla del servicio de Internet del emisor', value: 3 },
+              { label: '4 — Falla del suministro de energía eléctrica', value: 4 },
+              { label: '5 — Otro', value: 5 },
+            ]} onChange={(e) => setContingenciaTipo(e.value)} className="w-full" /></div>
+            <div className="field"><label className="font-semibold">Motivo</label><InputText value={contingenciaMotivo} onChange={(e) => setContingenciaMotivo(e.target.value)} className="w-full" /></div>
+            <div className="flex justify-content-between gap-2"><Button label="Volver al JSON" icon="pi pi-arrow-left" className="p-button-outlined" onClick={() => setContingenciaPaso(1)} /><Button label="Notificar contingencia" icon="pi pi-send" onClick={notificarContingencia} loading={contingenciaCargando} /></div>
+          </>}
+          {contingenciaPaso === 3 && <>
+            <div className="p-3 border-round-lg" style={{ background: 'rgba(16,185,129,.1)', color: '#047857' }}><i className="pi pi-check-circle mr-2" />Contingencia notificada. Sello: <strong>{obtenerSelloContingencia(ventaSeleccionada) || 'guardado en el servidor'}</strong></div>
+            <div className="flex justify-content-between gap-2"><Button label="Editar JSON / reintentar" icon="pi pi-pencil" className="p-button-outlined" onClick={() => setContingenciaPaso(1)} /><Button label="Enviar DTE" icon="pi pi-send" onClick={enviarDteContingencia} loading={contingenciaCargando} /></div>
+          </>}
+        </div>
       </Dialog>
 
       <DialogoNotaVenta

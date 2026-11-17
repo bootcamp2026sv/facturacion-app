@@ -434,7 +434,12 @@ export default function VistaPuntoVenta() {
           setAvisoCorreo({ tipo: 'exito', mensaje: `DTE enviado a ${datosReceptor.correo}.` });
         } catch (errorCorreo) {
           console.error('La venta se guardó, pero no se pudo enviar el correo:', errorCorreo);
-          setAvisoCorreo({ tipo: 'error', mensaje: 'La venta se guardó, pero no se pudo enviar el DTE al correo indicado.' });
+          const detalleCorreo = errorCorreo.response?.data?.mensaje
+            || errorCorreo.response?.data?.message
+            || errorCorreo.response?.data?.error
+            || (typeof errorCorreo.response?.data === 'string' ? errorCorreo.response.data : '')
+            || 'Error SMTP no especificado.';
+          setAvisoCorreo({ tipo: 'error', mensaje: `La venta se guardó, pero no se pudo enviar el DTE: ${detalleCorreo}` });
         }
       }
       setTicketVenta(crearDatosTicketVenta({

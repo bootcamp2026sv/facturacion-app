@@ -15,7 +15,6 @@ const VistaCodigosActividad = lazy(() => import("./views/VistaCodigosActividad")
 const VistaUnidadesMedida = lazy(() => import("./views/VistaUnidadesMedida"));
 const VistaVentas = lazy(() => import("./views/VistaVentas"));
 const VistaPuntoVenta = lazy(() => import("./views/VistaPuntoVenta"));
-const VistaPuntoVentaClasico = lazy(() => import("./views/VistaPuntoVentaClasico"));
 const VistaComercios = lazy(() => import("./views/VistaComercios"));
 const VistaGeografia = lazy(() => import("./views/VistaGeografia"));
 const VistaControlSistema = lazy(() => import("./views/VistaControlSistema"));
@@ -114,6 +113,12 @@ export default function PanelPrincipal() {
       componente: <VistaInicio alCambiarVista={setVistaActiva} />,
     },
     {
+      id: "pos",
+      etiqueta: "Punto de Venta",
+      icono: "pi pi-shopping-cart",
+      componente: <VistaPuntoVenta />,
+    },
+    {
       id: "ventas",
       etiqueta: "Ventas (DTE)",
       icono: "pi pi-percentage",
@@ -124,18 +129,6 @@ export default function PanelPrincipal() {
       etiqueta: "Reportes de facturación",
       icono: "pi pi-chart-line",
       componente: <VistaReportesFacturacion />,
-    },
-    {
-      id: "pos",
-      etiqueta: "Punto de Venta",
-      icono: "pi pi-shopping-cart",
-      componente: <VistaPuntoVenta />,
-    },
-    {
-      id: "pos-clasico",
-      etiqueta: "P. Venta Clásico",
-      icono: "pi pi-store",
-      componente: <VistaPuntoVentaClasico />,
     },
     {
       id: "productos",

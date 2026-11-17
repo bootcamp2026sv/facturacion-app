@@ -188,7 +188,7 @@ export default function VistaInicio({ alCambiarVista }) {
                 <button type="button" onClick={() => alCambiarVista?.('pos')} className="flex align-items-center justify-content-between w-full p-2 border-round border-none bg-transparent text-left hover:surface-hover cursor-pointer transition-colors transition-duration-150">
                   <div className="flex align-items-center gap-2">
                     <i className="pi pi-shopping-cart text-primary"></i>
-                    <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Nueva Venta (POS)</span>
+                    <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Punto de Venta</span>
                   </div>
                   <i className="pi pi-angle-right" style={{ color: 'var(--text-muted)' }}></i>
                 </button>
