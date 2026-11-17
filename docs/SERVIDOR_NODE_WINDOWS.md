@@ -15,7 +15,8 @@ npm run start
 
 También se incluyen:
 
-- `scripts\iniciar-frontend.cmd`: inicia el servidor.
+- `scripts\iniciar-frontend.cmd`: inicia el servidor manualmente.
+- `scripts\iniciar-frontend-oculto.vbs`: inicia el servidor sin abrir una ventana de terminal.
 - `scripts\registrar-frontend-inicio.cmd`: registra automáticamente la tarea `Facturacion Frontend` para iniciar sesión en Windows.
 - `scripts\configurar-frontend-windows.cmd`: instala npm, compila, registra la tarea y arranca el servidor en un solo paso.
 

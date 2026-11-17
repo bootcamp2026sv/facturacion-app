@@ -2,10 +2,10 @@
 setlocal
 set "FRONTEND_DIR=%~dp0.."
 for %%I in ("%FRONTEND_DIR%") do set "FRONTEND_DIR=%%~fI"
-set "STARTER=%FRONTEND_DIR%\scripts\iniciar-frontend.cmd"
+set "STARTER=%FRONTEND_DIR%\scripts\iniciar-frontend-oculto.vbs"
 
 echo Registrando Facturacion Frontend para iniciar con Windows...
-schtasks /Create /TN "Facturacion Frontend" /SC ONLOGON /TR "\"%STARTER%\"" /F
+schtasks /Create /TN "Facturacion Frontend" /SC ONLOGON /TR "wscript.exe \"%STARTER%\"" /F
 if errorlevel 1 (
   echo No se pudo registrar la tarea.
   pause
